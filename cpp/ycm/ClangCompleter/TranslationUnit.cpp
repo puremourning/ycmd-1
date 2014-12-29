@@ -189,6 +189,35 @@ std::vector< CompletionData > TranslationUnit::CandidatesForLocation(
   return candidates;
 }
 
+std::vector< CompletionData > TranslationUnit::HintsForLocation(
+  int line,
+  int column,
+  const std::vector< UnsavedFile > &unsaved_files ) {
+  unique_lock< mutex > lock( clang_access_mutex_ );
+
+  if ( !clang_translation_unit_ )
+    return std::vector< CompletionData >();
+
+  std::vector< CXUnsavedFile > cxunsaved_files =
+    ToCXUnsavedFiles( unsaved_files );
+  const CXUnsavedFile *unsaved = cxunsaved_files.size() > 0
+                                 ? &cxunsaved_files[ 0 ] : NULL;
+
+  CodeCompleteResultsWrap results(
+    clang_codeCompleteAt( clang_translation_unit_,
+                          filename_.c_str(),
+                          line,
+                          column,
+                          const_cast<CXUnsavedFile *>( unsaved ),
+                          cxunsaved_files.size(),
+                          clang_defaultCodeCompleteOptions() ),
+    clang_disposeCodeCompleteResults );
+
+  std::vector< CompletionData > hints = ToArgumentHintDataVector(
+                                          results.get() );
+  return hints;
+}
+
 Location TranslationUnit::GetDeclarationLocation(
   int line,
   int column,

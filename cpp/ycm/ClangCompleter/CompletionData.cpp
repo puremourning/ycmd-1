@@ -74,22 +74,24 @@ CompletionKind CursorKindToCompletionKind( CXCursorKind kind ) {
 
 bool IsMainCompletionTextInfo( CXCompletionChunkKind kind ) {
   return
-    kind == CXCompletionChunk_Optional     ||
-    kind == CXCompletionChunk_TypedText    ||
-    kind == CXCompletionChunk_Placeholder  ||
-    kind == CXCompletionChunk_LeftParen    ||
-    kind == CXCompletionChunk_RightParen   ||
-    kind == CXCompletionChunk_RightBracket ||
-    kind == CXCompletionChunk_LeftBracket  ||
-    kind == CXCompletionChunk_LeftBrace    ||
-    kind == CXCompletionChunk_RightBrace   ||
-    kind == CXCompletionChunk_RightAngle   ||
-    kind == CXCompletionChunk_LeftAngle    ||
-    kind == CXCompletionChunk_Comma        ||
-    kind == CXCompletionChunk_Colon        ||
-    kind == CXCompletionChunk_SemiColon    ||
-    kind == CXCompletionChunk_Equal        ||
-    kind == CXCompletionChunk_Informative  ||
+    kind == CXCompletionChunk_Optional         ||
+    kind == CXCompletionChunk_TypedText        ||
+    kind == CXCompletionChunk_Placeholder      ||
+    kind == CXCompletionChunk_CurrentParameter ||
+    kind == CXCompletionChunk_Text             ||
+    kind == CXCompletionChunk_LeftParen        ||
+    kind == CXCompletionChunk_RightParen       ||
+    kind == CXCompletionChunk_RightBracket     ||
+    kind == CXCompletionChunk_LeftBracket      ||
+    kind == CXCompletionChunk_LeftBrace        ||
+    kind == CXCompletionChunk_RightBrace       ||
+    kind == CXCompletionChunk_RightAngle       ||
+    kind == CXCompletionChunk_LeftAngle        ||
+    kind == CXCompletionChunk_Comma            ||
+    kind == CXCompletionChunk_Colon            ||
+    kind == CXCompletionChunk_SemiColon        ||
+    kind == CXCompletionChunk_Equal            ||
+    kind == CXCompletionChunk_Informative      ||
     kind == CXCompletionChunk_HorizontalSpace;
 
 }
@@ -130,6 +132,11 @@ std::string OptionalChunkToString( CXCompletionString completion_string,
                                                   j ) );
     }
 
+    else if ( kind == CXCompletionChunk_CurrentParameter ) {
+      final_string.append(
+        "☞  " + ChunkToString( optional_completion_string, j ) );
+    }
+
     else {
       final_string.append( ChunkToString( optional_completion_string, j ) );
     }
@@ -152,7 +159,8 @@ std::string RemoveTwoConsecutiveUnderscores( std::string text ) {
 } // unnamed namespace
 
 
-CompletionData::CompletionData( const CXCompletionResult &completion_result ) {
+CompletionData::CompletionData( const CXCompletionResult &completion_result,
+                                bool is_argument_hint ) {
   CXCompletionString completion_string = completion_result.CompletionString;
 
   if ( !completion_string )
@@ -188,6 +196,27 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result ) {
 
   doc_string_ = YouCompleteMe::CXStringToString(
                   clang_getCompletionBriefComment( completion_string ) );
+
+  // This line address issue #1287
+  everything_except_return_type_ = original_string_;
+
+  if ( is_argument_hint ) {
+    std::string hint = "no more arguments";
+    for ( uint i = 0; i < num_chunks; ++i ) {
+      if ( clang_getCompletionChunkKind( completion_string, i ) ==
+           CXCompletionChunk_CurrentParameter ) {
+        hint = clang_getCString(
+                 clang_getCompletionChunkText( completion_string, i ) );
+        break;
+      }
+    }
+
+    kind_ = NONE;
+    return_type_ = "";
+    original_string_ = "";
+    everything_except_return_type_ =
+      RemoveTwoConsecutiveUnderscores( boost::move( hint ) );
+  }
 }
 
 
@@ -218,6 +247,11 @@ void CompletionData::ExtractDataFromChunk( CXCompletionString completion_string,
     if ( kind == CXCompletionChunk_Optional ) {
       everything_except_return_type_.append(
         OptionalChunkToString( completion_string, chunk_num ) );
+    }
+
+    else if ( kind == CXCompletionChunk_CurrentParameter ) {
+      everything_except_return_type_.append(
+        "☞  " + ChunkToString( completion_string, chunk_num ) );
     }
 
     else {

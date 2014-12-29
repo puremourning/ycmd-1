@@ -210,6 +210,8 @@ class Completer( object ):
       sort_property = 'word'
     elif 'insertion_text' in candidates[ 0 ]:
       sort_property = 'insertion_text'
+    elif 'menu_text' in candidates[ 0 ]:
+      sort_property = 'menu_text'
 
     matches = FilterAndSortCandidates( candidates,
                                        sort_property,

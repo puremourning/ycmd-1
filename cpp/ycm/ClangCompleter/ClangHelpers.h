@@ -35,6 +35,9 @@ boost::remove_pointer< CXDiagnostic >::type > DiagnosticWrap;
 std::vector< CompletionData > ToCompletionDataVector(
   CXCodeCompleteResults *results );
 
+std::vector< CompletionData > ToArgumentHintDataVector(
+  CXCodeCompleteResults *results );
+
 // NOTE: CXUnsavedFiles store pointers to data in UnsavedFiles, so UnsavedFiles
 // need to outlive CXUnsavedFiles!
 std::vector< CXUnsavedFile > ToCXUnsavedFiles(

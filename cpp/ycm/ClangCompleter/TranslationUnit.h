@@ -66,6 +66,11 @@ public:
     int column,
     const std::vector< UnsavedFile > &unsaved_files );
 
+  std::vector< CompletionData > HintsForLocation(
+    int line,
+    int column,
+    const std::vector< UnsavedFile > &unsaved_files );
+
   Location GetDeclarationLocation(
     int line,
     int column,

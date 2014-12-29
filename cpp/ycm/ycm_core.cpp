@@ -96,6 +96,7 @@ BOOST_PYTHON_MODULE(ycm_core)
     .def( "DeleteCachesForFile", &ClangCompleter::DeleteCachesForFile )
     .def( "UpdatingTranslationUnit", &ClangCompleter::UpdatingTranslationUnit )
     .def( "UpdateTranslationUnit", &ClangCompleter::UpdateTranslationUnit )
+    .def( "HintsForLocationInFile", &ClangCompleter::HintsForLocationInFile )
     .def( "CandidatesForLocationInFile",
           &ClangCompleter::CandidatesForLocationInFile );
 
@@ -120,7 +121,7 @@ BOOST_PYTHON_MODULE(ycm_core)
     .def( "DetailedInfoForPreviewWindow",
           &CompletionData::DetailedInfoForPreviewWindow )
     .def( "DocString", &CompletionData::DocString )
-    .def_readonly( "kind_", &CompletionData::kind_ );
+    .def( "Kind", &CompletionData::Kind );
 
   class_< std::vector< CompletionData >,
       boost::shared_ptr< std::vector< CompletionData > > >( "CompletionVector" )

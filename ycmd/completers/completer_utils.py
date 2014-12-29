@@ -29,16 +29,31 @@ class PreparedTriggers( object ):
         defaultdict( set ) )
     final_triggers = _FiletypeDictUnion( PREPARED_DEFAULT_FILETYPE_TRIGGERS,
                                          user_prepared_triggers )
+    final_hint_triggers = _FiletypeDictUnion( PREPARED_DEFAULT_HINT_TRIGGERS,
+                                              defaultdict( set ) )
+
     if filetype_set:
       final_triggers = dict( ( k, v ) for k, v in final_triggers.iteritems()
                              if k in filetype_set )
+      final_hint_triggers = dict( ( k, v ) for k, v in
+                                  final_hint_triggers.iteritems()
+                                  if k in filetype_set )
 
     self._filetype_to_prepared_triggers = final_triggers
+    self._filetype_to_prepared_hint_triggers = final_hint_triggers
 
 
   def MatchesForFiletype( self, current_line, start_column, filetype ):
     try:
       triggers = self._filetype_to_prepared_triggers[ filetype ]
+    except KeyError:
+      return False
+    return _MatchesSemanticTrigger( current_line, start_column, triggers )
+
+
+  def MatchesHintForFiletype( self, current_line, start_column, filetype ):
+    try:
+      triggers = self._filetype_to_prepared_hint_triggers[ filetype ]
     except KeyError:
       return False
     return _MatchesSemanticTrigger( current_line, start_column, triggers )
@@ -97,6 +112,8 @@ def _MatchesSemanticTrigger( line_value, start_column, trigger_list ):
   if not line_length or start_column > line_length:
     return False
 
+  line_value = line_value[ :start_column ]
+
   match = False
   for trigger in trigger_list:
     match = ( _StringTriggerMatches( trigger, line_value, start_column )
@@ -141,5 +158,10 @@ DEFAULT_FILETYPE_TRIGGERS = {
   'erlang' : [':'],
 }
 
+DEFAULT_HINT_TRIGGERS = { 'c,cpp,objcpp' : [r're!\(\s*', r're!,\s*'] }
+
 PREPARED_DEFAULT_FILETYPE_TRIGGERS = _FiletypeTriggerDictFromSpec(
     DEFAULT_FILETYPE_TRIGGERS )
+
+PREPARED_DEFAULT_HINT_TRIGGERS = _FiletypeTriggerDictFromSpec(
+    DEFAULT_HINT_TRIGGERS )

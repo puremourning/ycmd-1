@@ -35,7 +35,8 @@ enum CompletionKind {
   MACRO,
   PARAMETER,
   NAMESPACE,
-  UNKNOWN
+  UNKNOWN,
+  NONE
 };
 
 // This class holds pieces of information about a single completion coming from
@@ -52,7 +53,7 @@ enum CompletionKind {
 // about a completion at the top of the buffer.
 struct CompletionData {
   CompletionData() {}
-  CompletionData( const CXCompletionResult &completion_result );
+  CompletionData( const CXCompletionResult &completion_result, bool is_argument_hint = false );
 
   // What should actually be inserted into the buffer. For a function like
   // "int foo(int x)", this is just "foo". Same for a data member like "foo_":
@@ -86,6 +87,25 @@ struct CompletionData {
 
   std::string DocString() {
     return doc_string_;
+  }
+
+  std::string Kind() {
+    static const char * const kinds[] {
+      "STRUCT",
+      "CLASS",
+      "ENUM",
+      "TYPE",
+      "MEMBER",
+      "FUNCTION",
+      "VARIABLE",
+      "MACRO",
+      "PARAMETER",
+      "NAMESPACE",
+      "UNKNOWN",
+      ""
+    };
+
+    return kinds[kind_];
   }
 
   bool operator== ( const CompletionData &other ) const {

@@ -74,6 +74,26 @@ class ClangCompleter( Completer ):
     return files
 
 
+  def ShouldUseNowInner( self, request_data ):
+    if not self.prepared_triggers:
+      return False
+
+    current_line = request_data[ 'line_value' ]
+    start_column = request_data[ 'start_column' ] - 1
+    column_num = request_data[ 'column_num' ] - 1
+    filetype = self._CurrentFiletype( request_data[ 'filetypes' ] )
+
+    if self.prepared_triggers.MatchesForFiletype( current_line,
+                                                  start_column,
+                                                  filetype ):
+      return True
+
+    return self.prepared_triggers.MatchesHintForFiletype(
+             current_line,
+             start_column,
+             filetype ) if start_column == column_num else False
+
+
   def ComputeCandidatesInner( self, request_data ):
     filename = request_data[ 'filepath' ]
     if not filename:
@@ -89,15 +109,34 @@ class ClangCompleter( Completer ):
     files = self.GetUnsavedFilesVector( request_data )
     line = request_data[ 'line_num' ]
     column = request_data[ 'start_column' ]
-    with self._files_being_compiled.GetExclusive( filename ):
-      results = self._completer.CandidatesForLocationInFile(
-          ToUtf8IfNeeded( filename ),
-          line,
-          column,
-          files,
-          flags )
 
-    if not results:
+    current_line = request_data[ 'line_value' ]
+    start_column = column - 1
+    column_num = request_data[ 'column_num' ] - 1
+    filetype = self._CurrentFiletype( request_data[ 'filetypes' ] )
+
+    looking_for_hints = self.prepared_triggers.MatchesHintForFiletype(
+        current_line,
+        start_column,
+        filetype ) if start_column  == column_num else False
+
+    with self._files_being_compiled.GetExclusive( filename ):
+      if looking_for_hints:
+        results = self._completer.HintsForLocationInFile(
+            ToUtf8IfNeeded( filename ),
+            line,
+            column,
+            files,
+            flags )
+      else:
+        results = self._completer.CandidatesForLocationInFile(
+            ToUtf8IfNeeded( filename ),
+            line,
+            column,
+            files,
+            flags )
+
+    if not results and not looking_for_hints:
       raise RuntimeError( NO_COMPLETIONS_MESSAGE )
 
     return [ ConvertCompletionData( x ) for x in results ]
@@ -270,7 +309,7 @@ def ConvertCompletionData( completion_data ):
     insertion_text = completion_data.TextToInsertInBuffer(),
     menu_text = completion_data.MainCompletionText(),
     extra_menu_info = completion_data.ExtraMenuInfo(),
-    kind = completion_data.kind_.name,
+    kind = completion_data.Kind(),
     detailed_info = completion_data.DetailedInfoForPreviewWindow(),
     extra_data = { 'doc_string': completion_data.DocString() } if completion_data.DocString() else None )
 

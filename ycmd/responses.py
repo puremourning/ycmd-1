@@ -87,10 +87,10 @@ def BuildCompletionData( insertion_text,
                          menu_text = None,
                          kind = None,
                          extra_data = None ):
-  completion_data = {
-    'insertion_text': insertion_text
-  }
+  completion_data = {}
 
+  if insertion_text:
+    completion_data[ 'insertion_text' ] = insertion_text
   if extra_menu_info:
     completion_data[ 'extra_menu_info' ] = extra_menu_info
   if menu_text:
