@@ -133,7 +133,12 @@ struct CompletionData {
 
   std::string doc_string_;
 
+  std::string current_arg_;
+
 private:
+
+  std::string OptionalChunkToString( CXCompletionString completion_string,
+                                     uint chunk_num );
 
   void ExtractDataFromChunk( CXCompletionString completion_string,
                              uint chunk_num,
