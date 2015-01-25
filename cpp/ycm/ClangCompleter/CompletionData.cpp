@@ -150,13 +150,16 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result,
     RemoveTwoConsecutiveUnderscores(
       boost::move( everything_except_return_type_ ) );
 
+  doc_string_ = YouCompleteMe::CXStringToString(
+                  clang_getCompletionBriefComment( completion_string ) );
+
+  if ( !doc_string_.empty() )
+    detailed_info_.append( doc_string_ + "\n" );
+
   detailed_info_.append( return_type_ )
   .append( " " )
   .append( everything_except_return_type_ )
   .append( "\n" );
-
-  doc_string_ = YouCompleteMe::CXStringToString(
-                  clang_getCompletionBriefComment( completion_string ) );
 
   // This address issue #1287
   if ( kind_ == YouCompleteMe::FUNCTION || kind_ == YouCompleteMe::UNKNOWN )
