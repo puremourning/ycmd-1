@@ -112,6 +112,8 @@ def _MatchesSemanticTrigger( line_value, start_column, trigger_list ):
   if not line_length or start_column > line_length:
     return False
 
+  line_value = line_value[ :start_column ]
+
   match = False
   for trigger in trigger_list:
     match = ( _StringTriggerMatches( trigger, line_value, start_column )
