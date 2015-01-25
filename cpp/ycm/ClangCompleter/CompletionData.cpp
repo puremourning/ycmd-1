@@ -227,6 +227,10 @@ void CompletionData::ExtractDataFromChunk( CXCompletionString completion_string,
   if ( IsMainCompletionTextInfo( kind ) ) {
     if ( kind == CXCompletionChunk_LeftParen ) {
       saw_left_paren = true;
+      if ( original_string_.empty() )
+        original_string_ = "(*) ";
+      if ( everything_except_return_type_.empty() )
+        everything_except_return_type_ = "(*) ";
     }
 
     else if ( saw_left_paren &&
@@ -260,7 +264,7 @@ void CompletionData::ExtractDataFromChunk( CXCompletionString completion_string,
   if ( kind == CXCompletionChunk_ResultType )
     return_type_ = ChunkToString( completion_string, chunk_num );
 
-  if ( kind == CXCompletionChunk_TypedText )
+  if ( kind == CXCompletionChunk_TypedText || kind == CXCompletionChunk_Text )
     original_string_ = ChunkToString( completion_string, chunk_num );
 }
 
