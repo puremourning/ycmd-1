@@ -36,8 +36,9 @@ namespace YouCompleteMe {
 namespace {
 
 unsigned editingOptions() {
-  return ( CXTranslationUnit_DetailedPreprocessingRecord |
-           clang_defaultEditingTranslationUnitOptions() ) |
+  return clang_defaultEditingTranslationUnitOptions()          |
+         CXTranslationUnit_Incomplete                          |
+         CXTranslationUnit_DetailedPreprocessingRecord         |
          CXTranslationUnit_IncludeBriefCommentsInCodeCompletion;
 }
 
