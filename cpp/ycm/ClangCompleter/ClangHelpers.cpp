@@ -200,47 +200,6 @@ std::vector< CompletionData > ToCompletionDataVector(
 }
 
 
-enum ArgumentHintKind {
-  NO_ARGUMENT_HINT = 0,
-  EMPTY_ARGUMENT_HINT,
-  ARGUMENT_HINT_FOR_CURRENT_ARGUMENT
-};
-
-ArgumentHintKind GetArgumentHintKind( CXCompletionString completion_string ) {
-  const uint num_chunks = clang_getNumCompletionChunks( completion_string );
-
-  for ( uint i = 0; i < num_chunks; ++i ) {
-    const CXCompletionChunkKind chunk_kind =
-      clang_getCompletionChunkKind( completion_string, i );
-
-    if ( chunk_kind == CXCompletionChunk_CurrentParameter )
-      return ARGUMENT_HINT_FOR_CURRENT_ARGUMENT;
-    else if ( chunk_kind == CXCompletionChunk_TypedText )
-      return NO_ARGUMENT_HINT;
-  }
-
-  return EMPTY_ARGUMENT_HINT;
-}
-
-
-ArgumentHintKind GetHighestArgumentHintKind( CXCodeCompleteResults *results ) {
-  ArgumentHintKind argument_hint_kind = NO_ARGUMENT_HINT;
-
-  for ( uint i = 0; i < results->NumResults; ++i ) {
-    ArgumentHintKind current_argument_hint_kind =
-      GetArgumentHintKind( results->Results[ i ].CompletionString );
-
-    if ( current_argument_hint_kind > argument_hint_kind ) {
-      argument_hint_kind = current_argument_hint_kind;
-      if ( argument_hint_kind == ARGUMENT_HINT_FOR_CURRENT_ARGUMENT )
-        break;
-    }
-  }
-
-  return argument_hint_kind;
-}
-
-
 std::vector< CompletionData > ToArgumentHintDataVector(
   CXCodeCompleteResults *results ) {
   std::vector< CompletionData > hints;
@@ -248,12 +207,7 @@ std::vector< CompletionData > ToArgumentHintDataVector(
   if ( !results || !results->Results )
     return hints;
 
-  ArgumentHintKind highest_argument_hint_kind =
-    GetHighestArgumentHintKind( results );
-  if ( highest_argument_hint_kind == NO_ARGUMENT_HINT )
-    return hints;
-
-  hints.reserve( results->NumResults );
+  hints.reserve( 12 );
   unordered_map< std::string, uint > seen_data;
 
   for ( uint i = 0; i < results->NumResults; ++i ) {
@@ -262,20 +216,10 @@ std::vector< CompletionData > ToArgumentHintDataVector(
     if ( !CompletionStringAvailable( completion_result.CompletionString ) )
       continue;
 
-    ArgumentHintKind argument_hint_kind =
-        GetArgumentHintKind( completion_result.CompletionString );
-
-    if ( argument_hint_kind == NO_ARGUMENT_HINT )
+    if ( completion_result.CursorKind != CXCursor_OverloadCandidate )
       continue;
 
-    if ( argument_hint_kind == EMPTY_ARGUMENT_HINT &&
-         highest_argument_hint_kind != EMPTY_ARGUMENT_HINT )
-      continue;
-
-    assert(argument_hint_kind != NO_ARGUMENT_HINT);
-
-    CompletionData data( completion_result,
-                         argument_hint_kind != NO_ARGUMENT_HINT );
+    CompletionData data( completion_result, /*is_argument_hint=*/true );
 
     // Discard useless candidates
     if ( data.everything_except_return_type_.empty() )
