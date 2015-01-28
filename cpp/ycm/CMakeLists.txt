@@ -43,7 +43,9 @@ if ( USE_CLANG_COMPLETER AND
      NOT USE_SYSTEM_LIBCLANG AND
      NOT PATH_TO_LLVM_ROOT AND
      NOT EXTERNAL_LIBCLANG_PATH )
-  message( "Downloading Clang 3.5" )
+
+  message( FATAL_ERROR "This fork requires clang 3.7 revision 227309. "
+    "Until clang 3.7 gets released only --clang-completer with --system-libclang is supported.")
 
   set( CLANG_URL "http://llvm.org/releases/3.5.0" )
 
