@@ -18,8 +18,7 @@
 #include "CompletionData.h"
 #include "ClangUtils.h"
 
-#include <boost/algorithm/string/erase.hpp>
-#include <boost/move/move.hpp>
+#include <boost/regex.hpp>
 
 namespace YouCompleteMe {
 
@@ -107,14 +106,9 @@ std::string ChunkToString( CXCompletionString completion_string,
 }
 
 
-// NOTE: this function accepts the text param by value on purpose; it internally
-// needs a copy before processing the text so the copy might as well be made on
-// the parameter BUT if this code is compiled in C++11 mode a move constructor
-// can be called on the passed-in value. This is not possible if we accept the
-// param by const ref.
-std::string RemoveTwoConsecutiveUnderscores( std::string text ) {
-  boost::erase_all( text, "__" );
-  return text;
+std::string TrimUnderscores( const std::string &text ) {
+  static boost::regex underscores("\\<_+|_+\\>");
+  return boost::regex_replace( text, underscores, "" );
 }
 
 } // unnamed namespace
@@ -140,15 +134,14 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result,
 
   kind_ = CursorKindToCompletionKind( completion_result.CursorKind );
 
-  // We remove any two consecutive underscores from the function definition
-  // since identifiers with them are ugly, compiler-reserved names. Functions
+  // We trim any underscores from the function definition since identifiers
+  // with them are ugly, in most cases compiler-reserved names. Functions
   // from the standard library use parameter names like "__pos" and we want to
   // show them as just "pos". This will never interfere with client code since
   // ANY C++ identifier with two consecutive underscores in it is
   // compiler-reserved.
   everything_except_return_type_ =
-    RemoveTwoConsecutiveUnderscores(
-      boost::move( everything_except_return_type_ ) );
+    TrimUnderscores( everything_except_return_type_ );
 
   doc_string_ = YouCompleteMe::CXStringToString(
                   clang_getCompletionBriefComment( completion_string ) );
@@ -169,8 +162,7 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result,
     kind_ = NONE;
     return_type_ = "";
     original_string_ = "";
-    everything_except_return_type_ =
-      RemoveTwoConsecutiveUnderscores( current_arg_ );
+    everything_except_return_type_ = TrimUnderscores( current_arg_ );
   }
 }
 
