@@ -163,6 +163,8 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result,
     return_type_ = "";
     original_string_ = "";
     everything_except_return_type_ = TrimUnderscores( current_arg_ );
+    if ( everything_except_return_type_.empty() )
+      everything_except_return_type_ = "void";
   }
 }
 
