@@ -1,7 +1,11 @@
 ycmd: a code-completion & comprehension server
 ==============================================
 
-[![Build Status](https://travis-ci.org/Valloric/ycmd.png?branch=master)](https://travis-ci.org/Valloric/ycmd)
+
+This is a fork of [ycmd][] providing a special support for C and C++.
+
+It adds support for requests of code-completion to provide prototype
+information of what is expected to be inserted in argument locations.
 
 ycmd is a server that provides APIs for code-completion and other
 code-comprehension use-cases like semantic GoTo commands (and others). For
@@ -14,23 +18,37 @@ The best way to learn how to interact with ycmd is by reading through (and
 running) the [`example_client.py`][example-client] file. See the [README for the
 examples][example-readme] folder for details on how to run the example client.
 
-Known ycmd clients:
+Known oblitum's ycmd clients:
 ------------------
 
-- [YouCompleteMe][ycm]: Vim client, stable and exposes all ycmd features.
-- [emacs-ycmd][]: Emacs client, still a bit experimental.
+- [oblitum's YouCompleteMe][oblitum-ycm]: Vim client, stable and exposes all
+  ycmd features.
 
-Feel free to send a pull request adding a link to your client here if you've
-built one.
+The sole use of this fork is to provide functionality for
+[oblitum/YouCompleteMe][oblitum-ycm].
+
+Expectations
+------------
+
+The expectation for this fork is that these changes lands in the official one or
+that the newer libclang features gets used in there.
+Once this happens it'll probably cease to exist.
+
+Thanks
+------
+
+- Strahinja Val Markovic
+- Manuel Klimek
+- Xavier Deguillard
 
 Building
 --------
 
-[Clients commonly build and set up ycmd for you; you are unlikely to need to
-build ycmd yourself unless you want to build a new client.]
+<sub> Clients commonly build and set up ycmd for you; you are unlikely to need to
+build ycmd yourself unless you want to build a new client. </sub>
 
 This is all for Ubuntu Linux. Details on getting ycmd running on other OS's can be
-found in [YCM's instructions][ycm-install] (ignore the Vim-specific parts).
+found in [YCM's instructions][oblitum-ycm] (ignore the Vim-specific parts).
 
 First, install the dependencies:
 ```
@@ -42,11 +60,11 @@ When you first clone the repository you'll need to update the submodules:
 git submodule update --init --recursive
 ```
 
-Then run `./build.py --clang-completer --omnisharp-completer`.  This should get
+Then run `./build.py --clang-completer --system-libclang`.  This should get
 you going.
 
 For more detailed instructions on building ycmd, see [YCM's
-instructions][ycm-install] (ignore the Vim-specific parts).
+instructions][oblitum-ycm] (ignore the Vim-specific parts).
 
 API notes
 ---------
@@ -198,39 +216,46 @@ HMAC auth was added to block this attack vector.
 Contact
 -------
 
-If you have questions about the plugin or need help, please use the
-[ycmd-users][] mailing list.
+The author's homepage is <http://nosubstance.me>.
 
-The author's homepage is <http://val.markovic.io>.
+The original author's homepage is <http://val.markovic.io>.
 
 Project Management
 ------------------
 
-This open-source project is run by me, Strahinja Val Markovic. I also happen to
-work for Google and the code I write here is under Google copyright (for the
-sake of simplicity and other reasons). This does **NOT** mean that this is an
-official Google product (it isn't) or that Google has (or wants to have)
-anything to do with it.
+This open-source fork is run by me, Francisco Lopes. I've contributed to clang
+and made the necessary plugin changes in my free-time. Manuel Klimek was the
+reviewer.
+
+The original notice on this section was:
+
+> This open-source project is run by me, Strahinja Val Markovic. I also happen
+> to work for Google and the code I write here is under Google copyright (for
+> the sake of simplicity and other reasons). This does **NOT** mean that this is
+> an official Google product (it isn't) or that Google has (or wants to have)
+> anything to do with it.
 
 License
 -------
 
-This software is licensed under the [GPL v3 license][gpl].
+This software is licensed under the [GPL v3 license][gpl].  
+© 2015 Francisco Lopes.  
 © 2014 Google Inc.
 
-[ycmd-users]: https://groups.google.com/forum/?hl=en#!forum/ycm-users
+[ycmd]: https://github.com/Valloric/ycmd/
 [ycm]: http://valloric.github.io/YouCompleteMe/
+[oblitum-ycm]: https://github.com/oblitum/YouCompleteMe/
+[gpl]: http://www.gnu.org/copyleft/gpl.html
 [semver]: http://semver.org/
 [hmac]: http://en.wikipedia.org/wiki/Hash-based_message_authentication_code
 [exploit]: https://groups.google.com/d/topic/ycm-users/NZAPrvaYgxo/discussion
-[example-client]: https://github.com/Valloric/ycmd/blob/master/examples/example_client.py
-[example-readme]: https://github.com/Valloric/ycmd/blob/master/examples/README.md
-[trigger-defaults]: https://github.com/Valloric/ycmd/blob/master/ycmd/completers/completer_utils.py#L24
+[example-client]: https://github.com/oblitum/ycmd/blob/master/examples/example_client.py
+[example-readme]: https://github.com/oblitum/ycmd/blob/master/examples/README.md
+[trigger-defaults]: https://github.com/oblitum/ycmd/blob/master/ycmd/completers/completer_utils.py#L24
 [subsequence]: http://en.wikipedia.org/wiki/Subsequence
-[ycm-install]: https://github.com/Valloric/YouCompleteMe/blob/master/README.md#mac-os-x-super-quick-installation
-[def-settings]: https://github.com/Valloric/ycmd/blob/master/ycmd/default_settings.json
+[def-settings]: https://github.com/oblitum/ycmd/blob/master/ycmd/default_settings.json
 [base64]: http://en.wikipedia.org/wiki/Base64
 [mkstemp]: http://man7.org/linux/man-pages/man3/mkstemp.3.html
-[options]: https://github.com/Valloric/YouCompleteMe#options
-[extra-conf-doc]: https://github.com/Valloric/YouCompleteMe#c-family-semantic-completion-engine-usage
+[options]: https://github.com/oblitum/YouCompleteMe#options
+[extra-conf-doc]: https://github.com/oblitum/YouCompleteMe#c-family-semantic-completion-engine-usage
 [emacs-ycmd]: https://github.com/abingham/emacs-ycmd
