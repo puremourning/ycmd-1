@@ -36,11 +36,12 @@ namespace YouCompleteMe {
 namespace {
 
 unsigned editingOptions() {
-  return clang_defaultEditingTranslationUnitOptions()          |
-         CXTranslationUnit_Incomplete                          |
-         CXTranslationUnit_DetailedPreprocessingRecord         |
-         CXTranslationUnit_IncludeBriefCommentsInCodeCompletion;
+  return CXTranslationUnit_DetailedPreprocessingRecord |
+         CXTranslationUnit_Incomplete |
+         CXTranslationUnit_IncludeBriefCommentsInCodeCompletion |
+         clang_defaultEditingTranslationUnitOptions();
 }
+
 
 unsigned completionOptions() {
   return clang_defaultCodeCompleteOptions() |
