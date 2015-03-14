@@ -251,7 +251,7 @@ This software is licensed under the [GPL v3 license][gpl].
 [exploit]: https://groups.google.com/d/topic/ycm-users/NZAPrvaYgxo/discussion
 [example-client]: https://github.com/oblitum/ycmd/blob/master/examples/example_client.py
 [example-readme]: https://github.com/oblitum/ycmd/blob/master/examples/README.md
-[trigger-defaults]: https://github.com/oblitum/ycmd/blob/master/ycmd/completers/completer_utils.py#L24
+[trigger-defaults]: https://github.com/oblitum/ycmd/blob/master/ycmd/completers/completer_utils.py#L148
 [subsequence]: http://en.wikipedia.org/wiki/Subsequence
 [def-settings]: https://github.com/oblitum/ycmd/blob/master/ycmd/default_settings.json
 [base64]: http://en.wikipedia.org/wiki/Base64
@@ -259,3 +259,4 @@ This software is licensed under the [GPL v3 license][gpl].
 [options]: https://github.com/oblitum/YouCompleteMe#options
 [extra-conf-doc]: https://github.com/oblitum/YouCompleteMe#c-family-semantic-completion-engine-usage
 [emacs-ycmd]: https://github.com/abingham/emacs-ycmd
+[gpl]: http://www.gnu.org/copyleft/gpl.html
