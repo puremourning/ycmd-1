@@ -63,7 +63,11 @@ class RequestWrap( object ):
     # Handling ''.splitlines() returning [] instead of ['']
     if contents is not None and len( contents ) == 0:
       return ''
-    return contents.splitlines()[ self._request[ 'line_num' ] - 1 ]
+    lines = contents.splitlines()
+    line_num = self._request[ 'line_num' ] - 1
+    if line_num >= len(lines):
+      line_num = len(lines) - 1
+    return lines[ line_num ]
 
 
   def CompletionStartColumn( self ):
