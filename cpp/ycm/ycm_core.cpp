@@ -100,7 +100,7 @@ BOOST_PYTHON_MODULE(ycm_core)
     .def( "CandidatesForLocationInFile",
           &ClangCompleter::CandidatesForLocationInFile )
     .def( "GetTypeAtLocation", &ClangCompleter::GetTypeAtLocation )
-    .def( "GetEnclosingFunctionAtLocation", 
+    .def( "GetEnclosingFunctionAtLocation",
           &ClangCompleter::GetEnclosingFunctionAtLocation );
 
   enum_< CompletionKind >( "CompletionKind" )
