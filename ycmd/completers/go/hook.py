@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright (C) 2013  Google Inc.
+# Copyright (C) 2015  Google Inc.
 #
 # This file is part of YouCompleteMe.
 #
@@ -17,34 +17,17 @@
 # You should have received a copy of the GNU General Public License
 # along with YouCompleteMe.  If not, see <http://www.gnu.org/licenses/>.
 
-import json
-import os
-from frozendict import frozendict
+import logging
+from ycmd.completers.go.gocode_completer import \
+    GoCodeCompleter, FindGoCodeBinary
 
-_USER_OPTIONS = {}
+_logger = logging.getLogger( __name__ )
 
-def SetAll( new_options ):
-  global _USER_OPTIONS
-  _USER_OPTIONS = frozendict( new_options )
-
-
-def GetAll():
-  return _USER_OPTIONS
-
-
-def Value( key ):
-  return _USER_OPTIONS[ key ]
-
-
-def LoadDefaults():
-  SetAll( DefaultOptions() )
-
-
-def DefaultOptions():
-  settings_path = os.path.join(
-      os.path.dirname( os.path.abspath( __file__ ) ), 'default_settings.json' )
-  with open( settings_path ) as f:
-    options = json.loads( f.read() )
-    options.pop( 'hmac_secret', None )
-    return options
+def GetCompleter( user_options ):
+  binary = FindGoCodeBinary( user_options )
+  if binary:
+    _logger.info("Enabling go completion using %s", binary)
+    return GoCodeCompleter( user_options )
+  _logger.info("Could not find gocode binary, no go completion.")
+  return None
 

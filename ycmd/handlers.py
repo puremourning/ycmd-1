@@ -48,6 +48,7 @@ from ycmd.request_wrap import RequestWrap
 bottle.Request.MEMFILE_MAX = 1000 * 1024
 
 _server_state = None
+_hmac_secret = None
 _logger = logging.getLogger( __name__ )
 app = bottle.Bottle()
 
@@ -101,12 +102,6 @@ def GetCompletions():
       request_data.CompletionStartColumn() ) )
 
 
-@app.get( '/user_options' )
-def GetUserOptions():
-  _logger.info( 'Received user options GET request' )
-  return _JsonResponse( dict( _server_state.user_options ) )
-
-
 @app.get( '/healthy' )
 def GetHealthy():
   _logger.info( 'Received health request' )
@@ -123,12 +118,6 @@ def GetReady():
     cs_completer = _server_state.GetFiletypeCompleter( ['cs'] )
     return _JsonResponse( cs_completer.ServerIsReady() )
   return _JsonResponse( True )
-
-
-@app.post( '/user_options' )
-def SetUserOptions():
-  _logger.info( 'Received user options POST request' )
-  UpdateUserOptions( request.json )
 
 
 @app.post( '/semantic_completion_available' )
@@ -195,7 +184,7 @@ def DebugInfo():
 def ErrorHandler( httperror ):
   body = _JsonResponse( BuildExceptionResponse( httperror.exception,
                                                 httperror.traceback ) )
-  hmac_plugin.SetHmacHeader( body, user_options_store.Value( 'hmac_secret' ) )
+  hmac_plugin.SetHmacHeader( body, _hmac_secret )
   return body
 
 
@@ -229,12 +218,19 @@ def ServerShutdown():
     extra_conf_store.Shutdown()
 
 
+def SetHmacSecret( hmac_secret ):
+  global _hmac_secret
+  _hmac_secret = hmac_secret
+
+
 def UpdateUserOptions( options ):
   global _server_state
 
   if not options:
     return
 
+  # This should never be passed in, but let's try to remove it just in case.
+  options.pop( 'hmac_secret', None )
   user_options_store.SetAll( options )
   _server_state = server_state.ServerState( options )
 
