@@ -67,26 +67,28 @@ def PathToTestFile( test_basename ):
   return os.path.join( PathToTestDataDir(), test_basename )
 
 
-def StopOmniSharpServer( app ):
+def StopOmniSharpServer( app, filename ):
   app.post_json( '/run_completer_command',
                  BuildRequest( completer_target = 'filetype_default',
                                command_arguments = ['StopServer'],
+                               filepath = filename,
                                filetype = 'cs' ) )
 
 
-def WaitUntilOmniSharpServerReady( app ):
+def WaitUntilOmniSharpServerReady( app, filename ):
   retries = 100;
   success = False;
 
   # If running on Travis CI, keep trying forever. Travis will kill the worker
   # after 10 mins if nothing happens.
   while retries > 0 or OnTravis():
-    result = app.get( '/ready', { 'include_subservers': 1 } ).json
+    result = app.get( '/ready', { 'subserver': 'cs' } ).json
     if result:
       success = True;
       break
     request = BuildRequest( completer_target = 'filetype_default',
                             command_arguments = [ 'ServerTerminated' ],
+                            filepath = filename,
                             filetype = 'cs' )
     result = app.post_json( '/run_completer_command', request ).json
     if result:
@@ -98,3 +100,8 @@ def WaitUntilOmniSharpServerReady( app ):
     raise RuntimeError( "Timeout waiting for OmniSharpServer" )
 
 
+def StopGoCodeServer( app ):
+  app.post_json( '/run_completer_command',
+                 BuildRequest( completer_target = 'filetype_default',
+                               command_arguments = ['StopServer'],
+                               filetype = 'go' ) )

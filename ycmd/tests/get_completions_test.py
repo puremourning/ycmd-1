@@ -23,23 +23,24 @@ SetUpPythonPath()
 import httplib
 from .test_utils import ( Setup, BuildRequest, PathToTestFile,
                           ChangeSpecificOptions, StopOmniSharpServer,
-                          WaitUntilOmniSharpServerReady )
+                          WaitUntilOmniSharpServerReady, StopGoCodeServer )
 from webtest import TestApp, AppError
 from nose.tools import eq_, with_setup
-from hamcrest import ( assert_that, has_item, has_items, has_entry,
+from hamcrest import ( assert_that, has_item, has_items, has_entry, has_entries,
                        contains_inanyorder, empty, greater_than,
                        contains_string )
-from ..responses import ( BuildCompletionData, UnknownExtraConf,
-                          NoExtraConfDetected )
+from ..responses import  UnknownExtraConf, NoExtraConfDetected
 from .. import handlers
 import bottle
 
 bottle.debug( True )
 
 
-# TODO: Make the other tests use this helper too instead of BuildCompletionData
-def CompletionEntryMatcher( insertion_text ):
-  return has_entry( 'insertion_text', insertion_text )
+def CompletionEntryMatcher( insertion_text, extra_menu_info = None ):
+  match = { 'insertion_text': insertion_text }
+  if extra_menu_info:
+    match.update( { 'extra_menu_info': extra_menu_info } )
+  return has_entries( match )
 
 
 def CompletionLocationMatcher( location_type, value ):
@@ -77,9 +78,10 @@ def GetCompletions_IdentifierCompleter_Works_test():
                                   column_num = 3 )
   response_data = app.post_json( '/completions', completion_data ).json
 
-  eq_( [ BuildCompletionData( 'foo' ),
-         BuildCompletionData( 'foogoo' ) ], response_data[ 'completions' ] )
   eq_( 1, response_data[ 'completion_start_column' ] )
+  assert_that( response_data[ 'completions' ],
+               has_items( CompletionEntryMatcher( 'foo' ),
+                          CompletionEntryMatcher( 'foogoo' ) ) )
 
 
 @with_setup( Setup )
@@ -109,12 +111,12 @@ def GetCompletions_IdentifierCompleter_WorksForSpecialIdentifierChars_test():
   completion_data = BuildRequest( contents = 'fo ' + contents,
                                   filetype = 'css',
                                   column_num = 3 )
-  response_data = app.post_json( '/completions', completion_data ).json
+  results = app.post_json( '/completions',
+                           completion_data ).json[ 'completions' ]
 
-  eq_( [ BuildCompletionData( 'font-size' ),
-         BuildCompletionData( 'font-family' ) ],
-       response_data[ 'completions' ] )
-
+  assert_that( results,
+               has_items( CompletionEntryMatcher( 'font-size' ),
+                          CompletionEntryMatcher( 'font-family' ) ) )
 
 
 @with_setup( Setup )
@@ -130,7 +132,7 @@ def GetCompletions_CsCompleter_Works_test():
                              event_name = 'FileReadyToParse' )
 
   app.post_json( '/event_notification', event_data )
-  WaitUntilOmniSharpServerReady( app )
+  WaitUntilOmniSharpServerReady( app, filepath )
 
   completion_data = BuildRequest( filepath = filepath,
                                   filetype = 'cs',
@@ -143,7 +145,43 @@ def GetCompletions_CsCompleter_Works_test():
                           CompletionEntryMatcher( 'CursorSize' ) ) )
   eq_( 12, response_data[ 'completion_start_column' ] )
 
-  StopOmniSharpServer( app )
+  StopOmniSharpServer( app, filepath )
+
+
+@with_setup( Setup )
+def GetCompletions_CsCompleter_MultipleSolution_Works_test():
+  app = TestApp( handlers.app )
+  app.post_json( '/ignore_extra_conf_file',
+                 { 'filepath': PathToTestFile( '.ycm_extra_conf.py' ) } )
+  filepaths = [ PathToTestFile( 'testy/Program.cs' ),
+                PathToTestFile( 'testy-multiple-solutions/'
+                                'solution-named-like-folder/'
+                                'testy/'
+                                'Program.cs' ) ]
+  lines = [ 10, 9 ]
+  for filepath, line in zip( filepaths, lines ):
+    contents = open( filepath ).read()
+    event_data = BuildRequest( filepath = filepath,
+                               filetype = 'cs',
+                               contents = contents,
+                               event_name = 'FileReadyToParse' )
+
+    app.post_json( '/event_notification', event_data )
+    WaitUntilOmniSharpServerReady( app, filepath )
+
+    completion_data = BuildRequest( filepath = filepath,
+                                    filetype = 'cs',
+                                    contents = contents,
+                                    line_num = line,
+                                    column_num = 12 )
+    response_data = app.post_json( '/completions', completion_data ).json
+    assert_that( response_data[ 'completions' ],
+                  has_items( CompletionEntryMatcher( 'CursorLeft' ),
+                             CompletionEntryMatcher( 'CursorSize' ) ) )
+    eq_( 12, response_data[ 'completion_start_column' ] )
+
+    StopOmniSharpServer( app, filepath )
+
 
 @with_setup( Setup )
 def GetCompletions_CsCompleter_PathWithSpace_test():
@@ -158,7 +196,7 @@ def GetCompletions_CsCompleter_PathWithSpace_test():
                              event_name = 'FileReadyToParse' )
 
   app.post_json( '/event_notification', event_data )
-  WaitUntilOmniSharpServerReady( app )
+  WaitUntilOmniSharpServerReady( app, filepath )
 
   completion_data = BuildRequest( filepath = filepath,
                                   filetype = 'cs',
@@ -171,7 +209,7 @@ def GetCompletions_CsCompleter_PathWithSpace_test():
                           CompletionEntryMatcher( 'CursorSize' ) ) )
   eq_( 12, response_data[ 'completion_start_column' ] )
 
-  StopOmniSharpServer( app )
+  StopOmniSharpServer( app, filepath )
 
 
 @with_setup( Setup )
@@ -187,7 +225,7 @@ def GetCompletions_CsCompleter_HasBothImportsAndNonImport_test():
                              event_name = 'FileReadyToParse' )
 
   app.post_json( '/event_notification', event_data )
-  WaitUntilOmniSharpServerReady( app )
+  WaitUntilOmniSharpServerReady( app, filepath )
 
   completion_data = BuildRequest( filepath = filepath,
                                   filetype = 'cs',
@@ -202,7 +240,7 @@ def GetCompletions_CsCompleter_HasBothImportsAndNonImport_test():
                has_items( CompletionEntryMatcher( 'DateTime' ),
                           CompletionEntryMatcher( 'DateTimeStyles' ) ) )
 
-  StopOmniSharpServer( app )
+  StopOmniSharpServer( app, filepath )
 
 
 @with_setup( Setup )
@@ -218,7 +256,7 @@ def GetCompletions_CsCompleter_ImportsOrderedAfter_test():
                              event_name = 'FileReadyToParse' )
 
   app.post_json( '/event_notification', event_data )
-  WaitUntilOmniSharpServerReady( app )
+  WaitUntilOmniSharpServerReady( app, filepath )
 
   completion_data = BuildRequest( filepath = filepath,
                                   filetype = 'cs',
@@ -237,7 +275,104 @@ def GetCompletions_CsCompleter_ImportsOrderedAfter_test():
                             if not val[ 'extra_data' ][ 'required_namespace_import' ] )
 
   assert_that( min_import_index, greater_than( max_nonimport_index ) ),
-  StopOmniSharpServer( app )
+  StopOmniSharpServer( app, filepath )
+
+
+@with_setup( Setup )
+def GetCompletions_CsCompleter_ForcedReturnsResults_test():
+  app = TestApp( handlers.app )
+  app.post_json( '/ignore_extra_conf_file',
+                 { 'filepath': PathToTestFile( '.ycm_extra_conf.py' ) } )
+  filepath = PathToTestFile( 'testy/ContinuousTest.cs' )
+  contents = open( filepath ).read()
+  event_data = BuildRequest( filepath = filepath,
+                             filetype = 'cs',
+                             contents = contents,
+                             event_name = 'FileReadyToParse' )
+
+  app.post_json( '/event_notification', event_data )
+  WaitUntilOmniSharpServerReady( app, filepath )
+
+  completion_data = BuildRequest( filepath = filepath,
+                                  filetype = 'cs',
+                                  contents = contents,
+                                  line_num = 9,
+                                  column_num = 21,
+                                  force_semantic = True,
+                                  query = 'Date' )
+  response_data = app.post_json( '/completions', completion_data ).json
+
+  assert_that( response_data[ 'completions' ],
+               has_items( CompletionEntryMatcher( 'String' ),
+                          CompletionEntryMatcher( 'StringBuilder' ) ) )
+  StopOmniSharpServer( app, filepath )
+
+
+@with_setup( Setup )
+def GetCompletions_CsCompleter_NonForcedReturnsNoResults_test():
+  app = TestApp( handlers.app )
+  app.post_json( '/ignore_extra_conf_file',
+                 { 'filepath': PathToTestFile( '.ycm_extra_conf.py' ) } )
+  filepath = PathToTestFile( 'testy/ContinuousTest.cs' )
+  contents = open( filepath ).read()
+  event_data = BuildRequest( filepath = filepath,
+                             filetype = 'cs',
+                             contents = contents,
+                             event_name = 'FileReadyToParse' )
+
+  app.post_json( '/event_notification', event_data )
+  WaitUntilOmniSharpServerReady( app, filepath )
+
+  completion_data = BuildRequest( filepath = filepath,
+                                  filetype = 'cs',
+                                  contents = contents,
+                                  line_num = 9,
+                                  column_num = 21,
+                                  force_semantic = False,
+                                  query = 'Date' )
+  results = app.post_json( '/completions', completion_data ).json[ 'completions' ]
+
+  assert_that( results, empty() )
+  StopOmniSharpServer( app, filepath )
+
+
+@with_setup( Setup )
+def GetCompletions_CsCompleter_ForcedDividesCache_test():
+  app = TestApp( handlers.app )
+  app.post_json( '/ignore_extra_conf_file',
+                 { 'filepath': PathToTestFile( '.ycm_extra_conf.py' ) } )
+  filepath = PathToTestFile( 'testy/ContinuousTest.cs' )
+  contents = open( filepath ).read()
+  event_data = BuildRequest( filepath = filepath,
+                             filetype = 'cs',
+                             contents = contents,
+                             event_name = 'FileReadyToParse' )
+
+  app.post_json( '/event_notification', event_data )
+  WaitUntilOmniSharpServerReady( app, filepath )
+
+  completion_data = BuildRequest( filepath = filepath,
+                                  filetype = 'cs',
+                                  contents = contents,
+                                  line_num = 9,
+                                  column_num = 21,
+                                  force_semantic = True,
+                                  query = 'Date' )
+  results = app.post_json( '/completions', completion_data ).json[ 'completions' ]
+
+  assert_that( results, not(empty()) )
+
+  completion_data = BuildRequest( filepath = filepath,
+                                  filetype = 'cs',
+                                  contents = contents,
+                                  line_num = 9,
+                                  column_num = 21,
+                                  force_semantic = False,
+                                  query = 'Date' )
+  results = app.post_json( '/completions', completion_data ).json[ 'completions' ]
+
+  assert_that( results, empty() )
+  StopOmniSharpServer( app, filepath )
 
 
 @with_setup( Setup )
@@ -253,14 +388,45 @@ def GetCompletions_CsCompleter_ReloadSolutionWorks_test():
                              event_name = 'FileReadyToParse' )
 
   app.post_json( '/event_notification', event_data )
-  WaitUntilOmniSharpServerReady( app )
+  WaitUntilOmniSharpServerReady( app, filepath )
   result = app.post_json( '/run_completer_command',
                           BuildRequest( completer_target = 'filetype_default',
                                         command_arguments = [ 'ReloadSolution' ],
+                                        filepath = filepath,
                                         filetype = 'cs' ) ).json
 
-  StopOmniSharpServer( app )
+  StopOmniSharpServer( app, filepath )
   eq_( result, True )
+
+
+@with_setup( Setup )
+def GetCompletions_CsCompleter_ReloadSolution_MultipleSolution_Works_test():
+  app = TestApp( handlers.app )
+  app.post_json( '/ignore_extra_conf_file',
+                 { 'filepath': PathToTestFile( '.ycm_extra_conf.py' ) } )
+  filepaths = [ PathToTestFile( 'testy/Program.cs' ),
+                PathToTestFile( 'testy-multiple-solutions/'
+                                'solution-named-like-folder/'
+                                'testy/'
+                                'Program.cs' ) ]
+  for filepath in filepaths:
+    contents = open( filepath ).read()
+    event_data = BuildRequest( filepath = filepath,
+                               filetype = 'cs',
+                               contents = contents,
+                               event_name = 'FileReadyToParse' )
+
+    app.post_json( '/event_notification', event_data )
+    WaitUntilOmniSharpServerReady( app, filepath )
+    result = app.post_json( '/run_completer_command',
+                            BuildRequest( completer_target = 'filetype_default',
+                                          command_arguments = [ 'ReloadSolution' ],
+                                          filepath = filepath,
+                                          filetype = 'cs' ) ).json
+
+    StopOmniSharpServer( app, filepath )
+    eq_( result, True )
+
 
 def _CsCompleter_SolutionSelectCheck( app, sourcefile, reference_solution,
                                       extra_conf_store = None ):
@@ -270,22 +436,12 @@ def _CsCompleter_SolutionSelectCheck( app, sourcefile, reference_solution,
                  { 'filepath': PathToTestFile( '.ycm_extra_conf.py' ) } )
   if extra_conf_store:
     app.post_json( '/load_extra_conf_file', { 'filepath': extra_conf_store } )
-  contents = open( sourcefile ).read()
-  event_data = BuildRequest( filepath = sourcefile,
-                             filetype = 'cs',
-                             contents = contents,
-                             event_name = 'FileReadyToParse' )
 
-  # Here the server should raise an exception if it can't start
-  app.post_json( '/event_notification', event_data )
-  # Assuming we have a successful launch
   result = app.post_json( '/run_completer_command',
                           BuildRequest( completer_target = 'filetype_default',
                                         command_arguments = [ 'SolutionFile' ],
+                                        filepath = sourcefile,
                                         filetype = 'cs' ) ).json
-  # We don't want the server to linger around, stop it once start completed
-  WaitUntilOmniSharpServerReady( app )
-  StopOmniSharpServer( app )
   # Now that cleanup is done, verify solution file
   eq_( reference_solution , result)
 
@@ -399,8 +555,8 @@ def GetCompletions_CsCompleter_DoesntStartWithAmbiguousMultipleSolutions_test():
   # the test passes if we caught an exception when trying to start it,
   # so raise one if it managed to start
   if not exception_caught:
-    WaitUntilOmniSharpServerReady( app )
-    StopOmniSharpServer( app )
+    WaitUntilOmniSharpServerReady( app, filepath )
+    StopOmniSharpServer( app, filepath )
     raise Exception( ( 'The Omnisharp server started, despite us not being able '
                       'to find a suitable solution file to feed it. Did you '
                       'fiddle with the solution finding code in '
@@ -625,9 +781,11 @@ def GetCompletions_IdentifierCompleter_SyntaxKeywordsAdded_test():
   completion_data = BuildRequest( contents =  'oo ',
                                   column_num = 3 )
 
-  eq_( [ BuildCompletionData( 'foo' ),
-         BuildCompletionData( 'zoo' ) ],
-       app.post_json( '/completions', completion_data ).json[ 'completions' ] )
+  results = app.post_json( '/completions',
+                                 completion_data ).json[ 'completions' ]
+  assert_that( results,
+               has_items( CompletionEntryMatcher( 'foo' ),
+                          CompletionEntryMatcher( 'zoo' ) ) )
 
 
 @with_setup( Setup )
@@ -645,9 +803,12 @@ def GetCompletions_UltiSnipsCompleter_Works_test():
   completion_data = BuildRequest( contents =  'oo ',
                                   column_num = 3 )
 
-  eq_( [ BuildCompletionData( 'foo', '<snip> bar' ),
-         BuildCompletionData( 'zoo', '<snip> goo' ) ],
-       app.post_json( '/completions', completion_data ).json[ 'completions' ] )
+  results = app.post_json( '/completions',
+                           completion_data ).json[ 'completions' ]
+  assert_that( results,
+               has_items(
+                 CompletionEntryMatcher( 'foo', extra_menu_info='<snip> bar' ),
+                 CompletionEntryMatcher( 'zoo', extra_menu_info='<snip> goo' ) ) )
 
 
 @with_setup( Setup )
@@ -707,7 +868,6 @@ def GetCompletions_JediCompleter_UnicodeDescription_test():
 
   results = app.post_json( '/completions',
                            completion_data ).json[ 'completions' ]
-  print results
   assert_that( results, has_item(
                           has_entry( 'detailed_info',
                             contains_string( u'aafäö' ) ) ) )
@@ -726,6 +886,35 @@ def GetCompletions_GoCodeCompleter_test():
 
   results = app.post_json( '/completions',
                            completion_data ).json[ 'completions' ]
-  assert_that( results, has_item(
-                          has_entry( 'insertion_text',
-                            contains_string( u'Logger' ) ) ) )
+  assert_that( results, has_item( CompletionEntryMatcher( u'Logger' ) ) )
+
+  StopGoCodeServer( app )
+
+
+@with_setup( Setup )
+def GetCompletions_TypeScriptCompleter_test():
+  app = TestApp( handlers.app )
+  filepath = PathToTestFile( 'test.ts' )
+  contents = open ( filepath ).read()
+
+  event_data = BuildRequest( filepath = filepath,
+                             filetype = 'typescript',
+                             contents = contents,
+                             event_name = 'BufferVisit' )
+
+  app.post_json( '/event_notification', event_data )
+
+  completion_data = BuildRequest( filepath = filepath,
+                                  filetype = 'typescript',
+                                  contents = contents,
+                                  force_semantic = True,
+                                  line_num = 11,
+                                  column_num = 6 )
+
+  results = app.post_json( '/completions',
+                           completion_data ).json[ 'completions' ]
+  assert_that( results,
+               has_items( CompletionEntryMatcher( 'methodA' ),
+                          CompletionEntryMatcher( 'methodB' ),
+                          CompletionEntryMatcher( 'methodC' ) ) )
+
