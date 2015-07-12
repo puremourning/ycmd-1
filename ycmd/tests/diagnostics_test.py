@@ -42,6 +42,14 @@ from pprint import pprint
 
 bottle.debug( True )
 
+system_libs = [
+  '-isystem', '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1',
+  '-isystem', '/usr/local/include',
+  '-isystem', '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/include',
+  '-isystem', '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include',
+  '-isystem', '/usr/include',
+]
+
 @with_setup( Setup )
 def Diagnostics_ClangCompleter_ZeroBasedLineAndColumn_test():
   app = TestApp( handlers.app )
@@ -53,7 +61,7 @@ void foo() {
 // Padding to 5 lines
 """
 
-  event_data = BuildRequest( compilation_flags = ['-x', 'c++'],
+  event_data = BuildRequest( compilation_flags = ['-x', 'c++'] + system_libs,
                              event_name = 'FileReadyToParse',
                              contents = contents,
                              filetype = 'cpp' )
@@ -102,7 +110,7 @@ void foo() {
 // Padding to 5 lines
 """
 
-  event_data = BuildRequest( compilation_flags = ['-x', 'c++'],
+  event_data = BuildRequest( compilation_flags = ['-x', 'c++'] + system_libs,
                              event_name = 'FileReadyToParse',
                              contents = contents,
                              filetype = 'cpp' )
@@ -138,7 +146,7 @@ struct Foo {
 };
 """
 
-  event_data = BuildRequest( compilation_flags = ['-x', 'c++'],
+  event_data = BuildRequest( compilation_flags = ['-x', 'c++'] + system_libs,
                              event_name = 'FileReadyToParse',
                              contents = contents,
                              filepath = '/foo.h',
@@ -259,7 +267,7 @@ struct Foo {
 };
 """
 
-  diag_data = BuildRequest( compilation_flags = ['-x', 'c++'],
+  diag_data = BuildRequest( compilation_flags = ['-x', 'c++'] + system_libs,
                             line_num = 3,
                             contents = contents,
                             filetype = 'cpp' )
