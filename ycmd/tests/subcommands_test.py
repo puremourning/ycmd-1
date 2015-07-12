@@ -38,6 +38,14 @@ from hamcrest import ( assert_that, contains, has_entries, equal_to )
 
 bottle.debug( True )
 
+system_libs = [
+  '-isystem', '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1',
+  '-isystem', '/usr/local/include',
+  '-isystem', '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/6.1.0/include',
+  '-isystem', '/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include',
+  '-isystem', '/usr/include',
+]
+
 @with_setup( Setup )
 def RunCompleterCommand_GoTo_Jedi_ZeroBasedLineAndColumn_test():
   app = TestApp( handlers.app )
@@ -71,7 +79,7 @@ def RunCompleterCommand_GoTo_Clang_ZeroBasedLineAndColumn_test():
 
   goto_data = BuildRequest( completer_target = 'filetype_default',
                             command_arguments = ['GoToDefinition'],
-                            compilation_flags = ['-x', 'c++'],
+                            compilation_flags = ['-x', 'c++'] + system_libs,
                             line_num = 10,
                             column_num = 3,
                             contents = contents,
@@ -92,7 +100,7 @@ def _RunCompleterCommand_GoTo_all_Clang(filename, command, test):
     'command_arguments' : command,
     'compilation_flags' : ['-x',
                            'c++',
-                           '-std=c++11'],
+                           '-std=c++11'] + system_libs,
     'line_num'          : 10,
     'column_num'        : 3,
     'contents'          : contents,
@@ -229,7 +237,7 @@ def _RunCompleterCommand_Message_Clang(filename, test, command):
     'command_arguments' : command,
     'compilation_flags' : ['-x',
                            'c++',
-                           '-std=c++11'],
+                           '-std=c++11'] + system_libs,
     'line_num'          : 10,
     'column_num'        : 3,
     'contents'          : contents,
@@ -378,7 +386,7 @@ def _RunFixItTest_Clang( line, column, lang, file_name, check ):
                              '-std=c++11',
                              '-Wall',
                              '-Wextra',
-                             '-pedantic'],
+                             '-pedantic'] + system_libs,
       'filetype'          : 'cpp',
     },
 
@@ -386,7 +394,7 @@ def _RunFixItTest_Clang( line, column, lang, file_name, check ):
       'compilation_flags' : ['-x',
                              'objective-c',
                              '-Wall',
-                             '-Wextra'],
+                             '-Wextra'] + system_libs,
       'filetype'          : 'objc',
     },
   }
