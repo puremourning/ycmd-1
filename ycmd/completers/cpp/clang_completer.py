@@ -106,6 +106,7 @@ class ClangCompleter( Completer ):
              'GoToImprecise',
              'ClearCompilationFlagCache',
              'GetType',
+             'GetTypeQuick',
              'GetParent',
              'FixIt']
 
@@ -150,6 +151,12 @@ class ClangCompleter( Completer ):
         'method' : self._GetSemanticInfo,
         'args'   : { 'request_data' : request_data,
                      'func'         : 'GetTypeAtLocation' }
+      },
+      'GetTypeQuick' : {
+        'method' : self._GetSemanticInfo,
+        'args'   : { 'request_data' : request_data,
+                     'func'         : 'GetTypeAtLocation',
+                     'reparse'      : True }
       },
       'GetParent' : {
         'method' : self._GetSemanticInfo,
