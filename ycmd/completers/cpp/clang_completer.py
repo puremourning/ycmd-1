@@ -108,7 +108,8 @@ class ClangCompleter( Completer ):
              'GetType',
              'GetTypeQuick',
              'GetParent',
-             'FixIt']
+             'FixIt',
+             'FixItQuick']
 
 
   def OnUserCommand( self, arguments, request_data ):
@@ -166,7 +167,12 @@ class ClangCompleter( Completer ):
       'FixIt' : {
         'method' : self._FixIt,
         'args'   : { 'request_data' : request_data }
-      }
+      },
+      'FixItQuick' : {
+        'method' : self._FixIt,
+        'args'   : { 'request_data' : request_data,
+                     'reparse'      : False }
+      },
     }
 
     try:
@@ -261,7 +267,7 @@ class ClangCompleter( Completer ):
   def _ClearCompilationFlagCache( self ):
     self._flags.Clear()
 
-  def _FixIt( self, request_data ):
+  def _FixIt( self, request_data, reparse = True ):
     filename = request_data[ 'filepath' ]
     if not filename:
       raise ValueError( INVALID_FILE_MESSAGE )
@@ -280,7 +286,7 @@ class ClangCompleter( Completer ):
         column,
         files,
         flags,
-        True )
+        reparse )
 
     # don't raise an error if not fixits: - leave that to the client to respond
     # in a nice way
