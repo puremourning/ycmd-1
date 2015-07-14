@@ -140,6 +140,8 @@ class ClangCompleter( Completer ):
                                 func = 'GetEnclosingFunctionAtLocation' ) ),
       'FixIt'                    : ( lambda self, request_data, args:
          self._FixIt( request_data ) ),
+      'FixItQuick'               : ( lambda self, request_data, args:
+         self._FixIt( request_data, reparse = False ) ),
       'GetDoc'                   : ( lambda self, request_data, args:
          self._GetSemanticInfo( request_data,
                                 reparse = True,
@@ -289,7 +291,7 @@ class ClangCompleter( Completer ):
   def _ClearCompilationFlagCache( self ):
     self._flags.Clear()
 
-  def _FixIt( self, request_data ):
+  def _FixIt( self, request_data, reparse = True ):
     filename = request_data[ 'filepath' ]
     if not filename:
       raise ValueError( INVALID_FILE_MESSAGE )
@@ -308,7 +310,7 @@ class ClangCompleter( Completer ):
         column,
         files,
         flags,
-        True )
+        reparse )
 
     # don't raise an error if not fixits: - leave that to the client to respond
     # in a nice way
