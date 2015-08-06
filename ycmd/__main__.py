@@ -41,7 +41,7 @@ def YcmCoreSanityCheck():
 
 # We manually call sys.exit() on SIGTERM and SIGINT so that atexit handlers are
 # properly executed.
-def SetUpSignalHandler( stdout, stderr, keep_logfiles ):
+def SetUpSignalHandler( stdout, stderr, keep_logfiles, unix_socket ):
   def SignalHandler( signum, frame ):
     # We reset stderr & stdout, just in case something tries to use them
     if stderr:
@@ -58,6 +58,9 @@ def SetUpSignalHandler( stdout, stderr, keep_logfiles ):
         utils.RemoveIfExists( stderr )
       if stdout:
         utils.RemoveIfExists( stdout )
+
+    if unix_socket:
+      utils.RemoveIfExists( unix_socket )
 
     sys.exit()
 
@@ -85,6 +88,11 @@ def ParseArguments():
   # Default of 0 will make the OS pick a free port for us
   parser.add_argument( '--port', type = int, default = 0,
                        help = 'server port')
+  # Optional domain socket to use in place of listening port. This prevents use
+  # of a TCP port on systems where they are used for interface processes.
+  parser.add_argument( '--domain_socket', type = str, default = None,
+                       help = 'name of a unix domain socket to use in place of '
+                              'tcp host/port' )
   parser.add_argument( '--log', type = str, default = 'info',
                        help = 'log level, one of '
                               '[debug|info|warning|error|critical]' )
@@ -155,15 +163,21 @@ def Main():
   from ycmd import handlers
   handlers.UpdateUserOptions( options )
   handlers.SetHmacSecret( hmac_secret )
-  SetUpSignalHandler( args.stdout, args.stderr, args.keep_logfiles )
+  SetUpSignalHandler( args.stdout, 
+                      args.stderr, 
+                      args.keep_logfiles,
+                      args.domain_socket )
   handlers.app.install( WatchdogPlugin( args.idle_suicide_seconds ) )
   handlers.app.install( HmacPlugin( hmac_secret ) )
   CloseStdin()
-  waitress.serve( handlers.app,
-                  host = args.host,
-                  port = args.port,
-                  threads = 30 )
 
+  if not args.domain_socket:
+    waitress.serve( handlers.app,
+                    host = args.host,
+                    port = args.port,
+                    threads = 30 )
+  else:
+    waitress.serve( handlers.app, unix_socket = args.domain_socket )
 
 if __name__ == "__main__":
   Main()
