@@ -47,16 +47,19 @@ if ( USE_CLANG_COMPLETER AND
   message( FATAL_ERROR "This fork requires clang 3.7 revision 227309. "
     "Until clang 3.7 gets released only --clang-completer with --system-libclang is supported.")
 
-  set( CLANG_URL "http://llvm.org/releases/3.6.0" )
-
   if ( APPLE )
-    set( CLANG_DIRNAME "clang+llvm-3.6.0-x86_64-apple-darwin" )
-    set( CLANG_MD5 "103e06006c88d391c9c369a4671e3363" )
+    set( CLANG_DIRNAME "clang+llvm-3.6.2-x86_64-apple-darwin" )
+    set( CLANG_SHA256
+         "a796b60dbdf849a946ba142f7c05233975ec85bc04468a88e920dee02542a77d" )
     set( CLANG_FILENAME "${CLANG_DIRNAME}.tar.xz" )
   else()
     if ( 64_BIT_PLATFORM )
-      set( CLANG_DIRNAME "clang+llvm-3.6.0-x86_64-linux-gnu-ubuntu-14.04" )
-      set( CLANG_MD5 "cfb2ebc01573e666770b9c5f72deb04e" )
+      # We MUST support the latest Ubuntu LTS release!
+      # At the time of writing, that's 14.04. Switch to next LTS ~6 months after
+      # it comes out.
+      set( CLANG_DIRNAME "clang+llvm-3.6.2-x86_64-linux-gnu-ubuntu-14.04" )
+      set( CLANG_SHA256
+           "70ff742456459ecad363462c72cba00aaa5473f699da29a2a6125ee7edfb967a" )
       set( CLANG_FILENAME "${CLANG_DIRNAME}.tar.xz" )
     else()
       # Clang 3.3 is the last version with pre-built x86 binaries upstream.
@@ -67,10 +70,33 @@ if ( USE_CLANG_COMPLETER AND
     endif()
   endif()
 
-  file(
-    DOWNLOAD "${CLANG_URL}/${CLANG_FILENAME}" "./${CLANG_FILENAME}"
-    SHOW_PROGRESS EXPECTED_MD5 "${CLANG_MD5}"
-  )
+  # Check if the Clang archive is already downloaded and its checksum is correct.
+  # If this is not the case, remove it if needed and download it.
+  set( CLANG_DOWNLOAD ON )
+  set( CLANG_LOCAL_FILE
+       "${CMAKE_SOURCE_DIR}/../clang_archives/${CLANG_FILENAME}" )
+
+  if( EXISTS "${CLANG_LOCAL_FILE}" )
+    file( SHA256 "${CLANG_LOCAL_FILE}" CLANG_LOCAL_SHA256 )
+
+    if( "${CLANG_LOCAL_SHA256}" STREQUAL "${CLANG_SHA256}" )
+      set( CLANG_DOWNLOAD OFF )
+    else()
+      file( REMOVE "${CLANG_LOCAL_FILE}" )
+    endif()
+  endif()
+
+  if( CLANG_DOWNLOAD )
+    message( "Downloading Clang 3.6.2" )
+
+    set( CLANG_URL "http://llvm.org/releases/3.6.2" )
+    file(
+      DOWNLOAD "${CLANG_URL}/${CLANG_FILENAME}" "${CLANG_LOCAL_FILE}"
+      SHOW_PROGRESS EXPECTED_HASH SHA256=${CLANG_SHA256}
+    )
+  else()
+    message( "Using Clang archive: ${CLANG_LOCAL_FILE}" )
+  endif()
 
   if ( CLANG_FILENAME MATCHES ".+bz2" )
     execute_process( COMMAND tar -xjf ${CLANG_FILENAME} )
