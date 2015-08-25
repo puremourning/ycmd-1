@@ -267,6 +267,11 @@ std::string TranslationUnit::GetTypeAtLocation(
   if ( !CursorIsValid( cursor ) )
     return "Internal error: cursor not valid";
 
+  CXCursor ref_cursor = clang_getCursorReferenced( cursor );
+
+  if ( CursorIsValid( ref_cursor ) )
+    cursor = ref_cursor;
+
   CXType type = clang_getCursorType( cursor );
 
   std::string type_description =
@@ -291,15 +296,23 @@ std::string TranslationUnit::GetTypeAtLocation(
   //     std::string test = "test"; <-- type = std::string;
   //                                    canonical type = std::basic_string<char>
   //
-  // So as a compromise, we return both if and only if the types differ, like
+  // So as a compromise, we return both if and only if the type spellings 
+  // differ, like
   //     std::string => std::basic_string<char>
+  //
+  // Note: in the case of auto, the underlying type is special within libclang
+  // and so any use of an auto-declared variable appears as different from its
+  // canonical type. As a result, we don't use clang_equalTypes, we just
+  // compare the spelling. This is less efficient, but a better user experience
 
   CXType canonical_type = clang_getCanonicalType( type );
+  std::string canonical_type_spelling =
+                    CXStringToString( clang_getTypeSpelling( canonical_type ) );
 
-  if ( !clang_equalTypes( type, canonical_type ) )
+  if ( type_description != canonical_type_spelling )
   {
     type_description += " => ";
-    type_description += CXStringToString(clang_getTypeSpelling(canonical_type));
+    type_description += canonical_type_spelling;
   }
 
   return type_description;
@@ -329,7 +342,7 @@ std::string TranslationUnit::GetEnclosingFunctionAtLocation(
   std::string parent_str =
                   CXStringToString( clang_getCursorDisplayName( parent ) );
 
-  if (parent_str.empty())
+  if ( parent_str.empty() )
     return "Unknown semantic parent";
 
   return parent_str;
