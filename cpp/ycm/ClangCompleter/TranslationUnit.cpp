@@ -267,6 +267,13 @@ std::string TranslationUnit::GetTypeAtLocation(
   if ( !CursorIsValid( cursor ) )
     return "Internal error: cursor not valid";
 
+  // when the cursor is an expression, we want the type of the think that is
+  // being referred to in the expression, so that we get A& for things like:
+  //     A& a = get_a();
+  //     a.doSomething();
+  //     ^
+  // with the cursor on the caret, we want to see "A&", but the type of the
+  // cursor at that location is actually "A"
   CXCursor ref_cursor = clang_getCursorReferenced( cursor );
 
   if ( CursorIsValid( ref_cursor ) )
@@ -297,8 +304,8 @@ std::string TranslationUnit::GetTypeAtLocation(
   //                                    canonical type = std::basic_string<char>
   //
   // So as a compromise, we return both if and only if the type spellings 
-  // differ, like
-  //     std::string => std::basic_string<char>
+  // differ, in the same way as clang diagnostics
+  //     std::string (aka 'std::basic_string<char>')
   //
   // Note: in the case of auto, the underlying type is special within libclang
   // and so any use of an auto-declared variable appears as different from its
@@ -311,8 +318,9 @@ std::string TranslationUnit::GetTypeAtLocation(
 
   if ( type_description != canonical_type_spelling )
   {
-    type_description += " => ";
+    type_description += " (aka '";
     type_description += canonical_type_spelling;
+    type_description += "')";
   }
 
   return type_description;
