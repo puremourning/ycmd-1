@@ -290,32 +290,32 @@ def RunCompleterCommand_GetType_Clang_test():
     [{'line_num' : 31, 'column_num': 3} ,  'const Foo *'],
     [{'line_num' : 31, 'column_num': 16} , 'const Foo *'],
   # cursor on usage
-    [{'line_num' : 33, 'column_num': 17} , 'const Foo'],
-    [{'line_num' : 33, 'column_num': 21} , 'const int'],
+    [{'line_num' : 33, 'column_num': 17} , 'const Foo &'],
+    [{'line_num' : 33, 'column_num': 21} , 'int'],
     [{'line_num' : 34, 'column_num': 17} , 'const Foo *'],
-    [{'line_num' : 34, 'column_num': 22} , 'const int'],
-    [{'line_num' : 35, 'column_num': 17} , 'Foo'],
+    [{'line_num' : 34, 'column_num': 22} , 'int'],
+    [{'line_num' : 35, 'column_num': 17} , 'Foo &'],
     [{'line_num' : 35, 'column_num': 21} , 'int'],
     [{'line_num' : 36, 'column_num': 17} , 'Foo *'],
     [{'line_num' : 36, 'column_num': 22} , 'int'],
 
   # auto behaves strangely (bug in libclang)
-    [{'line_num' : 16, 'column_num': 3} ,  'auto &'], # sic
-    [{'line_num' : 16, 'column_num': 11} , 'auto &'], # sic
+    [{'line_num' : 16, 'column_num': 3} ,  'Foo &'],
+    [{'line_num' : 16, 'column_num': 11} , 'Foo &'],
     [{'line_num' : 16, 'column_num': 18} , 'Foo'],
-    [{'line_num' : 17, 'column_num': 3} ,  'auto *'], # sic
-    [{'line_num' : 17, 'column_num': 11} , 'auto *'], # sic
+    [{'line_num' : 17, 'column_num': 3} ,  'Foo *'],
+    [{'line_num' : 17, 'column_num': 11} , 'Foo *'],
     [{'line_num' : 17, 'column_num': 18} , 'Foo'],
-    [{'line_num' : 19, 'column_num': 3} ,  'const auto &'], # sic
-    [{'line_num' : 19, 'column_num': 16} , 'const auto &'], # sic
-    [{'line_num' : 20, 'column_num': 3} ,  'const auto *'], # sic
-    [{'line_num' : 20, 'column_num': 16} , 'const auto *'], # sic
+    [{'line_num' : 19, 'column_num': 3} ,  'const Foo &'],
+    [{'line_num' : 19, 'column_num': 16} , 'const Foo &'],
+    [{'line_num' : 20, 'column_num': 3} ,  'const Foo *'],
+    [{'line_num' : 20, 'column_num': 16} , 'const Foo *'],
   # auto works in usage
-    [{'line_num' : 22, 'column_num': 17} , 'const Foo'],
-    [{'line_num' : 22, 'column_num': 23} , 'const int'],
+    [{'line_num' : 22, 'column_num': 17} , 'const Foo &'],
+    [{'line_num' : 22, 'column_num': 23} , 'int'],
     [{'line_num' : 23, 'column_num': 17} , 'const Foo *'],
-    [{'line_num' : 23, 'column_num': 24} , 'const int'],
-    [{'line_num' : 24, 'column_num': 17} , 'Foo'],
+    [{'line_num' : 23, 'column_num': 24} , 'int'],
+    [{'line_num' : 24, 'column_num': 17} , 'Foo &'],
     [{'line_num' : 24, 'column_num': 22} , 'int'],
     [{'line_num' : 25, 'column_num': 17} , 'Foo *'],
     [{'line_num' : 25, 'column_num': 23} , 'int'],
