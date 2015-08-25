@@ -271,12 +271,12 @@ def RunCompleterCommand_GetType_Clang_test():
     [{'line_num' : 13, 'column_num': 3} , 'Unknown type'], # sic
     # on string (string)
     [{'line_num' : 13, 'column_num': 8} ,
-                                  'string => std::basic_string<char>'], # sic
+                            'string (aka \'std::basic_string<char>\')'], # sic
     # on a (std::string)
     [{'line_num' : 13, 'column_num': 15} ,
-                                  'std::string => std::basic_string<char>'],
+                            'std::string (aka \'std::basic_string<char>\')'],
     [{'line_num' : 14, 'column_num': 16} ,
-                                  'std::string => std::basic_string<char>'],
+                            'std::string (aka \'std::basic_string<char>\')'],
 
   # cursor on decl for refs & pointers
     [{'line_num' : 27, 'column_num': 3} ,  'Foo'],
@@ -310,14 +310,14 @@ def RunCompleterCommand_GetType_Clang_test():
     [{'line_num' : 19, 'column_num': 16} , 'const auto &'], # sic
     [{'line_num' : 20, 'column_num': 3} ,  'const auto *'], # sic
     [{'line_num' : 20, 'column_num': 16} , 'const auto *'], # sic
-  # auto sort of works in usage (but canonical types apparently differ)
-    [{'line_num' : 22, 'column_num': 17} , 'const Foo => const Foo'], #sic
+  # auto works in usage
+    [{'line_num' : 22, 'column_num': 17} , 'const Foo'],
     [{'line_num' : 22, 'column_num': 23} , 'const int'],
-    [{'line_num' : 23, 'column_num': 17} , 'const Foo * => const Foo *'], #sic
+    [{'line_num' : 23, 'column_num': 17} , 'const Foo *'],
     [{'line_num' : 23, 'column_num': 24} , 'const int'],
-    [{'line_num' : 24, 'column_num': 17} , 'Foo => Foo'], #sic
+    [{'line_num' : 24, 'column_num': 17} , 'Foo'],
     [{'line_num' : 24, 'column_num': 22} , 'int'],
-    [{'line_num' : 25, 'column_num': 17} , 'Foo * => Foo *'], #sic
+    [{'line_num' : 25, 'column_num': 17} , 'Foo *'],
     [{'line_num' : 25, 'column_num': 23} , 'int'],
 
   ]
