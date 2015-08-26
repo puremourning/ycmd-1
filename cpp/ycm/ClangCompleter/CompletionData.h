@@ -90,7 +90,7 @@ struct CompletionData {
   }
 
   std::string Kind() {
-    static const char * const kinds[] {
+    static const char * const kinds[] = {
       "STRUCT",
       "CLASS",
       "ENUM",

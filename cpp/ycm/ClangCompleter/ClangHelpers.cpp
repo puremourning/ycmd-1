@@ -185,6 +185,9 @@ std::vector< CompletionData > ToCompletionDataVector(
                                      data.original_string_,
                                      completions.size() );
 
+    
+    // TODO: BenJ - If we add all overloads, what does the output look like?
+    // does it get de-duplicated?
     if ( index == completions.size() ) {
       completions.push_back( boost::move( data ) );
     }

@@ -31,6 +31,8 @@
 import os
 import ycm_core
 
+LLVM_ROOT='/Users/ben/Development/llvm-root/trunk'
+
 # These are the compilation flags that will be used in case there's no
 # compilation database set (by default, one is not set).
 # CHANGE THIS LIST OF FLAGS. YES, THIS IS THE DROID YOU HAVE BEEN LOOKING FOR.
@@ -65,10 +67,7 @@ flags = [
 # This path will only work on OS X, but extra paths that don't exist are not
 # harmful
 '/System/Library/Frameworks/Python.framework/Headers',
-'-isystem',
-'../llvm/include',
-'-isystem',
-'../llvm/tools/clang/include',
+'-isystem', os.path.join(LLVM_ROOT, 'include'),
 '-I',
 '.',
 '-I',
