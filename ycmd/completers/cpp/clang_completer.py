@@ -19,6 +19,8 @@
 
 from collections import defaultdict
 import ycm_core
+import logging
+import pprint
 from ycmd import responses
 from ycmd import extra_conf_store
 from ycmd.utils import ToUtf8IfNeeded
@@ -135,7 +137,9 @@ class ClangCompleter( Completer ):
     if not results and not looking_for_hints:
       raise RuntimeError( NO_COMPLETIONS_MESSAGE )
 
-    return [ ConvertCompletionData( x ) for x in results ]
+    completions = [ ConvertCompletionData( x ) for x in results ]
+
+    return completions
 
 
   def DefinedSubcommands( self ):
@@ -327,7 +331,7 @@ class ClangCompleter( Completer ):
         flags,
         reparse )
 
-    # don't raise an error if not fixits: - leave that to the client to respond
+    # Don't raise an error if not fixits: - leave that to the client to respond
     # in a nice way
 
     return responses.BuildFixItResponse( fixits )
@@ -410,7 +414,9 @@ def ConvertCompletionData( completion_data ):
     extra_menu_info = completion_data.ExtraMenuInfo(),
     kind = completion_data.Kind(),
     detailed_info = completion_data.DetailedInfoForPreviewWindow(),
-    extra_data = { 'doc_string': completion_data.DocString() } if completion_data.DocString() else None )
+    extra_data = ( { 'doc_string': completion_data.DocString() }
+                   if completion_data.DocString() else None ),
+    chunks = completion_data.chunks )
 
 
 def DiagnosticsToDiagStructure( diagnostics ):

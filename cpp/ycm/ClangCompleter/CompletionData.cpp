@@ -133,6 +133,67 @@ std::string RemoveTrailingParens( std::string text ) {
   return text;
 }
 
+void AppendChunk( CXCompletionString completion_string,
+                  uint chunk_num,
+                  std::vector< CompletionData::Chunk >& chunks )
+{
+  CXCompletionChunkKind kind = clang_getCompletionChunkKind(
+                                 completion_string, chunk_num );
+
+  CompletionData::Chunk chunk;
+
+  switch ( kind ) {
+    case CXCompletionChunk_Optional:
+    {
+      CXCompletionString optional_completion_string =
+        clang_getCompletionChunkCompletionString( completion_string,
+                                                  chunk_num );
+
+      uint optional_num_chunks = clang_getNumCompletionChunks(
+                                   optional_completion_string );
+
+      chunk.children.reserve( optional_num_chunks );
+
+      for ( uint j = 0; j < optional_num_chunks; ++j ) {
+        AppendChunk( optional_completion_string,
+                     j,
+                     chunk.children );
+      }
+
+      chunk.isOptional = true;
+      chunks.push_back( chunk );
+      break;
+    }
+
+    case CXCompletionChunk_Placeholder:
+    case CXCompletionChunk_LeftParen:
+    case CXCompletionChunk_RightParen:
+    case CXCompletionChunk_LeftBracket:
+    case CXCompletionChunk_RightBracket:
+    case CXCompletionChunk_LeftBrace:
+    case CXCompletionChunk_RightBrace:
+    case CXCompletionChunk_LeftAngle:
+    case CXCompletionChunk_RightAngle:
+    case CXCompletionChunk_Comma:
+    case CXCompletionChunk_Colon:
+    case CXCompletionChunk_SemiColon:
+    case CXCompletionChunk_Equal:
+    case CXCompletionChunk_Text:
+    case CXCompletionChunk_TypedText:
+      chunk.insertion_text = TrimUnderscores( 
+                                ChunkToString( completion_string, chunk_num ) );
+      chunks.push_back( chunk );
+      break;
+    // ignored;
+    case CXCompletionChunk_Informative:
+    case CXCompletionChunk_ResultType:
+    case CXCompletionChunk_HorizontalSpace:
+    case CXCompletionChunk_VerticalSpace:
+    case CXCompletionChunk_CurrentParameter:
+      break;
+  }
+}
+
 } // unnamed namespace
 
 
@@ -148,12 +209,17 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result,
   bool saw_function_params = false;
   bool saw_placeholder = false;
 
+  chunks_.reserve( num_chunks );
+
   for ( uint j = 0; j < num_chunks; ++j ) {
     ExtractDataFromChunk( completion_string,
                           j,
                           saw_left_paren,
                           saw_function_params,
                           saw_placeholder );
+    if ( !is_argument_hint ) {
+        AppendChunk( completion_string, j, chunks_ );
+    }
   }
 
   original_string_ = RemoveTrailingParens( boost::move( original_string_ ) );
@@ -175,13 +241,9 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result,
     detailed_info_.append( doc_string_ + "\n" );
 
   detailed_info_.append( return_type_ )
-  .append( " " )
-  .append( everything_except_return_type_ )
-  .append( "\n" );
-
-  // This address issue #1287
-  if ( kind_ == YouCompleteMe::FUNCTION || kind_ == YouCompleteMe::UNKNOWN )
-    everything_except_return_type_ = original_string_;
+                .append( " " )
+                .append( everything_except_return_type_ )
+                .append( "\n" );
 
   if ( is_argument_hint ) {
     kind_ = NONE;

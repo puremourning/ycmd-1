@@ -73,11 +73,17 @@ def BuildDescriptionOnlyGoToResponse( text ):
   }
 
 
-# TODO: Look at all the callers and ensure they are not using this instead of an
-# exception.
 def BuildDisplayMessageResponse( text ):
   return {
     'message': text
+  }
+
+
+def BuildCompletionChunk( chunk ):
+  return {
+    'insertion_text': chunk.insertion_text,
+    'is_optional': chunk.is_optional,
+    'chunks': [ BuildCompletionChunk( x ) for x in chunk.children ],
   }
 
 
@@ -86,7 +92,8 @@ def BuildCompletionData( insertion_text,
                          detailed_info = None,
                          menu_text = None,
                          kind = None,
-                         extra_data = None ):
+                         extra_data = None,
+                         chunks = None ):
   completion_data = {}
 
   if insertion_text:
@@ -101,6 +108,10 @@ def BuildCompletionData( insertion_text,
     completion_data[ 'kind' ] = kind
   if extra_data:
     completion_data[ 'extra_data' ] = extra_data
+
+  if chunks:
+    completion_data[ 'chunks' ] = [ BuildCompletionChunk( x ) for x in chunks ]
+
   return completion_data
 
 

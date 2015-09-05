@@ -21,6 +21,7 @@
 #include "standard.h"
 #include <string>
 #include <clang-c/Index.h>
+#include <vector>
 
 namespace YouCompleteMe {
 
@@ -53,7 +54,8 @@ enum CompletionKind {
 // about a completion at the top of the buffer.
 struct CompletionData {
   CompletionData() {}
-  CompletionData( const CXCompletionResult &completion_result, bool is_argument_hint = false );
+  CompletionData( const CXCompletionResult &completion_result,
+                  bool is_argument_hint = false );
 
   // What should actually be inserted into the buffer. For a function like
   // "int foo(int x)", this is just "foo". Same for a data member like "foo_":
@@ -134,6 +136,24 @@ struct CompletionData {
   std::string doc_string_;
 
   std::string current_arg_;
+
+  struct Chunk {
+    Chunk() : isOptional( false ) {
+
+    }
+
+    std::string insertion_text;
+    bool isOptional;
+    std::vector< Chunk > children;
+
+    bool operator==( const Chunk& other ) const {
+      return insertion_text == other.insertion_text &&
+             isOptional == other.isOptional &&
+             children == other.children;
+    }
+  };
+
+  std::vector< Chunk > chunks_;
 
 private:
 

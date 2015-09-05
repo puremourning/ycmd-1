@@ -126,11 +126,20 @@ BOOST_PYTHON_MODULE(ycm_core)
     .def( "DetailedInfoForPreviewWindow",
           &CompletionData::DetailedInfoForPreviewWindow )
     .def( "DocString", &CompletionData::DocString )
-    .def( "Kind", &CompletionData::Kind );
+    .def( "Kind", &CompletionData::Kind )
+    .def_readonly( "chunks", &CompletionData::chunks_);
 
   class_< std::vector< CompletionData >,
       boost::shared_ptr< std::vector< CompletionData > > >( "CompletionVector" )
     .def( vector_indexing_suite< std::vector< CompletionData > >() );
+
+  class_< CompletionData::Chunk >( "CompletionChunk" )
+    .def_readonly( "insertion_text" , &CompletionData::Chunk::insertion_text )
+    .def_readonly( "is_optional", &CompletionData::Chunk::isOptional )
+    .def_readonly( "children", &CompletionData::Chunk::children );
+
+  class_< std::vector< CompletionData::Chunk > >( "CompletionChunkVector" )
+    .def( vector_indexing_suite< std::vector< CompletionData::Chunk > >() );
 
   class_< Location >( "Location" )
     .def_readonly( "line_number_", &Location::line_number_ )
