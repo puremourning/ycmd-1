@@ -1,0 +1,8 @@
+--std=c++03 
+--enable=warning,performance,portability
+-I .
+-I ./ClangCompleter
+-i tests/gmock
+-i tests/testdata
+-DUSE_CLANG_COMPLETER
+-DYCMD_CORE_VERSION=1
