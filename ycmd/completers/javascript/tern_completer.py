@@ -207,6 +207,8 @@ class TernCompleter( Completer ):
                                          self._GetDoc( request_data) ),
       'GetFiles':       ( lambda self, request_data, args:
                                          self._GetFiles( request_data ) ),
+      'FixItRename':    ( lambda self, request_data, args:
+                                         self._Rename( request_data, args ) ),
     }
 
 
@@ -514,3 +516,84 @@ class TernCompleter( Completer ):
     # ycmd!!!
     return responses.BuildDetailedInfoResponse( 
         '\n'.join( [ os.path.abspath( x ) for x in response[ 'files' ] ] ) )
+
+
+  def _Rename( self, request_data, args ):
+    query = {
+      'type': 'rename',
+      'newName': args[ 0 ],
+    }
+
+    response = self._GetResponse( query, request_data )
+
+    # Tern response format:
+    # 'changes': [
+    #     {
+    #         'file'
+    #         'start' {
+    #             'line'
+    #             'ch'
+    #         }
+    #         'end' {
+    #             'line'
+    #             'ch'
+    #         }
+    #         'text'
+    #     }
+    # ]
+
+    # ycmd response format:
+    #
+    # {
+    #     'fixits': [
+    #         'chunks': (list<Chunk>) [
+    #             {
+    #                  'replacement_text',
+    #                  'range' (Range) {
+    #                      'start_' (Location): {
+    #                          'line_number_',
+    #                          'column_number_',
+    #                          'filename_'
+    #                      },
+    #                      'end_' (Location): {
+    #                          'line_number_',
+    #                          'column_number_',
+    #                          'filename_'
+    #                      }
+    #                  }
+    #              }
+    #         ],
+    #         'location' (Location) {
+    #              'line_number_',
+    #              'column_number_',
+    #              'filename_'
+    #         }
+    #
+    #     ]
+    # }
+
+    def BuildRange( filename, start, end ):
+      return responses.Range(
+        responses.Location( start[ 'line' ] + 1,
+                            start[ 'ch' ] + 1,
+                            filename ),
+        responses.Location( end[ 'line' ] + 1,
+                            end[ 'ch' ] + 1,
+                            filename ) )
+
+
+
+    def BuildFixItChunk( change ):
+      return responses.FixItChunk(
+        change[ 'text' ],
+        BuildRange( os.path.abspath( change[ 'file'] ),
+                    change[ 'start' ],
+                    change[ 'end' ] ) )
+
+
+    return responses.BuildFixItResponse( [
+      responses.FixIt(
+        responses.Location( request_data[ 'line_num' ],
+                            request_data[ 'column_num' ],
+                            request_data[ 'filepath' ] ),
+        [ BuildFixItChunk( x ) for x in response[ 'changes' ] ] ) ] )
