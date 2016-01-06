@@ -1,6 +1,13 @@
 var simple_test_obect = {
+  /**
+   * @returns {String}
+   */
   'a_simple_function': function( param ) {
-    return 'yes';
+    if ( param === 100 ) {
+        return 'true';
+    } else {
+        return 10;
+    }
   },
 
   'basic_type': 100,
@@ -19,3 +26,24 @@ function blah( simple_test_obect ) {
 }
 
 blah( simple_test_obect ); simple_test_obect = null;
+
+simple_test_obect.a_simple_function();
+
+function test() {
+    if ( simple_assignment == 10 ) {
+        return 'true'
+    } else {
+        return 10;
+    }
+}
+test();
+
+not_a_function = 'ben';
+
+var an_array = [];
+an_array.length;
+simple_test_obect();
+
+
+new Date().setHours( 'test' );
+"".match( '/(this_isot a valid regex' );

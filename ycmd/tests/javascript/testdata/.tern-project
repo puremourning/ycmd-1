@@ -9,9 +9,13 @@
       "file3.js"
   ],
   "plugins": {
+    "doc_comment": {
+      "strong": true
+    },
     "requirejs": {
       "baseURL": "./",
       "paths": {}
-    }
+    },
+    "lint": {}
   }
 }

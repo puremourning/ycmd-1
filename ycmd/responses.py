@@ -142,6 +142,9 @@ def BuildRangeData( source_range ):
 
 
 class Diagnostic( object ):
+  """A diagnostic represents a single error or warning message related to a
+  range, or set of ranges, of source code"""
+
   def __init__ ( self, ranges, location, location_extent, text, kind ):
     self.ranges_ = ranges
     self.location_ = location

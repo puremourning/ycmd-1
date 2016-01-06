@@ -247,29 +247,8 @@ class CsharpCompleter( Completer ):
 
 
   def GetDetailedDiagnostic( self, request_data ):
-    current_line = request_data[ 'line_num' ]
-    current_column = request_data[ 'column_num' ]
-    current_file = request_data[ 'filepath' ]
-
-    if not self._diagnostic_store:
-      raise ValueError( NO_DIAGNOSTIC_MESSAGE )
-
-    diagnostics = self._diagnostic_store[ current_file ][ current_line ]
-    if not diagnostics:
-      raise ValueError( NO_DIAGNOSTIC_MESSAGE )
-
-    closest_diagnostic = None
-    distance_to_closest_diagnostic = 999
-
-    for diagnostic in diagnostics:
-      distance = abs( current_column - diagnostic.location_.column_number_ )
-      if distance < distance_to_closest_diagnostic:
-        distance_to_closest_diagnostic = distance
-        closest_diagnostic = diagnostic
-
-    return responses.BuildDisplayMessageResponse(
-      closest_diagnostic.text_ )
-
+    return GetDetailedDiagnosticFromStore( self._max_diagnostics_to_display,
+                                           request_data )
 
   def DebugInfo( self, request_data ):
     solutioncompleter = self._GetSolutionCompleter( request_data )
@@ -659,3 +638,28 @@ def _IndexToLineColumn( text, index ):
       return linenum + 1, index - curr_pos + 1
     curr_pos += len( line )
   assert False
+
+
+def GetDetailedDiagnosticFromStore( diagnostic_store, request_data ):
+  current_line = request_data[ 'line_num' ]
+  current_column = request_data[ 'column_num' ]
+  current_file = request_data[ 'filepath' ]
+
+  if not diagnostic_store:
+    raise ValueError( NO_DIAGNOSTIC_MESSAGE )
+
+  diagnostics = diagnostic_store[ current_file ][ current_line ]
+  if not diagnostics:
+    raise ValueError( NO_DIAGNOSTIC_MESSAGE )
+
+  closest_diagnostic = None
+  distance_to_closest_diagnostic = 999
+
+  for diagnostic in diagnostics:
+    distance = abs( current_column - diagnostic.location_.column_number_ )
+    if distance < distance_to_closest_diagnostic:
+      distance_to_closest_diagnostic = distance
+      closest_diagnostic = diagnostic
+
+  return responses.BuildDisplayMessageResponse(
+    closest_diagnostic.text_ )

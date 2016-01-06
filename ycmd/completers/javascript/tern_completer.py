@@ -34,6 +34,8 @@ import traceback
 from subprocess import PIPE
 from ycmd import utils, responses
 from ycmd.completers.completer import Completer
+from ycmd.completers.cs.cs_completer import ( DiagnosticsToDiagStructure,
+                                              GetDetailedDiagnosticFromStore )
 
 _logger = logging.getLogger( __name__ )
 
@@ -116,9 +118,15 @@ class TernCompleter( Completer ):
     super( TernCompleter, self ).__init__( user_options )
 
     self._server_keep_logfiles = user_options[ 'server_keep_logfiles' ]
+    self._max_diagnostics_to_display = user_options[
+      'max_diagnostics_to_display' ]
 
     # Used to ensure that starting/stopping of the server is synchronised
     self._server_state_mutex = threading.Lock()
+
+    # Used to cache diagnostic data returned from lint (in OnFileReadyToParse)
+    # for return in the GetDetailedDiagnostic response.
+    self._diagnostic_store = None
 
     self._do_tern_project_check = False
 
@@ -204,6 +212,10 @@ class TernCompleter( Completer ):
       # soon.
       pass
 
+    if self.ServerIsReady():
+      # When this event fires, the server might not have started up yet. If so
+      # just don't publish any diagnostics, yet.
+      return self._GetDiagnostics( request_data )
 
   def GetSubcommandsMap( self ):
     return {
@@ -594,3 +606,33 @@ class TernCompleter( Completer ):
                             request_data[ 'column_num' ],
                             request_data[ 'filepath' ] ),
         [ BuildFixItChunk( x ) for x in response[ 'changes' ] ] ) ] )
+
+
+  def _GetDiagnostics( self, request_data ):
+    query = {
+      'type': 'lint'
+    }
+
+    # The lint plugin only returns errors for the current file.
+    filename = request_data[ 'filepath' ]
+
+    def BuildDiagnostic( message ):
+      return responses.Diagnostic(
+          [],
+          BuildLocation( filename, message[ 'from' ] ),
+          BuildRange( filename, message[ 'from' ], message[ 'to' ] ),
+          message[ 'message' ],
+          message[ 'severity' ].upper() )
+
+    response = self._GetResponse( query, request_data )
+    diagnostics = [ BuildDiagnostic( x ) for x in response[ 'messages' ] ]
+
+    self._diagnostic_store = DiagnosticsToDiagStructure( diagnostics )
+
+    return [ responses.BuildDiagnosticData( x )
+              for x in diagnostics[ : self._max_diagnostics_to_display ] ]
+
+
+  def GetDetailedDiagnostic( self, request_data ):
+    return GetDetailedDiagnosticFromStore( self._diagnostic_store,
+                                           request_data )
