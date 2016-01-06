@@ -128,7 +128,15 @@ class TernCompleter( Completer ):
     # for return in the GetDetailedDiagnostic response.
     self._diagnostic_store = None
 
+    # We only check for .tern-project once
     self._do_tern_project_check = False
+
+    # The tern lint module is a plug-in and needs to be configured in the
+    # .tern-project file for diagnostics to be available. The only way to know
+    # if this is the case (TODO: other than parsing .tern-project, which is
+    # possible), is to catch the server error the first time we try and get
+    # diagnostics.
+    self._tern_lint_supported = True
 
     with self._server_state_mutex:
       self._server_stdout = None
@@ -609,9 +617,20 @@ class TernCompleter( Completer ):
 
 
   def _GetDiagnostics( self, request_data ):
+    if not self._tern_lint_supported:
+      return None
+
     query = {
       'type': 'lint'
     }
+
+    try:
+        response = self._GetResponse( query, request_data )
+    except:
+        self._tern_lint_supported = False
+        raise RuntimeError( 'Tern diagnostics are not available. Add "lint" to '
+                            'the list of plugins in .tern-config to enable '
+                            'diagnostic display.' )
 
     # The lint plugin only returns errors for the current file.
     filename = request_data[ 'filepath' ]
@@ -624,7 +643,6 @@ class TernCompleter( Completer ):
           message[ 'message' ],
           message[ 'severity' ].upper() )
 
-    response = self._GetResponse( query, request_data )
     diagnostics = [ BuildDiagnostic( x ) for x in response[ 'messages' ] ]
 
     self._diagnostic_store = DiagnosticsToDiagStructure( diagnostics )
