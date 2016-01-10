@@ -324,7 +324,7 @@ def Main():
     BuildGoCode()
   if args.tern_completer or args.all_completers:
     SetUpTern()
-  if args.racer_completer:
+  if args.racer_completer or args.all_completers:
     BuildRacerd()
 
 if __name__ == '__main__':
