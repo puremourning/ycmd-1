@@ -205,6 +205,8 @@ class TernCompleter( Completer ):
                                          self._GetType( request_data) ),
       'GetDoc':         ( lambda self, request_data, args:
                                          self._GetDoc( request_data) ),
+      'GetFiles':       ( lambda self, request_data, args:
+                                         self._GetFiles( request_data ) ),
     }
 
 
@@ -271,7 +273,7 @@ class TernCompleter( Completer ):
 
   def _PostRequest( self, request, request_data ):
     """Send a raw request with the supplied request block, and
-    return the server's response. If the server is not running, it is started.
+    return the server's response.
 
     This method is useful where the query block is not supplied, i.e. where just
     the files are being updated.
@@ -500,3 +502,15 @@ class TernCompleter( Completer ):
                                           ref[ 'start' ][ 'line' ] + 1,
                                           ref[ 'start' ][ 'ch' ] + 1 )
              for ref in response[ 'refs' ] ]
+
+
+  def _GetFiles( self, request_data ):
+    query = {
+      'type': 'files'
+    }
+    response = self._GetResponse(  query, request_data )
+
+    # FIXME: abspath needs to be relative to .tern-project, not the WD of 
+    # ycmd!!!
+    return responses.BuildDetailedInfoResponse( 
+        '\n'.join( [ os.path.abspath( x ) for x in response[ 'files' ] ] ) )
