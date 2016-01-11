@@ -207,7 +207,7 @@ class TernCompleter( Completer ):
                                          self._GetDoc( request_data) ),
       'GetFiles':       ( lambda self, request_data, args:
                                          self._GetFiles( request_data ) ),
-      'FixItRename':    ( lambda self, request_data, args:
+      'RefactorRename': ( lambda self, request_data, args:
                                          self._Rename( request_data, args ) ),
     }
 
