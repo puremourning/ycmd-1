@@ -45,6 +45,7 @@ def Subcommands_DefinedSubcommands_test( app ):
   eq_( sorted( [ 'GoToDefinition',
                  'GoTo',
                  'GetDoc',
+                 'GetFiles',
                  'GetType',
                  'GoToReferences',
                  'RefactorRename',
