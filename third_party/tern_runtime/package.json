@@ -1,7 +1,7 @@
 {
   "description": "ycmd tern runtime area with required tern version and plugins",
   "dependencies": {
-    "tern": "0.17.0"
+    "tern": "0.17.0",
     "tern-lint": "=0.6.0"
   }
 }
