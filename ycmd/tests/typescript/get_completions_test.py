@@ -23,6 +23,7 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import *  # noqa
 
+import json
 from hamcrest import assert_that, contains_inanyorder, has_entries
 from mock import patch
 
@@ -42,31 +43,71 @@ def RunTest( app, test ):
 
   app.post_json( '/event_notification', event_data )
 
-  completion_data = BuildRequest( filepath = filepath,
-                                  filetype = 'typescript',
-                                  contents = contents,
-                                  force_semantic = True,
-                                  line_num = 17,
-                                  column_num = 6 )
+  completion_data = BuildRequest(
+      filepath = filepath,
+      filetype = 'typescript',
+      contents = contents,
+      force_semantic = True,
+      line_num = test[ 'request' ][ 'line_num' ],
+      column_num = test[ 'request' ][ 'column_num' ] )
 
-  response = app.post_json( '/completions', completion_data )
+  response = app.post_json( '/completions', completion_data ).json
 
-  assert_that( response.json, test[ 'expect' ][ 'data' ] )
+  print( json.dumps( response, indent=2 ) )
+
+  assert_that( response, test[ 'expect' ][ 'data' ] )
 
 
 @SharedYcmd
 def GetCompletions_Basic_test( app ):
   RunTest( app, {
+    'request' : {
+      'line_num': 17,
+      'column_num': 6,
+    },
     'expect': {
       'data': has_entries( {
         'completions': contains_inanyorder(
           CompletionEntryMatcher( 'methodA', extra_params = {
-            'menu_text': 'methodA (method) Foo.methodA(): void' } ),
+            'extra_menu_info': '(method) Foo.methodA(): void',
+            'detailed_info': '(method) Foo.methodA(): void',
+          } ),
           CompletionEntryMatcher( 'methodB', extra_params = {
-            'menu_text': 'methodB (method) Foo.methodB(): void' } ),
+            'extra_menu_info': '(method) Foo.methodB(): void',
+            'detailed_info': '(method) Foo.methodB(): void'
+          } ),
           CompletionEntryMatcher( 'methodC', extra_params = {
-            'menu_text': ( 'methodC (method) Foo.methodC(a: '
-                           '{ foo: string; bar: number; }): void' ) } ),
+            'extra_menu_info': ( '(method) Foo.methodC(a: '
+                                 '{ foo: string; bar: number; }): void' ),
+            'detailed_info': ( '(method) Foo.methodC(a: '
+                               '{ foo: string; bar: number; }): void' )
+          } ),
+        )
+      } )
+    }
+  } )
+
+
+@SharedYcmd
+def GetCompletions_WithDocs_test( app ):
+  RunTest( app, {
+    'request' : {
+      'line_num': 39,
+      'column_num': 5,
+    },
+    'expect': {
+      'data': has_entries( {
+        'completions': contains_inanyorder(
+          CompletionEntryMatcher( 'testMethod', extra_params = {
+            'extra_menu_info': '(method) Bar.testMethod(): void',
+            'detailed_info': ( '(method) Bar.testMethod(): void\n'
+                                'Method documentation' ),
+          } ),
+          CompletionEntryMatcher( 'member', extra_params = {
+            'extra_menu_info': '(property) Bar.member: string',
+            'detailed_info': ( '(property) Bar.member: string\n'
+                                'Variable documentation' ),
+          } )
         )
       } )
     }
@@ -79,6 +120,10 @@ def GetCompletions_Basic_test( app ):
         2 )
 def GetCompletions_MaxDetailedCompletion_test( app ):
   RunTest( app, {
+    'request' : {
+      'line_num': 17,
+      'column_num': 6,
+    },
     'expect': {
       'data': has_entries( {
         'completions': contains_inanyorder(

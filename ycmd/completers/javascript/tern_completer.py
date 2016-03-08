@@ -185,9 +185,10 @@ class TernCompleter( Completer ):
 
       return doc
 
-    return [ responses.BuildCompletionData( completion[ 'name' ],
-                                            completion.get( 'type', '?' ),
-                                            BuildDoc( completion ) )
+    return [ responses.BuildCompletionData(
+               insertion_text = completion[ 'name' ],
+               extra_menu_info = completion.get( 'type', '?' ),
+               detailed_info = BuildDoc( completion ) )
              for completion in completions ]
 
 

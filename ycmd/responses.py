@@ -99,6 +99,18 @@ def BuildCompletionData( insertion_text,
                          menu_text = None,
                          kind = None,
                          extra_data = None ):
+  """ Explanation of arguments:
+  - |insertion_text|  : What should be inserted if this completion selected
+  - |extra_menu_info| : More information about the completion, such as the
+                        signature, type, etc.
+  - |detailed_info|   : Signature/docs, etc. (e.g. for preview window)
+  - |menu_text|       : Alternative text to display for selection (usually
+                        defaults to insertion_text if not supplied)
+  - |kind|            : Single letter shorthand type (e.g. f, m, etc.)
+  - |extra_data|      : Alternative way to supply documentation strings - set
+                        this to a dictionary { 'doc_string': doc_string }.
+                        This is typically appended to detailed_info for display
+                        in the preview window (or equivalent)"""
   completion_data = {
     'insertion_text': insertion_text
   }

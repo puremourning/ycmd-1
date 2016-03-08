@@ -28,6 +28,11 @@ class Bar {
    * Method documentation
    */
   testMethod() {}
+
+  /**
+   * Variable documentation
+   */
+  member : string
 }
 
 var bar = new Bar();

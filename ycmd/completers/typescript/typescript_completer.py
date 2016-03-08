@@ -278,20 +278,13 @@ class TypeScriptCompleter( Completer ):
     if len( entries ) > MAX_DETAILED_COMPLETIONS:
       return [ _ConvertCompletionData(e) for e in entries ]
 
-    names = []
-    namelength = 0
-    for e in entries:
-      name = e[ 'name' ]
-      namelength = max( namelength, len( name ) )
-      names.append( name )
-
     detailed_entries = self._SendRequest( 'completionEntryDetails', {
       'file':       request_data[ 'filepath' ],
       'line':       request_data[ 'line_num' ],
       'offset':     request_data[ 'column_num' ],
-      'entryNames': names
+      'entryNames': [ e[ 'name' ] for e in entries ],
     } )
-    return [ _ConvertDetailedCompletionData( e, namelength )
+    return [ _ConvertDetailedCompletionData( e )
              for e in detailed_entries ]
 
 
@@ -501,16 +494,23 @@ def _ConvertCompletionData( completion_data ):
   )
 
 
-def _ConvertDetailedCompletionData( completion_data, padding = 0 ):
+def _ConvertDetailedCompletionData( completion_data ):
   name = completion_data[ 'name' ]
   display_parts = completion_data[ 'displayParts' ]
   signature = ''.join( [ p[ 'text' ] for p in display_parts ] )
 
+  # For inexplicable reasons the documentation for a completion is in multiple
+  # parts, whereas the documentation for a quicinfo is just a string.
+  documentation = ''.join( [
+    p[ 'text' ] for p in completion_data[ 'documentation' ]
+  ] )
+
   # needed to strip new lines and indentation from the signature
   signature = re.sub( '\s+', ' ', signature )
-  menu_text = '{0} {1}'.format( name.ljust( padding ), signature )
   return responses.BuildCompletionData(
-    insertion_text = name,
-    menu_text      = menu_text,
-    kind           = completion_data[ 'kind' ]
+    insertion_text  = name,
+    extra_menu_info = signature,
+    kind            = completion_data[ 'kind' ],
+    detailed_info   = signature + ( '\n{0}'.format( documentation )
+                                   if documentation else '' )
   )

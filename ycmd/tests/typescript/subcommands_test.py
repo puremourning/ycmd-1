@@ -23,10 +23,10 @@ from future import standard_library
 standard_library.install_aliases()
 from builtins import *  # noqa
 
+import json
 from hamcrest import ( assert_that,
                        contains,
                        contains_inanyorder,
-                       has_items,
                        has_entries )
 
 from ycmd.tests.typescript import PathToTestFile, SharedYcmd
@@ -103,7 +103,7 @@ def Subcommands_GetDoc_Method_test( app ):
 
   gettype_data = BuildRequest( completer_target = 'filetype_default',
                                command_arguments = [ 'GetDoc' ],
-                               line_num = 34,
+                               line_num = 39,
                                column_num = 9,
                                contents = contents,
                                filetype = 'typescript',
@@ -131,7 +131,7 @@ def Subcommands_GetDoc_Class_test( app ):
 
   gettype_data = BuildRequest( completer_target = 'filetype_default',
                                command_arguments = [ 'GetDoc' ],
-                               line_num = 37,
+                               line_num = 42,
                                column_num = 2,
                                contents = contents,
                                filetype = 'typescript',
@@ -149,6 +149,7 @@ def Subcommands_GetDoc_Class_test( app ):
 @SharedYcmd
 def Subcommands_GoToReferences_test( app ):
   filepath = PathToTestFile( 'test.ts' )
+  file3 = PathToTestFile( 'file3.ts' )
   contents = ReadFile( filepath )
 
   event_data = BuildRequest( filepath = filepath,
@@ -160,20 +161,36 @@ def Subcommands_GoToReferences_test( app ):
 
   references_data = BuildRequest( completer_target = 'filetype_default',
                                   command_arguments = [ 'GoToReferences' ],
-                                  line_num = 33,
+                                  line_num = 38,
                                   column_num = 6,
                                   contents = contents,
                                   filetype = 'typescript',
                                   filepath = filepath )
 
-  expected = has_items(
+  expected = contains_inanyorder(
     has_entries( { 'description': 'var bar = new Bar();',
-                   'line_num'   : 33,
+                   'filepath'   : filepath,
+                   'line_num'   : 38,
                    'column_num' : 5 } ),
     has_entries( { 'description': 'bar.testMethod();',
-                   'line_num'   : 34,
-                   'column_num' : 1 } ) )
+                   'filepath'   : filepath,
+                   'line_num'   : 39,
+                   'column_num' : 1 } ),
+    has_entries( { 'description': 'bar.nonExistingMethod();',
+                   'filepath'   : filepath,
+                   'line_num'   : 40,
+                   'column_num' : 1 } ),
+    has_entries( { 'description': 'bar.testMethod();',
+                   'filepath'   : file3,
+                   'line_num'   : 2,
+                   'column_num' : 1 } ),
+    has_entries( { 'description': 'var bar = new Bar();',
+                   'filepath'   : file3,
+                   'line_num'   : 1,
+                   'column_num' : 5 } ),
+  )
   actual = app.post_json( '/run_completer_command', references_data ).json
+  print( json.dumps( actual, indent=2 ) )
   assert_that( actual, expected )
 
 
@@ -191,7 +208,7 @@ def Subcommands_GoTo_test( app ):
 
   goto_data = BuildRequest( completer_target = 'filetype_default',
                             command_arguments = [ 'GoToDefinition' ],
-                            line_num = 34,
+                            line_num = 39,
                             column_num = 9,
                             contents = contents,
                             filetype = 'typescript',
@@ -220,7 +237,7 @@ def Subcommands_GoTo_Fail_test( app ):
 
   goto_data = BuildRequest( completer_target = 'filetype_default',
                             command_arguments = [ 'GoToDefinition' ],
-                            line_num = 35,
+                            line_num = 40,
                             column_num = 6,
                             contents = contents,
                             filetype = 'typescript',
@@ -279,7 +296,7 @@ def Subcommands_RefactorRename_NotPossible_test( app ):
                             'RefactorRename',
                             'whatever'
                           ],
-                          line_num = 35,
+                          line_num = 40,
                           column_num = 5,
                           contents = contents,
                           filetype = 'typescript',
@@ -375,12 +392,12 @@ def Subcommands_RefactorRename_MultipleFiles_test( app ):
           LocationMatcher( filepath, 25, 10 ) ),
         ChunkMatcher(
           'this-is-a-longer-string',
-          LocationMatcher( filepath, 33, 15 ),
-          LocationMatcher( filepath, 33, 18 ) ),
+          LocationMatcher( filepath, 38, 15 ),
+          LocationMatcher( filepath, 38, 18 ) ),
         ChunkMatcher(
           'this-is-a-longer-string',
-          LocationMatcher( filepath, 37, 1 ),
-          LocationMatcher( filepath, 37, 4 ) ),
+          LocationMatcher( filepath, 42, 1 ),
+          LocationMatcher( filepath, 42, 4 ) ),
         ChunkMatcher(
           'this-is-a-longer-string',
           LocationMatcher( file2, 1, 5 ),
