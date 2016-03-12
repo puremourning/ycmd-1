@@ -587,20 +587,10 @@ class TernCompleter( Completer ):
     #     ]
     # }
 
-    def BuildRange( filename, start, end ):
-      return responses.Range(
-        responses.Location( start[ 'line' ] + 1,
-                            start[ 'ch' ] + 1,
-                            filename ),
-        responses.Location( end[ 'line' ] + 1,
-                            end[ 'ch' ] + 1,
-                            filename ) )
-
-
     def BuildFixItChunk( change ):
       return responses.FixItChunk(
         change[ 'text' ],
-        BuildRange( os.path.abspath( change[ 'file'] ),
+        _BuildRange( os.path.abspath( change[ 'file'] ),
                     change[ 'start' ],
                     change[ 'end' ] ) )
 
@@ -635,11 +625,21 @@ class TernCompleter( Completer ):
     # The lint plugin only returns errors for the current file.
     filename = request_data[ 'filepath' ]
 
+    def BuildLocation( filename, pos ):
+        return responses.Location( pos[ 'line' ] + 1,
+                                   pos[ 'ch' ] + 1,
+                                   filename )
+
     def BuildDiagnostic( message ):
+      _logger.debug( 'Message: '
+                   + message[ 'message' ]
+                   + ' is a '
+                   + repr( type( message[ 'message' ] ) ) )
+
       return responses.Diagnostic(
           [],
           BuildLocation( filename, message[ 'from' ] ),
-          BuildRange( filename, message[ 'from' ], message[ 'to' ] ),
+          _BuildRange( filename, message[ 'from' ], message[ 'to' ] ),
           message[ 'message' ],
           message[ 'severity' ].upper() )
 
@@ -654,3 +654,13 @@ class TernCompleter( Completer ):
   def GetDetailedDiagnostic( self, request_data ):
     return GetDetailedDiagnosticFromStore( self._diagnostic_store,
                                            request_data )
+
+
+def _BuildRange( filename, start, end ):
+  return responses.Range(
+    responses.Location( start[ 'line' ] + 1,
+                        start[ 'ch' ] + 1,
+                        filename ),
+    responses.Location( end[ 'line' ] + 1,
+                        end[ 'ch' ] + 1,
+                        filename ) )

@@ -16,6 +16,7 @@
       "baseURL": "./",
       "paths": {}
     },
-    "lint": {}
+    "lint": {},
+    "node-extension": {}
   }
 }
