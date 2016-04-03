@@ -48,6 +48,17 @@ if ( USE_CLANG_COMPLETER AND
            "75933480c8f8e3ae3cf9281494bf0057e9e4cfae4315f59c468a4e850a86f544" )
     endif()
     set( CLANG_FILENAME "${CLANG_DIRNAME}.exe" )
+  elseif ( SYSTEM_IS_FREEBSD )
+    if ( 64_BIT_PLATFORM )
+      set( CLANG_DIRNAME "clang+llvm-${CLANG_VERSION}-amd64-unknown-freebsd10" )
+      set( CLANG_SHA256
+	   "fe8c7136d254a4a25967c4d8d97f48a985cb594fe5c864dc234526a6bacfebe2" )
+    else()
+      set( CLANG_DIRNAME "clang+llvm-${CLANG_VERSION}-i686-unknown-freebsd10" )
+      set( CLANG_SHA256
+	   "674cf5faac18ffa5c01775460d2d56975426ea454e395332851a6a547140597e" )
+    endif()
+    set( CLANG_FILENAME "${CLANG_DIRNAME}.tar.xz" )
   else()
     if ( 64_BIT_PLATFORM )
       # We MUST support the latest Ubuntu LTS release!
