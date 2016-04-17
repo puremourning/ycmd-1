@@ -100,7 +100,7 @@ def _FiletypeDictUnion( dict_one, dict_two ):
 
 
 # start_codepoint and column_codepoint are codepoint offsets in the unicode
-# string line_value
+# string line_value.
 def _RegexTriggerMatches( trigger,
                           line_value,
                           start_codepoint,
@@ -118,8 +118,8 @@ def _RegexTriggerMatches( trigger,
   return False
 
 
-# start_codepoint and column_codepoint are 0-based and are codepiont offsets
-# into the unicode string line_value
+# start_codepoint and column_codepoint are 0-based and are codepoint offsets
+# into the unicode string line_value.
 def _MatchingSemanticTrigger( line_value, start_codepoint, column_codepoint,
                               trigger_list ):
   if start_codepoint < 0 or column_codepoint < 0:
@@ -182,7 +182,7 @@ def FilterAndSortCandidatesWrap( candidates, sort_property, query ):
   # FIXME: This is actually quite inefficient in an area which is used
   # constantly and the key performance critical part of the system. There is
   # code in the C++ layer (see PythonSupport.cpp:GetUtf8String) which attempts
-  # to work around this limitation. Unfortunately it hass issues which cause the
+  # to work around this limitation. Unfortunately it has issues which cause the
   # above problems, and we work around it by converting here in the python
   # layer until we can come up with a better solution in the C++ layer.
 
@@ -210,17 +210,17 @@ def FilterAndSortCandidatesWrap( candidates, sort_property, query ):
 
 
 def _ConvertCandidatesToCppCompatible( candidates, sort_property ):
-  """Convert the candidates to the format expected by the C++ layer"""
+  """Convert the candidates to the format expected by the C++ layer."""
   return _ConvertCandidates( candidates, sort_property, ToCppStringCompatible )
 
 
 def _ConvertCandidatesToPythonCompatible( candidates, sort_property ):
-  """Convert the candidates to the format expected by the python layer"""
+  """Convert the candidates to the format expected by the python layer."""
   return _ConvertCandidates( candidates, sort_property, ToUnicode )
 
 
 def _ConvertCandidates( candidates, sort_property, converter ):
-  """ Apply the conversion function |converter| to the logical insertion text
+  """Apply the conversion function |converter| to the logical insertion text
   field within the candidates in the candidate list |candidates|. The
   |sort_property| is required to determine the format of |candidates|.
 
@@ -229,7 +229,7 @@ def _ConvertCandidates( candidates, sort_property, converter ):
   ycmd.utils.ToCppStringCompatible.
 
   Typically this method is not called directly, rather it is used via
-  _ConvertCandidatesToCppCompatible and _ConvertCandidatesToPythonCompatible"""
+  _ConvertCandidatesToCppCompatible and _ConvertCandidatesToPythonCompatible."""
 
   if sort_property:
     for candidate in candidates:

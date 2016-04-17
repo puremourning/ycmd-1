@@ -1,5 +1,6 @@
-# Copyright (C) 2014 Google Inc.
 # encoding: utf8
+#
+# Copyright (C) 2014 Google Inc.
 #
 # This file is part of ycmd.
 #
@@ -124,14 +125,9 @@ class RequestWrap( object ):
 
 
   def _Query( self ):
-    query = self[ 'line_value' ][
+    return self[ 'line_value' ][
         self[ 'start_codepoint' ] - 1 : self[ 'column_codepoint' ] - 1
     ]
-
-    _logger.debug( 'Query for line /{0}/ is /{1}/'.format( self[ 'line_value' ],
-                                                           query ) )
-
-    return query
 
 
   def _Filetypes( self ):
@@ -147,8 +143,8 @@ def CompletionStartColumn( line_value, column_num, filetype ):
   'r'), then the starting column would be the index of the letter 'b'.
 
   NOTE: if the line contains multi-byte characters, then the result is not
-  the 'character' index (see CompletionStartCodepoint for that), and therfore
-  is is not safe to perform any character-relevant arithmetic on the result
+  the 'character' index (see CompletionStartCodepoint for that), and therefore
+  it is not safe to perform any character-relevant arithmetic on the result
   of this method."""
   return CodepointOffsetToByteOffset(
       ToUnicode( line_value ),

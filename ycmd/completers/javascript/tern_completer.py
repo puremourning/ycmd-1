@@ -339,7 +339,7 @@ class TernCompleter( Completer ):
 
     NOTE: the |codepoint| parameter is usually the current cursor position,
     though it should be the "completion start column" codepoint for completion
-    requests"""
+    requests."""
 
     def MakeTernLocation( request_data ):
       return {

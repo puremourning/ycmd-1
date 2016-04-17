@@ -71,7 +71,7 @@ def BuildGoToResponse( filepath, line_num, column_num, description = None ):
 
 
 def BuildGoToResponseFromLocation( location, description = None ):
-  """Build a GoTo response from a responses.Location object"""
+  """Build a GoTo response from a responses.Location object."""
   response = BuildLocationData( location )
   if description:
     response[ 'description' ] = description

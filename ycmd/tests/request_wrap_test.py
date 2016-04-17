@@ -103,7 +103,7 @@ def StartColumn_DotWithUnicode_test():
                                  contents = 'fäö.bär') )[ 'start_column' ] )
 
 
-def StartColumn_Unicode_Not_Identifier_test():
+def StartColumn_UnicodeNotIdentifier_test():
   contents = "var x = '†es†ing'."
 
   # † not considered an identifier character
@@ -219,13 +219,13 @@ def Query_InWhiteSpace_test():
                                  contents = 'foo       ') )[ 'query' ] )
 
 
-def Query_Unicode_Singlechar_Inclusive_test():
+def Query_UnicodeSinglecharInclusive_test():
   eq_( 'ø',
        RequestWrap( PrepareJson( column_num = 7,
                                  contents = 'abc.ø' ) )[ 'query' ] )
 
 
-def Query_Unicode_Singlechar_Exclusive_test():
+def Query_UnicodeSinglecharExclusive_test():
   eq_( '',
        RequestWrap( PrepareJson( column_num = 5,
                                  contents = 'abc.ø' ) )[ 'query' ] )
