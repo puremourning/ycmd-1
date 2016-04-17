@@ -201,7 +201,7 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
 
 
   def QueryLengthAboveMinThreshold( self, request_data ):
-    # Note: calculation in 'characters' not bytes
+    # Note: calculation in 'characters' not bytes.
     query_length = ( request_data[ 'column_codepoint' ] -
                      request_data[ 'start_codepoint' ] )
 
@@ -372,7 +372,7 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
 
 class CompletionsCache( object ):
   """Completions for a particular request. Importantly, columns are byte
-  offsets, not unicode codepoints"""
+  offsets, not unicode codepoints."""
 
   def __init__( self ):
     self._access_lock = threading.Lock()
@@ -387,7 +387,7 @@ class CompletionsCache( object ):
       self._completions = None
 
 
-  # start_column is byte offset
+  # start_column is a byte offset.
   def Update( self, line_num, start_column, completion_type, completions ):
     with self._access_lock:
       self._line_num = line_num
@@ -396,7 +396,7 @@ class CompletionsCache( object ):
       self._completions = completions
 
 
-  # start_column is byte offset
+  # start_column is a byte offset.
   def GetCompletionsIfCacheValid( self, line_num, start_column,
                                   completion_type ):
     with self._access_lock:
@@ -406,7 +406,7 @@ class CompletionsCache( object ):
       return self._completions
 
 
-  # start_column is byte offset
+  # start_column is a byte offset.
   def _CacheValidNoLock( self, line_num, start_column, completion_type ):
     return ( line_num == self._line_num and
              start_column == self._start_column and

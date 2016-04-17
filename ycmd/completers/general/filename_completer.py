@@ -113,7 +113,7 @@ class FilenameCompleter( Completer ):
     start_codepoint = request_data[ 'start_codepoint' ] - 1
     filepath = request_data[ 'filepath' ]
     filetypes = request_data[ 'file_data' ][ filepath ][ 'filetypes' ]
-    line = current_line[ :start_codepoint ]
+    line = current_line[ : start_codepoint ]
 
     if InCFamilyFile( filetypes ):
       path_dir, quoted_include = (

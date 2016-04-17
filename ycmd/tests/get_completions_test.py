@@ -1,4 +1,5 @@
 # encoding: utf-8
+#
 # Copyright (C) 2013 Google Inc.
 #               2015 ycmd contributors
 #
@@ -415,9 +416,9 @@ def GetCompletions_CacheIsNotValid_DifferentCompletionType_test(
         return_value = True )
 @patch( 'ycmd.tests.test_utils.DummyCompleter.CandidatesList',
         return_value = [ 'aba', 'cbc' ] )
-def GetCompletions_Filter_Then_Return_From_Cache_test( app,
-                                                       candidates_list,
-                                                       *args ):
+def GetCompletions_FilterThenReturnFromCache_test( app,
+                                                   candidates_list,
+                                                   *args ):
 
   with PatchCompleter( DummyCompleter, 'dummy_filetype' ):
     # First, fill the cache with an empty query

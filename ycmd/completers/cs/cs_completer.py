@@ -509,8 +509,8 @@ class CsharpSolutionCompleter( object ):
 
     result = self._GetResponse( '/fixcodeissue', request )
     replacement_text = result[ "Text" ]
-    # Note: column_num already a byte offset so we don't need to use
-    # _BuildLocation
+    # Note: column_num is already a byte offset so we don't need to use
+    # _BuildLocation.
     location = responses.Location( request_data[ 'line_num' ],
                                    request_data[ 'column_num' ],
                                    request_data[ 'filepath' ] )
