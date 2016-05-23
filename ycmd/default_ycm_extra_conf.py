@@ -168,8 +168,39 @@ fallback_flags_ext_map = {
 # Implementation {{{
 
 
-# Return a compilation database object for the supplied path or None if none
-# could be found.
+def MakeRelativePathsInFlagsAbsolute( flags, working_directory ):
+  if not working_directory:
+    return list( flags )
+  new_flags = []
+  make_next_absolute = False
+  path_flags = [ '-isystem', '-I', '-iquote', '--sysroot=' ]
+  for flag in flags:
+    new_flag = flag
+
+    if make_next_absolute:
+      make_next_absolute = False
+      if not flag.startswith( '/' ):
+        new_flag = os.path.join( working_directory, flag )
+
+    for path_flag in path_flags:
+      if flag == path_flag:
+        make_next_absolute = True
+        break
+
+      if flag.startswith( path_flag ):
+        path = flag[ len( path_flag ): ]
+        new_flag = path_flag + os.path.join( working_directory, path )
+        break
+
+    if new_flag:
+      new_flags.append( new_flag )
+  return new_flags
+
+
+# Return a tuple containing:
+#  - compilation database object for the supplied path,
+#  - the directory in which the compilation database was found
+# or None if none compilation database could be found.
 #
 # We search up the directory hierarchy, to first see if we have a compilation
 # database already for that path, or if a compile_commands.json file exists in
@@ -180,7 +211,7 @@ def FindCompilationDatabase( wd ):
     # Did we already cache a database for this path?
     if folder in compilation_database_dir_map:
       # Yep. Return that.
-      return compilation_database_dir_map[ folder ]
+      return ( compilation_database_dir_map[ folder ], folder )
 
     # Guess not. Let's see if a compile_commands.json file already exists...
     compile_commands = os.path.join( folder, 'compile_commands.json' )
@@ -188,7 +219,7 @@ def FindCompilationDatabase( wd ):
       # Yes, it exists. Create a database and cache it in our map.
       database = ycm_core.CompilationDatabase( folder )
       compilation_database_dir_map[ folder ] = database
-      return database
+      return ( database, folder )
 
     # Doesn't exist. Check the next ancestor
 
@@ -250,7 +281,7 @@ def FlagsForFile( file_name, **kwargs ):
   file_parts = os.path.splitext( file_name )
 
   # Create or retrieve the cached compilation database object
-  database = FindCompilationDatabase( file_dir )
+  ( database, database_dir ) = FindCompilationDatabase( file_dir )
   if database is None:
     # We couldn't find a compilation database. Just return some absolutely
     # generic flags based on the file extension.
@@ -292,7 +323,8 @@ def FlagsForFile( file_name, **kwargs ):
 
   return {
     # We pass the compiler flags from the database unmodified.
-    'flags': compilation_info.compiler_flags_,
+    'flags': MakeRelativePathsInFlagsAbsolute( compilation_info.compiler_flags_,
+                                               database_dir ),
 
     # We always want to use ycmd's cache, as this significantly improves
     # performance.
