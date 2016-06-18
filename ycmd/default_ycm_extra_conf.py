@@ -224,7 +224,7 @@ def FindCompilationDatabase( wd ):
     # Doesn't exist. Check the next ancestor
 
   # Nothing was found. No compilation flags are available.
-  return None
+  return ( None, None )
 
 
 # Find the compilation info structure from the supplied database for the
