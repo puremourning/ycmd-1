@@ -9,24 +9,69 @@
 <div class="container">
     <h1>ycmd</h1>
     <p><p>ycmd is a code-completion &amp; code-comprehension server</p>
+    <p>ycmd presents a JSON/REST interface to clients over HTTP, validated by HMAC.
+    An instance of ycmd is started for each client application.</p>
     <h2 id="general-notes">General Notes</h2>
+    <p>The REST interface typically uses HTTP POST requests and expects the payload
+    data to be a valid json document. The following general principles are
+    applied:</p>
     <ul>
     <li>All strings going into and out of the server are UTF-8 encoded.</li>
     <li>All line and column numbers are 1-based, not 0-based. They are also byte
     offsets, not Unicode codepoint offsets.</li>
-    <li>All file paths are full, absolute paths.</li>
+    <li>All file paths are full, absolute paths. If a file has not been written
+    to disk yet, supply a temporary path.</li>
     <li>All requests to the server must include an HMAC in the x-ycm-hmac HTTP
+    header.</li>
+    <li>All responses from the server must be validated using the x-ycm-hmac
+    header.</li>
+    </ul>
+    <h2 id="the-example-client">The example client</h2>
+    <p>ycmd contains a simple example client in the <code>example</code> directory of the
+    source tree. It is written in pure python with only minimal dependencies.
+    It contains trivial implementations of most endpoints and serves to
+    supplement this API documentation.</p>
+    <p>Consult <code>example/README.md</code> for instructions on getting it running.</p>
+    <h2 id="starting-the-server">Starting the server</h2>
+    <p>The ycmd server is typically started by a client in order to provide
+    services to it. Briefly, starting the server requires supplying some
+    configuration and initialising and security features (HMAC).</p>
+    <p>The server should be started with a supported version of Python.</p>
+    <p>The full list of command line options can be obtained by passing <code>--help</code>
+    to ycmd (e.g. <code>python -m ycmd --help</code>). However, the following
+    options warrant further discussion:</p>
+    <h3 id="-options_file-"><code>--options_file</code></h3>
+    <p>This mandatory option supplied the name of a file containing user options
+    data. This option (and thus the file) are mandatory, as they are required
+    to set the shared HMAC secret.</p>
+    <p>Once the server has read the options, the server deletes the options file.
+    Therefore, the client should typically create a secure temporary file (e.g.
+    <code>mkstemp</code>) which contains the options to be used.</p>
+    <p>The default options and their values are found in <code>default_settings.json</code>
+    within the ycmd codebase.</p>
+    <p>The file contains a JSON-formatted object, where the keys are the names of
+    options (with any <code>ycm_</code> prefix removed) and the values are the option
+    values.</p>
+    <p>The canonical list of supported user options can be found in
+    YouCompleteMe&#39;&#39;s <code>README.md</code>. The option values should have the <code>ycm_</code>
+    prefix removed.</p>
+    <p>The following additional options are required to be set by the client
+    application and should <em>not</em> be visible to the user:</p>
+    <ul>
+    <li><code>hmac_secret</code>: The shared secret for HMAC authentication. This should be
+    a random 16 byte of random data with as much entropy as possible,
+    encoded as a base-64 utf-8 string.</li>
+    </ul>
+    <h2 id="hmac">HMAC</h2>
+    <p>All requests to the server must include an HMAC in the x-ycm-hmac HTTP
     header. The HMAC is computed from the shared secret passed to the server
     on startup and the request/response body. The digest algorithm is SHA-256.
     The server will also include the HMAC in its responses; you must verify it
-    before using the response. See example_client.py to see how it&#39;s done.</li>
-    </ul>
-    <h2 id="command-line-options">Command line options</h2>
-    <h2 id="hmac">HMAC</h2>
+    before using the response. See the example client to see how it&#39;&#39;s done.</p>
     <h2 id="filetypes">Filetypes</h2>
     <p>ycmd uses <code>filetypes</code> to identify the &quot;language&quot; of a given buffer. These
     filetype values are strictly the values understood by Vim. Please see the
-    YCM README.md for the list of filetypes recognised by ycmd for semantic 
+    YCM README.md for the list of filetypes recognised by ycmd for semantic
     completion.</p>
     </p>
     
@@ -114,7 +159,7 @@
                             <a href="#operation--filter_and_sort_candidates-post">POST</a>
                         </td>
                         <td>
-                            <p>Filter and sort a set of candidates using ycmd&#39;s fuzzy matching</p>
+                            <p>Filter and sort a set of candidates using ycmd&#39;&#39;s fuzzy matching</p>
         
                         </td>
                     </tr>
@@ -184,16 +229,16 @@
                     <section class="sw-operation-description">
                         <p>Returns the autocompletion suggestions for the current cursor
             position. Typically, the server determines whether or not to use
-            semantic completion or general (i.e. identifier-based) completion 
+            semantic completion or general (i.e. identifier-based) completion
             based on the language (filetype) and the context. Clients can force
-            the use of semantic completion by setting the <code>force_semantic</code> 
+            the use of semantic completion by setting the <code>force_semantic</code>
             property to <code>true</code>.</p>
             <p>Note that if <code>force_semantic</code> is not set to <code>true</code> and the completion
             engine returns an error, the server still tries to fall back to
             general completion, so this endpoint will typically always return
             successfully. Any semantic completer error raised is included in the
             response to be dealt with by the client.</p>
-            <p>When <code>force_semantic</code> is <code>true</code>, any error returned by the semantic 
+            <p>When <code>force_semantic</code> is <code>true</code>, any error returned by the semantic
             engine is returned via a 500 response.</p>
             
                     </section>
@@ -618,32 +663,30 @@
                 </div>
                 <div class="panel-body">
                     <section class="sw-operation-description">
-                        <p>The server needs to react to a number of client events in order to 
-            provide things like diagnotics and to handler downstream server states 
-            etc. The client must inform the server of the following events, 
+                        <p>The server needs to react to a number of client events in order to
+            provide things like diagnotics and to handler downstream server states
+            etc. The client must inform the server of the following events,
             populating the event name in the <code>event_name</code> property:</p>
             <ul>
             <li><code>FileReadyToParse</code>
-            Call when a new buffer is opened or after the user has 
+            Call when a new buffer is opened or after the user has
             stopped typing for some time, or at any other time when the client
-            believes that it is worthwhile reparsing the current file and 
-            updating semantic engines&#39; ASTs and reporting things like updated
+            believes that it is worthwhile reparsing the current file and
+            updating semantic engines&#39;&#39; ASTs and reporting things like updated
             diagnostics.</li>
-            <li><code>BufferUnload</code>
+            <li><code>BufferUnload</code> (optional)
             Call when the user closes a buffer that was previously known to be
             open. <em>Note</em>: the <code>unloaded_buffer</code> property is required.</li>
-            <li><code>BufferVisit</code>
+            <li><code>BufferVisit</code> (optional)
             Call when the user focusses on a buffer that is already known.
             <em>Note</em>: The <code>ultisnips_snippets</code> property is optional when firing
-            calling this event. TODO: Otherwise it is ignored.</li>
-            <li><code>InsertLeave</code>
-            For modal editors, call when exiting insert mode.
-            TODO: When should this <em>really</em> be called? This is sounding very 
-            Vim-specific. I wonder what the other editor plugins do.</li>
-            <li><code>CurrentIdentifierFinished</code>
-            Call when the user finishes typic what appear to the client to be
-            an identifier.
-            TODO: How should the client know when this has happened?</li>
+            calling this event. Otherwise it is ignored.</li>
+            <li><code>InsertLeave</code> (optional)
+            For modal editors, call when exiting insert mode. It is equivalent
+            to <code>CurrentIdentifierFinished</code>.</li>
+            <li><code>CurrentIdentifierFinished</code> (optional)
+            Call when the user finishes typing what appears to the client to be
+            an identifier.</li>
             </ul>
             
                     </section>
@@ -888,7 +931,7 @@
         <span id="path--filter_and_sort_candidates"></span>
             <div id="operation--filter_and_sort_candidates-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Filter and sort a set of candidates using ycmd&apos;s fuzzy matching</div>
+                    <div class="operation-summary">Filter and sort a set of candidates using ycmd&apos;&apos;s fuzzy matching</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/filter_and_sort_candidates</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -897,7 +940,7 @@
             determine a set of suitable candidate completion suggestions by other
             means. In Vim this is is typically from the <code>omnifunc</code> and other
             clients will have equivalents.</p>
-            <p>This endpoint allows clients to use ycmd&#39;s powerful filtering and
+            <p>This endpoint allows clients to use ycmd&#39;&#39;s powerful filtering and
             ranking capabilities (including longest-common-subsequence and
             word-boundary-character ranking) on arbitrary sets of identifiers.</p>
             <p><em>NOTE:</em> This API is primarily intended for use when subclassing the
@@ -913,7 +956,7 @@
                                             <div class="col-md-6">
                                                 <p><p>The set of candidates to sort of the query parameters.</p>
                         <p><em>NOTE:</em> This <code>request_data</code> object is different from most other
-                                ycmd requests as it does not contain buffer data or 
+                                ycmd requests as it does not contain buffer data or
                                 cursor locations.</p>
                         </p>
                                             </div>
@@ -1131,7 +1174,7 @@
                 <div class="panel-body">
                     <section class="sw-operation-description">
                         <p>By default, ycmd will not load <code>.ycm_extra_conf.py</code> files for security
-            reasons and instead raises an exception the first time it requires 
+            reasons and instead raises an exception the first time it requires
             loading.</p>
             <p>In the case that exception is raised, the client should call this
             API endpoint after confirming with the user that it is safe to load
@@ -1212,35 +1255,35 @@
                 <div class="panel-body">
                     <section class="sw-operation-description">
                         <p>Semantic completers offer additional engine-specific commands, known
-            as completer subcommands. This endpoint requests a specific command to 
+            as completer subcommands. This endpoint requests a specific command to
             be executed. Typically the &quot;default&quot; semantic completer for the current
             filetype is used, but it is possible to force the use of a particular
             completer, using the <code>completer_target</code> property.</p>
-            <p>The command to execute is passed as a list of arguments, the first of 
-            which is the command name followed by any command- and 
+            <p>The command to execute is passed as a list of arguments, the first of
+            which is the command name followed by any command- and
             completer-specific additional arguments. This &quot;command line&quot; is passed
             in the <code>command_arguments</code> property.</p>
-            <p>The list of available subcommands for a particular semantic compelter 
+            <p>The list of available subcommands for a particular semantic compelter
             can be queried using the <code>/defined_subcommands</code> endpoint.</p>
             <p>Subcommands may return one of a number of actions, depending on the
             type of command. The following types of response are returned:</p>
             <ul>
-            <li>A <em>simple display message</em> response. This is identified where the 
+            <li>A <em>simple display message</em> response. This is identified where the
             type of the response is scalar (i.e. boolean, number, string) or the
             type of the response is am obkect with a <code>message</code> property. These
             messages are typically only a single line and can be displayed in
             a message-box or similarly echoed in a status bar or equivalent.</li>
             <li>A <em>FixIt</em> response. This is identified where the type of the response
             is an object with a property named <code>fixits</code>.</li>
-            <li>A <em>detailed information</em> response. This is identified where the type 
+            <li>A <em>detailed information</em> response. This is identified where the type
             of the response is an object with a <code>detailed_info</code> property. These
             messages are typically multiple lines (such as the documentation and
             signature for a method) and are best displayed in a panel or preview
             area (or equivalent).</li>
             <li>A <em>GoTo</em> response. This is identified where the response type cannot
             be determined by any of the above methods. A GoTo response may contain
-            either a single location (e.g. for <code>GoToDeclaration</code>), or a list of 
-            possible locations for the user to chose from (such as in a 
+            either a single location (e.g. for <code>GoToDeclaration</code>), or a list of
+            possible locations for the user to chose from (such as in a
             <code>GoToReferences</code> subcommand).</li>
             </ul>
             
@@ -1377,11 +1420,11 @@
                                             <div class="row">
                                                 <div class="col-md-12">
                                                     <p>Optional action or display text in response to the request.</p>
-                                            <p><em>NOTE</em>: If the type of the response is not an object or list, 
+                                            <p><em>NOTE</em>: If the type of the response is not an object or list,
                                                     then the response is a <em>simple display message</em>.</p>
                                             <p><em>NOTE</em>: If the type of the response is a list, then the response is
-                                                    a GoTo list (e.g. quick-fix list or equivalent) and the 
-                                                    items in the list are of type <code>GoToLocations</code> 
+                                                    a GoTo list (e.g. quick-fix list or equivalent) and the
+                                                    items in the list are of type <code>GoToLocations</code>
                                                     (see definitions)</p>
                                             
                                                 </div>
@@ -1401,11 +1444,12 @@
                                                                                     
                                                                                 </dt>
                                                                                 <dd>
-                                                                                    <p>If present, this is a <em>FixIt</em> response and the value of this
-                                                                    property is a list of changes to buffers to apply the quick
-                                                                    fix or refactoring operation.</p>
+                                                                                    <p>If present, this is a <em>FixIt</em> or <em>Refactor</em> response and the
+                                                                    value of this property is a list of potential changes to
+                                                                    buffers to apply the quick fix or refactoring operation.</p>
                                                                     <p>An empty <code>fixits</code> list means that no FixIt or refactoring
-                                                                    was available. Otherwise, precisely 1 FixIt is supplied.</p>
+                                                                    was available. If multiple entries are supplied, the user is
+                                                                    prompted to select which one to apply.</p>
                                                                     
                                                                                     <div class="json-inner-schema">
                                                                                         
@@ -1440,8 +1484,8 @@
                                                                                     
                                                                                 </dt>
                                                                                 <dd>
-                                                                                    <p>If present, this is a <em>detailed information</em> response and 
-                                                                    the value of this property is the multi-line information 
+                                                                                    <p>If present, this is a <em>detailed information</em> response and
+                                                                    the value of this property is the multi-line information
                                                                     to display as unformatted plain text.</p>
                                                                     
                                                                                     <div class="json-inner-schema">
@@ -1658,7 +1702,7 @@
                                     the completion menu (or equivalent). Typically this is the
                                     signature/declaration of the item being suggested, or some
                                     additional free-text qualifiers (such as <code>[File]</code> etc.). These
-                                    are a single line and typically short. For more detailed 
+                                    are a single line and typically short. For more detailed
                                     information, such as usage and docs, see <code>detailed_info</code>.</p>
                                     <p>Equivalent of the Vim <code>complete-items</code> entry: <code>menu</code></p>
                                     
@@ -1689,7 +1733,7 @@
                                                     
                                                 </dt>
                                                 <dd>
-                                                    <p>An indicator of the type of suggestion. Only the first character 
+                                                    <p>An indicator of the type of suggestion. Only the first character
                                     of <code>kind</code> should be displayed.</p>
                                     <p>Equivalent of the Vim <code>complete-items</code> entry: <code>kind</code></p>
                                     
@@ -1717,7 +1761,7 @@
                                                                                 
                                                                             </dt>
                                                                             <dd>
-                                                                                <p>Additional documentation/information to be displayed 
+                                                                                <p>Additional documentation/information to be displayed
                                                                 alongside (after) information in <code>detailed_info</code>.</p>
                                                                 
                                                                                 <div class="json-inner-schema">
@@ -1821,11 +1865,8 @@
                                                 </dt>
                                                 <dd>
                                                     <p>1-based byte index of the column from which the completion should be
-                                    applied. This is the column in which the words suggested in 
+                                    applied. This is the column in which the words suggested in
                                     <code>completions</code> should be placed.</p>
-                                    <p>TODO: How do clients know how long the &quot;query&quot; is and thus how much
-                                    to replace? Presumably this is relying on the &quot;identifier&quot; knowledge
-                                    of the client.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -1873,7 +1914,7 @@
                             The source location where the diagnostic applies. This is typically
                             (but not always) the start of <code>location_extent</code>.</li>
                             <li><code>location_extent</code>
-                            The source range to which the diagnostic applies. This differs from 
+                            The source range to which the diagnostic applies. This differs from
                             the <code>location</code> in that it refers to the whole range. Typically this is
                             used to underline, or otherwise render as &quot;error&quot; the source code
                             which caused the diagnostic.</li>
@@ -1891,8 +1932,9 @@
                                                         <span class="json-property-required"></span>
                                                 </dt>
                                                 <dd>
-                                                    <p>List of ranges to which this diagnostic applies.
-                                    TODO: What?</p>
+                                                    <p>List of ranges to which this diagnostic applies. These ranges
+                                    typically identify the source locations which should be
+                                    &#39;&#39;highlighted&#39;&#39; as incorrect.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -2044,7 +2086,7 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <p>The server raised an exception processing the request. This response is 
+                                    <p>The server raised an exception processing the request. This response is
                             often returned when the server is unable to perform the requested action,
                             not due to a bug or other error, but because it is not possible to do so.
                             For example, it is common for an exception response to be returned when
@@ -2167,7 +2209,7 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <p>An object mapping whose keys are the absolute paths to the 
+                                    <p>An object mapping whose keys are the absolute paths to the
                             files and whose values are data relating to dirty buffers.</p>
                             
                                 </section>
@@ -2193,8 +2235,8 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <p>Absolute path to the file in the filesystem. If the file does 
-                            not yet exist (for example, a new file), then the value may be the empty 
+                                    <p>Absolute path to the file in the filesystem. If the file does
+                            not yet exist (for example, a new file), then the value may be the empty
                             string.</p>
                             
                                 </section>
@@ -2214,6 +2256,21 @@
                             
                                     <section class="json-schema-properties">
                                         <dl>
+                                                <dt data-property-name="text">
+                                                    <span class="json-property-name">text:</span>
+                                                    <span class="json-property-type">string</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                </dt>
+                                                <dd>
+                                                    <p>The diagnostic text or a description of the modification to be made.
+                                    This is the text displayed to the user when selecting from multiple
+                                    available FixIts.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
                                                 <dt data-property-name="location">
                                                     <span class="json-property-name">location:</span>
                                                     <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/Location">Location</a>
