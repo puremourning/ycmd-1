@@ -31,6 +31,9 @@ import traceback
 from bottle import request
 from threading import Thread
 
+from collections import defaultdict
+import contextlib
+
 import ycm_core
 from ycmd import extra_conf_store, hmac_plugin, server_state, user_options_store
 from ycmd.responses import BuildExceptionResponse, BuildCompletionResponse
@@ -49,90 +52,104 @@ _logger = logging.getLogger( __name__ )
 app = bottle.Bottle()
 wsgi_server = None
 
+import cProfile, pstats, StringIO
+
+_handler_profiles = defaultdict( cProfile.Profile )
+
+@contextlib.contextmanager
+def Profiler( name ):
+  _handler_profiles[ name ].enable()
+  try:
+    yield
+  finally:
+    _handler_profiles[ name ].disable()
 
 @app.post( '/event_notification' )
 def EventNotification():
-  _logger.info( 'Received event notification' )
-  request_data = RequestWrap( request.json )
-  event_name = request_data[ 'event_name' ]
-  _logger.debug( 'Event name: %s', event_name )
+  with Profiler( "event_notification" ):
+    _logger.info( 'Received event notification' )
+    request_data = RequestWrap( request.json )
+    event_name = request_data[ 'event_name' ]
+    _logger.debug( 'Event name: %s', event_name )
 
-  event_handler = 'On' + event_name
-  getattr( _server_state.GetGeneralCompleter(), event_handler )( request_data )
+    event_handler = 'On' + event_name
+    getattr( _server_state.GetGeneralCompleter(), event_handler )( request_data )
 
-  filetypes = request_data[ 'filetypes' ]
-  response_data = None
-  if _server_state.FiletypeCompletionUsable( filetypes ):
-    response_data = getattr( _server_state.GetFiletypeCompleter( filetypes ),
-                             event_handler )( request_data )
+    filetypes = request_data[ 'filetypes' ]
+    response_data = None
+    if _server_state.FiletypeCompletionUsable( filetypes ):
+      response_data = getattr( _server_state.GetFiletypeCompleter( filetypes ),
+                               event_handler )( request_data )
 
-  if response_data:
-    return _JsonResponse( response_data )
-  return _JsonResponse( {} )
+    if response_data:
+      return _JsonResponse( response_data )
+    return _JsonResponse( {} )
 
 
 @app.post( '/run_completer_command' )
 def RunCompleterCommand():
-  _logger.info( 'Received command request' )
-  request_data = RequestWrap( request.json )
-  completer = _GetCompleterForRequestData( request_data )
+  with Profiler( "run_completer_command" ):
+    _logger.info( 'Received command request' )
+    request_data = RequestWrap( request.json )
+    completer = _GetCompleterForRequestData( request_data )
 
-  return _JsonResponse( completer.OnUserCommand(
-      request_data[ 'command_arguments' ],
-      request_data ) )
+    return _JsonResponse( completer.OnUserCommand(
+        request_data[ 'command_arguments' ],
+        request_data ) )
 
 
 @app.post( '/completions' )
 def GetCompletions():
-  _logger.info( 'Received completion request' )
-  request_data = RequestWrap( request.json )
-  ( do_filetype_completion, forced_filetype_completion ) = (
-                    _server_state.ShouldUseFiletypeCompleter( request_data ) )
-  _logger.debug( 'Using filetype completion: %s', do_filetype_completion )
+  with Profiler( "completions" ):
+    request_data = RequestWrap( request.json )
+    ( do_filetype_completion, forced_filetype_completion ) = (
+                      _server_state.ShouldUseFiletypeCompleter( request_data ) )
+    _logger.debug( 'Using filetype completion: %s', do_filetype_completion )
 
-  errors = None
-  completions = None
+    errors = None
+    completions = None
 
-  if do_filetype_completion:
-    try:
-      completions = ( _server_state.GetFiletypeCompleter(
-                                  request_data[ 'filetypes' ] )
-                                 .ComputeCandidates( request_data ) )
+    if do_filetype_completion:
+      try:
+        completions = ( _server_state.GetFiletypeCompleter(
+                                    request_data[ 'filetypes' ] )
+                                   .ComputeCandidates( request_data ) )
 
-    except Exception as exception:
-      if forced_filetype_completion:
-        # user explicitly asked for semantic completion, so just pass the error
-        # back
-        raise
-      else:
-        # store the error to be returned with results from the identifier
-        # completer
-        stack = traceback.format_exc()
-        _logger.error( 'Exception from semantic completer (using general): ' +
-                        "".join( stack ) )
-        errors = [ BuildExceptionResponse( exception, stack ) ]
+      except Exception as exception:
+        if forced_filetype_completion:
+          # user explicitly asked for semantic completion, so just pass the error
+          # back
+          raise
+        else:
+          # store the error to be returned with results from the identifier
+          # completer
+          stack = traceback.format_exc()
+          _logger.error( 'Exception from semantic completer (using general): ' +
+                          "".join( stack ) )
+          errors = [ BuildExceptionResponse( exception, stack ) ]
 
-  if not completions and not forced_filetype_completion:
-    completions = ( _server_state.GetGeneralCompleter()
-                                 .ComputeCandidates( request_data ) )
+    if not completions and not forced_filetype_completion:
+      completions = ( _server_state.GetGeneralCompleter()
+                                   .ComputeCandidates( request_data ) )
 
-  return _JsonResponse(
-      BuildCompletionResponse( completions if completions else [],
-                               request_data.CompletionStartColumn(),
-                               errors = errors ) )
+    return _JsonResponse(
+        BuildCompletionResponse( completions if completions else [],
+                                 request_data.CompletionStartColumn(),
+                                 errors = errors ) )
 
 
 @app.post( '/filter_and_sort_candidates' )
 def FilterAndSortCandidates():
-  _logger.info( 'Received filter & sort request' )
-  # Not using RequestWrap because no need and the requests coming in aren't like
-  # the usual requests we handle.
-  request_data = request.json
+  with Profiler( 'filter_and_sort_candidates' ):
+    _logger.info( 'Received filter & sort request' )
+    # Not using RequestWrap because no need and the requests coming in aren't like
+    # the usual requests we handle.
+    request_data = request.json
 
-  return _JsonResponse( FilterAndSortCandidatesWrap(
-    request_data[ 'candidates'],
-    request_data[ 'sort_property' ],
-    request_data[ 'query' ] ) )
+    return _JsonResponse( FilterAndSortCandidatesWrap(
+      request_data[ 'candidates'],
+      request_data[ 'sort_property' ],
+      request_data[ 'query' ] ) )
 
 
 @app.get( '/healthy' )
@@ -213,6 +230,13 @@ def DebugInfo():
 
   if has_clang_support:
     output.append( 'Clang version: ' + ycm_core.ClangVersion() )
+
+  # Dump the profiling data to the log
+  for name, profile in _handler_profiles.iteritems():
+    stats = StringIO.StringIO()
+    ps = pstats.Stats( profile, stream = stats ).sort_stats( 'cumulative' )
+    ps.print_stats()
+    _logger.debug( 'Handler profile for ' + name + ': ' + stats.getvalue() ) 
 
   request_data = RequestWrap( request.json )
   try:
