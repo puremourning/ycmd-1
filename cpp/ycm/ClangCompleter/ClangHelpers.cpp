@@ -222,23 +222,25 @@ std::vector< CompletionData > ToCompletionDataVector(
       continue;
 
     CompletionData data( completion_result );
-    uint index = GetValueElseInsert( seen_data,
-                                     data.original_string_,
-                                     completions.size() );
+
+    uint index = completions.size();
+    if ( data.kind_ != OVERLOAD ) {
+      index = GetValueElseInsert( seen_data,
+                                  data.original_string_,
+                                  completions.size() );
+    }
 
     if ( index == completions.size() ) {
       completions.push_back( boost::move( data ) );
-    }
-
-    else {
+    } else {
       // If we have already seen this completion, then this is an overload of a
       // function we have seen. We add the signature of the overload to the
       // detailed information.
       completions[ index ].detailed_info_
-      .append( data.return_type_ )
-      .append( " " )
-      .append( data.everything_except_return_type_ )
-      .append( "\n" );
+        .append( data.return_type_ )
+        .append( " " )
+        .append( data.everything_except_return_type_ )
+        .append( "\n" );
     }
   }
 
