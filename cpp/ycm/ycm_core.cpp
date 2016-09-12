@@ -135,6 +135,7 @@ PYBIND11_MODULE( ycm_core, mod )
     .value( "MACRO", CompletionKind::MACRO )
     .value( "PARAMETER", CompletionKind::PARAMETER )
     .value( "NAMESPACE", CompletionKind::NAMESPACE )
+    .value( "OVERLOAD", CompletionKind::OVERLOAD )
     .value( "UNKNOWN", CompletionKind::UNKNOWN );
 
   py::class_< CompletionData >( mod, "CompletionData" )

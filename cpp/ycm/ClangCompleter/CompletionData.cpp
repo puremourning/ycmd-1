@@ -72,6 +72,9 @@ CompletionKind CursorKindToCompletionKind( CXCursorKind kind ) {
     case CXCursor_NamespaceAlias:
       return CompletionKind::NAMESPACE;
 
+    case CXCursor_OverloadCandidate:
+      return OVERLOAD;
+
     default:
       return CompletionKind::UNKNOWN;
   }
@@ -97,6 +100,7 @@ bool IsMainCompletionTextInfo( CXCompletionChunkKind kind ) {
     kind == CXCompletionChunk_Equal        ||
     kind == CXCompletionChunk_Informative  ||
     kind == CXCompletionChunk_HorizontalSpace ||
+    kind == CXCompletionChunk_CurrentParameter ||
     kind == CXCompletionChunk_Text;
 
 }
@@ -198,9 +202,9 @@ CompletionData::CompletionData( const CXCompletionResult &completion_result ) {
   kind_ = CursorKindToCompletionKind( completion_result.CursorKind );
 
   detailed_info_.append( return_type_ )
-  .append( " " )
-  .append( everything_except_return_type_ )
-  .append( "\n" );
+    .append( " " )
+    .append( everything_except_return_type_ )
+    .append( "\n" );
 
   doc_string_ = YouCompleteMe::CXStringToString(
                   clang_getCompletionBriefComment( completion_string ) );
@@ -231,6 +235,11 @@ void CompletionData::ExtractDataFromChunk( CXCompletionString completion_string,
     if ( kind == CXCompletionChunk_Optional ) {
       everything_except_return_type_.append(
         OptionalChunkToString( completion_string, chunk_num ) );
+    } else if ( kind == CXCompletionChunk_CurrentParameter ) {
+      everything_except_return_type_
+        .append( "*" )
+        .append( ChunkToString( completion_string, chunk_num ) )
+        .append( "*" );
     } else {
       everything_except_return_type_.append(
         ChunkToString( completion_string, chunk_num ) );
@@ -243,6 +252,7 @@ void CompletionData::ExtractDataFromChunk( CXCompletionString completion_string,
       break;
 
     case CXCompletionChunk_Placeholder:
+    case CXCompletionChunk_CurrentParameter:
       saw_placeholder = true;
       break;
 

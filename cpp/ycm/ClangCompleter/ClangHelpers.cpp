@@ -228,9 +228,13 @@ std::vector< CompletionData > ToCompletionDataVector(
     }
 
     CompletionData data( completion_result );
-    size_t index = GetValueElseInsert( seen_data,
-                                     data.original_string_,
-                                     completions.size() );
+
+    size_t index = completions.size();
+    if ( data.kind_ != OVERLOAD ) {
+      index = GetValueElseInsert( seen_data,
+                                  data.original_string_,
+                                  completions.size() );
+    }
 
     if ( index == completions.size() ) {
       completions.push_back( std::move( data ) );
@@ -239,10 +243,10 @@ std::vector< CompletionData > ToCompletionDataVector(
       // function we have seen. We add the signature of the overload to the
       // detailed information.
       completions[ index ].detailed_info_
-      .append( data.return_type_ )
-      .append( " " )
-      .append( data.everything_except_return_type_ )
-      .append( "\n" );
+        .append( data.return_type_ )
+        .append( " " )
+        .append( data.everything_except_return_type_ )
+        .append( "\n" );
     }
   }
 
