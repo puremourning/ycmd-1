@@ -487,26 +487,9 @@ def _BuildGetDocResponse( doc_data ):
   """Builds a "DetailedInfoResponse" for a GetDoc request. doc_data is a
   DocumentationData object returned from the ClangCompleter"""
 
-  # Parse the XML, as this is the only way to get the declaration text out of
-  # libclang. It seems quite wasteful, but while the contents of the XML
-  # provide fully parsed doxygen documentation tree, we actually don't want to
-  # ever lose any information from the comment, so we just want display
-  # the stripped comment. Arguably we could skip all of this XML generation and
-  # parsing, but having the raw declaration text is likely one of the most
-  # useful pieces of documentation available to the developer. Perhaps in
-  # future, we can use this XML for more interesting things.
-  try:
-    root = xml.etree.ElementTree.fromstring( doc_data.comment_xml )
-  except:
-    raise ValueError( NO_DOCUMENTATION_MESSAGE )
-
-  # Note: declaration is False-y if it has no child elements, hence the below
-  # (wordy) if not declaration is None
-  declaration = root.find( "Declaration" )
-
   return responses.BuildDetailedInfoResponse(
     '{0}\n{1}\nType: {2}\nName: {3}\n---\n{4}'.format(
-      ToUnicode( declaration.text ) if declaration is not None else "",
+      ToUnicode( doc_data.declaration_text ),
       ToUnicode( doc_data.brief_comment ),
       ToUnicode( doc_data.canonical_type ),
       ToUnicode( doc_data.display_name ),

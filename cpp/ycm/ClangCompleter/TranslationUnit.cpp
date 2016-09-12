@@ -475,7 +475,7 @@ DocumentationData TranslationUnit::GetDocsForLocationInFile(
   if ( !CursorIsValid( canonical_cursor ) )
     return DocumentationData();
 
-  return DocumentationData( canonical_cursor );
+  return DocumentationData( clang_translation_unit_, canonical_cursor );
 }
 
 CXCursor TranslationUnit::GetCursor( int line, int column ) {

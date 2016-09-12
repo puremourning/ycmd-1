@@ -32,12 +32,8 @@ struct DocumentationData {
 
   /// Construct and extract information from the supplied cursor. The cursor
   /// should be pointing to a canonical declaration, such as returned by
-  /// clang_getCanonicalCursor( clang_getCursorReferenced( cursor ) )
-  DocumentationData( const CXCursor &cursor );
-
-  /// XML data as parsed by libclang. This provides full semantic parsing of
-  /// doxygen-syntax comments.
-  std::string comment_xml;
+  /// clang_getCanonicalCursor( TU, clang_getCursorReferenced( cursor ) )
+  DocumentationData( CXTranslationUnit TU, const CXCursor &cursor );
 
   /// The raw text of the comment preceding the declaration
   std::string raw_comment;
@@ -47,6 +43,8 @@ struct DocumentationData {
   std::string canonical_type;
   /// The display name of the referenced cursor
   std::string display_name;
+  /// The raw text of the declaration
+  std::string declaration_text;
 };
 
 } // namespace YouCompleteMe
