@@ -182,6 +182,8 @@ std::vector< CompletionData > TranslationUnit::CandidatesForLocation(
 
   std::vector< CompletionData > candidates = ToCompletionDataVector(
                                                results.get() );
+
+
   return candidates;
 }
 
