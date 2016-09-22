@@ -38,6 +38,53 @@ typedef boost::shared_ptr< std::vector< CompletionData > > AsyncCompletions;
 
 class TranslationUnit : boost::noncopyable {
 public:
+  struct ResourceUsage
+  {
+    ResourceUsage( const std::string& name_ )
+      // I hate c++98
+      : total_usage_bytes( 0 )
+      , ast_bytes( 0 )
+      , results_cache_bytes( 0 )
+      , identifiers_bytes( 0 )
+      , preprocessor_bytes( 0 )
+      , objective_c_selectors_bytes( 0 )
+      , source_manager_bytes( 0 )
+      , name( name_ )
+    {
+    }
+
+    ResourceUsage()
+      // I hate c++98
+      : total_usage_bytes( 0 )
+      , ast_bytes( 0 )
+      , results_cache_bytes( 0 )
+      , identifiers_bytes( 0 )
+      , preprocessor_bytes( 0 )
+      , objective_c_selectors_bytes( 0 )
+      , source_manager_bytes( 0 )
+      , name( "" )
+    {
+    }
+
+    bool operator==( const ResourceUsage& other ) const
+    {
+      return name == other.name;
+    }
+
+    uint64_t total_usage_bytes;
+
+    uint64_t ast_bytes;
+    uint64_t results_cache_bytes;
+    uint64_t identifiers_bytes;
+    uint64_t preprocessor_bytes;
+    uint64_t objective_c_selectors_bytes;
+    uint64_t source_manager_bytes;
+
+    std::string name;
+  };
+
+
+public:
 
   // This constructor creates an invalid, sentinel TU. All of it's methods
   // return empty vectors, and IsCurrentlyUpdating always returns true so that
@@ -99,6 +146,8 @@ public:
     int column,
     const std::vector< UnsavedFile > &unsaved_files,
     bool reparse = true );
+
+  ResourceUsage GetResourceUsageInfo() const;
 
 private:
   void Reparse( std::vector< CXUnsavedFile > &unsaved_files );

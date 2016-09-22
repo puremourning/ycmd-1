@@ -94,6 +94,29 @@ BOOST_PYTHON_MODULE(ycm_core)
   class_< std::vector< UnsavedFile > >( "UnsavedFileVector" )
     .def( vector_indexing_suite< std::vector< UnsavedFile > >() );
 
+  class_< TranslationUnit::ResourceUsage >( "TUResourceUsage"  )
+    .def_readonly( "filename", &TranslationUnit::ResourceUsage::name )
+    .def_readonly( "total_usage_bytes",
+                   &TranslationUnit::ResourceUsage::total_usage_bytes )
+    .def_readonly( "ast_bytes",
+                   &TranslationUnit::ResourceUsage::ast_bytes )
+    .def_readonly( "results_cache_bytes",
+                   &TranslationUnit::ResourceUsage::results_cache_bytes )
+    .def_readonly( "identifiers_bytes",
+                   &TranslationUnit::ResourceUsage::identifiers_bytes )
+    .def_readonly( "preprocessor_bytes",
+                   &TranslationUnit::ResourceUsage::preprocessor_bytes )
+    .def_readonly(
+      "objective_c_selectors_bytes",
+      &TranslationUnit::ResourceUsage::objective_c_selectors_bytes )
+    .def_readonly( "source_manager_bytes",
+                   &TranslationUnit::ResourceUsage::source_manager_bytes );
+
+  class_< std::vector< TranslationUnit::ResourceUsage > >(
+    "TUResourceUsageVector" )
+    .def( vector_indexing_suite<
+            std::vector< TranslationUnit::ResourceUsage > >() );
+
   class_< ClangCompleter, boost::noncopyable >( "ClangCompleter" )
     .def( "GetDeclarationLocation", &ClangCompleter::GetDeclarationLocation )
     .def( "GetDefinitionLocation", &ClangCompleter::GetDefinitionLocation )
@@ -108,7 +131,9 @@ BOOST_PYTHON_MODULE(ycm_core)
     .def( "GetFixItsForLocationInFile",
           &ClangCompleter::GetFixItsForLocationInFile )
     .def( "GetDocsForLocationInFile",
-          &ClangCompleter::GetDocsForLocationInFile );
+          &ClangCompleter::GetDocsForLocationInFile )
+    .def( "GetResourceUsageInfo",
+          &ClangCompleter::GetResourceUsageInfo );
 
   enum_< CompletionKind >( "CompletionKind" )
     .value( "STRUCT", STRUCT )

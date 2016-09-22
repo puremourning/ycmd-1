@@ -478,6 +478,56 @@ DocumentationData TranslationUnit::GetDocsForLocationInFile(
   return DocumentationData( canonical_cursor );
 }
 
+TranslationUnit::ResourceUsage TranslationUnit::GetResourceUsageInfo() const
+{
+  ResourceUsage resource_usage( filename_ );
+
+  unique_lock< mutex > lock( clang_access_mutex_ );
+
+  if ( !clang_translation_unit_ )
+    return resource_usage;
+
+  CXTUResourceUsage usage =
+    clang_getCXTUResourceUsage( clang_translation_unit_ );
+
+
+  for( uint entry_idx = 0; entry_idx < usage.numEntries; ++entry_idx ) {
+    const CXTUResourceUsageEntry& entry = usage.entries[ entry_idx ];
+
+    resource_usage.total_usage_bytes += entry.amount;
+
+    switch( entry.kind ) {
+      case CXTUResourceUsage_AST:
+      case CXTUResourceUsage_AST_SideTables:
+      case CXTUResourceUsage_ExternalASTSource_Membuffer_MMap:
+      case CXTUResourceUsage_ExternalASTSource_Membuffer_Malloc:
+        resource_usage.ast_bytes += entry.amount;
+
+      case CXTUResourceUsage_GlobalCompletionResults:
+        resource_usage.results_cache_bytes += entry.amount;
+
+      case CXTUResourceUsage_Identifiers:
+        resource_usage.identifiers_bytes += entry.amount;
+
+      case CXTUResourceUsage_PreprocessingRecord:
+      case CXTUResourceUsage_Preprocessor:
+      case CXTUResourceUsage_Preprocessor_HeaderSearch:
+        resource_usage.preprocessor_bytes += entry.amount;
+
+      case CXTUResourceUsage_Selectors:
+        resource_usage.objective_c_selectors_bytes += entry.amount;
+
+      case CXTUResourceUsage_SourceManagerContentCache:
+      case CXTUResourceUsage_SourceManager_DataStructures:
+      case CXTUResourceUsage_SourceManager_Membuffer_MMap:
+      case CXTUResourceUsage_SourceManager_Membuffer_Malloc:
+        resource_usage.source_manager_bytes += entry.amount;
+        break;
+    }
+  }
+  return resource_usage;
+}
+
 CXCursor TranslationUnit::GetCursor( int line, int column ) {
   // ASSUMES A LOCK IS ALREADY HELD ON clang_access_mutex_!
   if ( !clang_translation_unit_ )

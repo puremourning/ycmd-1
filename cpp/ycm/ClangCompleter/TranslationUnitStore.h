@@ -61,6 +61,21 @@ public:
 
   void RemoveAll();
 
+  std::vector< boost::shared_ptr< TranslationUnit > > GetAll() const
+  {
+    std::vector< boost::shared_ptr< TranslationUnit > > result;
+
+    for( TranslationUnitForFilename::const_iterator it =
+                                        filename_to_translation_unit_.begin();
+         it != filename_to_translation_unit_.end();
+         ++it )
+    {
+      result.push_back( it->second );
+    }
+
+    return result;
+  }
+
 private:
 
   // WARNING: This accesses filename_to_translation_unit_ without a lock!

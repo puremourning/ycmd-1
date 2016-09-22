@@ -107,6 +107,8 @@ public:
     const std::vector< std::string > &flags,
     bool reparse = true );
 
+  std::vector< TranslationUnit::ResourceUsage > GetResourceUsageInfo() const;
+
   void DeleteCachesForFile( const std::string &filename );
 
 private:

@@ -366,25 +366,53 @@ class ClangCompleter( Completer ):
 
 
   def DebugInfo( self, request_data ):
+    resource_usage_data = self._completer.GetResourceUsageInfo()
+
+    resource_usage_info = list()
+    total_used_bytes = 0
+    for usage in resource_usage_data:
+      total_used_bytes += usage.total_usage_bytes
+      resource_usage_info.append( 'TU {0} using {1} bytes as:\n'
+                                  '  - AST: {2}\n'
+                                  '  - Results Cache: {3}\n'
+                                  '  - Identifiers: {4}\n'
+                                  '  - Preprocessor: {5}\n'
+                                  '  - Selectors: {6}\n'
+                                  '  - Source Manager: {7}\n'.format(
+                                    usage.filename,
+                                    usage.total_usage_bytes,
+                                    usage.ast_bytes,
+                                    usage.results_cache_bytes,
+                                    usage.identifiers_bytes,
+                                    usage.preprocessor_bytes,
+                                    usage.objective_c_selectors_bytes,
+                                    usage.source_manager_bytes
+                                  ) )
+
+    usage_info = 'C-family completer resource usage:\n{0}'.format(
+      '\n'.join( resource_usage_info ) )
+
     filename = request_data[ 'filepath' ]
     try:
       extra_conf = extra_conf_store.ModuleFileForSourceFile( filename )
       flags = self._FlagsForRequest( request_data ) or []
     except NoExtraConfDetected:
       return ( 'C-family completer debug information:\n'
-               '  No configuration file found' )
+               '  No configuration file found\n'
+               '{0}'.format( usage_info ) )
     except UnknownExtraConf as error:
       return ( 'C-family completer debug information:\n'
                '  Configuration file found but not loaded\n'
-               '  Configuration path: {0}'.format(
-                 error.extra_conf_file ) )
+               '  Configuration path: {0}\n'
+               '{1}'.format( error.extra_conf_file, usage_info) )
     if not extra_conf:
       return ( 'C-family completer debug information:\n'
                '  No configuration file found' )
     return ( 'C-family completer debug information:\n'
              '  Configuration file found and loaded\n'
              '  Configuration path: {0}\n'
-             '  Flags: {1}'.format( extra_conf, list( flags ) ) )
+             '  Flags: {1}\n'
+             '  {2}'.format( extra_conf, list( flags ), usage_info ) )
 
 
   def _FlagsForRequest( self, request_data ):

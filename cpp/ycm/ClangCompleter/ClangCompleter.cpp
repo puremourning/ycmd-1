@@ -255,5 +255,22 @@ void ClangCompleter::DeleteCachesForFile( const std::string &filename ) {
   translation_unit_store_.Remove( filename );
 }
 
+std::vector< TranslationUnit::ResourceUsage >
+ClangCompleter::GetResourceUsageInfo() const
+{
+  ReleaseGil unlock;
 
+  std::vector< TranslationUnit::ResourceUsage > result;
+
+  // This isn't very efficient, but it does hide the implementation of
+  // TranslationUnitStore, which would appear to be intentional.
+  std::vector< boost::shared_ptr< TranslationUnit > > units =
+    translation_unit_store_.GetAll();
+
+  foreach( boost::shared_ptr< TranslationUnit >& unit, units ) {
+    result.push_back( unit->GetResourceUsageInfo() );
+  }
+
+  return result;
+}
 } // namespace YouCompleteMe
