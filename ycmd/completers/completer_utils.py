@@ -33,13 +33,39 @@ from ycmd.utils import ( ToCppStringCompatible, ToUnicode, re, ReadFile,
 
 _logger = logging.getLogger( __name__ )
 
+TRIGGER_REGEX_PREFIX = 're!'
+INCLUDE_REGEX = re.compile( '\s*#\s*(?:include|import)\s*("|<)' )
+
+
+def _PrepareTrigger( trigger ):
+  trigger = ToUnicode( trigger )
+  if trigger.startswith( TRIGGER_REGEX_PREFIX ):
+    return re.compile( trigger[ len( TRIGGER_REGEX_PREFIX ) : ], re.UNICODE )
+  return re.compile( re.escape( trigger ), re.UNICODE )
+
+
+def FiletypeTriggerDictFromSpec( trigger_dict_spec ):
+  triggers_for_filetype = defaultdict( set )
+
+  for key, triggers in iteritems( trigger_dict_spec ):
+    filetypes = key.split( ',' )
+    for filetype in filetypes:
+      regexes = [ _PrepareTrigger( x ) for x in triggers ]
+      triggers_for_filetype[ filetype ].update( regexes )
+
+
+  return triggers_for_filetype
+
 
 class PreparedTriggers( object ):
-  def __init__( self, user_trigger_map = None, filetype_set = None ):
-    user_prepared_triggers = ( _FiletypeTriggerDictFromSpec(
+  def __init__( self,
+                user_trigger_map = None,
+                filetype_set = None,
+                default_triggers = PREPARED_DEFAULT_FILETYPE_TRIGGERS ):
+    user_prepared_triggers = ( FiletypeTriggerDictFromSpec(
         dict( user_trigger_map ) ) if user_trigger_map else
         defaultdict( set ) )
-    final_triggers = _FiletypeDictUnion( PREPARED_DEFAULT_FILETYPE_TRIGGERS,
+    final_triggers = _FiletypeDictUnion( default_triggers,
                                          user_prepared_triggers )
     if filetype_set:
       final_triggers = { k: v for k, v in iteritems( final_triggers )
@@ -74,17 +100,6 @@ class PreparedTriggers( object ):
                                             filetype ) is not None
 
 
-def _FiletypeTriggerDictFromSpec( trigger_dict_spec ):
-  triggers_for_filetype = defaultdict( set )
-
-  for key, triggers in iteritems( trigger_dict_spec ):
-    filetypes = key.split( ',' )
-    for filetype in filetypes:
-      regexes = [ _PrepareTrigger( x ) for x in triggers ]
-      triggers_for_filetype[ filetype ].update( regexes )
-
-
-  return triggers_for_filetype
 
 
 def _FiletypeDictUnion( dict_one, dict_two ):
@@ -148,13 +163,6 @@ def _MatchesSemanticTrigger( line_value, start_codepoint, column_codepoint,
                                    start_codepoint,
                                    column_codepoint,
                                    trigger_list ) is not None
-
-
-def _PrepareTrigger( trigger ):
-  trigger = ToUnicode( trigger )
-  if trigger.startswith( TRIGGER_REGEX_PREFIX ):
-    return re.compile( trigger[ len( TRIGGER_REGEX_PREFIX ) : ], re.UNICODE )
-  return re.compile( re.escape( trigger ), re.UNICODE )
 
 
 def _PathToCompletersFolder():

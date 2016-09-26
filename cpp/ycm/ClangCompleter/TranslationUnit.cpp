@@ -150,7 +150,8 @@ std::vector< CompletionData > TranslationUnit::CandidatesForLocation(
   const std::string &filename,
   int line,
   int column,
-  const std::vector< UnsavedFile > &unsaved_files ) {
+  const std::vector< UnsavedFile > &unsaved_files,
+  unsigned int filter ) {
   unique_lock< mutex > lock( clang_access_mutex_ );
 
   if ( !clang_translation_unit_ ) {
@@ -183,7 +184,8 @@ std::vector< CompletionData > TranslationUnit::CandidatesForLocation(
     clang_disposeCodeCompleteResults );
 
   std::vector< CompletionData > candidates = ToCompletionDataVector(
-                                               results.get() );
+                                               results.get(),
+                                               filter );
 
 
   return candidates;

@@ -116,6 +116,31 @@ ClangCompleter::CandidatesForLocationInFile(
 }
 
 
+std::vector< CompletionData >
+ClangCompleter::SignatureHintsForLocationInFile(
+  const std::string &translation_unit,
+  const std::string &filename,
+  int line,
+  int column,
+  const std::vector< UnsavedFile > &unsaved_files,
+  const std::vector< std::string > &flags ) {
+  ReleaseGil unlock;
+  shared_ptr< TranslationUnit > unit =
+    translation_unit_store_.GetOrCreate( translation_unit,
+                                         unsaved_files,
+                                         flags );
+
+  if ( !unit )
+    return std::vector< CompletionData >();
+
+  return unit->CandidatesForLocation( filename,
+                                      line,
+                                      column,
+                                      unsaved_files,
+                                      YouCompleteMe::CompletionKind::OVERLOAD );
+}
+
+
 Location ClangCompleter::GetDeclarationLocation(
   const std::string &translation_unit,
   const std::string &filename,

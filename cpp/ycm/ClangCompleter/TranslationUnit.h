@@ -62,7 +62,8 @@ public:
     const std::string &filename,
     int line,
     int column,
-    const std::vector< UnsavedFile > &unsaved_files );
+    const std::vector< UnsavedFile > &unsaved_files,
+    unsigned int filter = std::numeric_limits< unsigned int >::max() );
 
   YCM_EXPORT Location GetDeclarationLocation(
     const std::string &filename,

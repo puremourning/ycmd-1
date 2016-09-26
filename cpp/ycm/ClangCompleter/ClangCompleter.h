@@ -59,6 +59,14 @@ public:
     const std::vector< UnsavedFile > &unsaved_files,
     const std::vector< std::string > &flags );
 
+  YCM_EXPORT std::vector< CompletionData > SignatureHintsForLocationInFile(
+    const std::string &translation_unit,
+    const std::string &filename,
+    int line,
+    int column,
+    const std::vector< UnsavedFile > &unsaved_files,
+    const std::vector< std::string > &flags );
+
   YCM_EXPORT Location GetDeclarationLocation(
     const std::string &translation_unit,
     const std::string &filename,

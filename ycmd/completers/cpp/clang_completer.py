@@ -34,8 +34,15 @@ import ycm_core
 from ycmd import responses
 from ycmd.utils import re, ToBytes, ToCppStringCompatible, ToUnicode
 from ycmd.completers.completer import Completer
+<<<<<<< HEAD
 from ycmd.completers.cpp.flags import ( Flags, PrepareFlagsForClang,
                                         UserIncludePaths )
+=======
+from ycmd.completers.completer_utils import ( GetIncludeStatementValue,
+                                              FiletypeTriggerDictFromSpec,
+                                              PreparedTriggers )
+from ycmd.completers.cpp.flags import Flags, PrepareFlagsForClang
+>>>>>>> 1ff3a80c... Signature hints that trigger on ( and , etc.
 from ycmd.completers.cpp.ephemeral_values_set import EphemeralValuesSet
 from ycmd.completers.cpp.include_cache import IncludeCache, IncludeList
 from ycmd.responses import NoExtraConfDetected, UnknownExtraConf
@@ -50,6 +57,13 @@ TOO_MANY_ERRORS_DIAG_TEXT_TO_IGNORE = 'too many errors emitted, stopping now'
 NO_DOCUMENTATION_MESSAGE = 'No documentation available for current context'
 INCLUDE_REGEX = re.compile( '(\s*#\s*(?:include|import)\s*)(?:"[^"]*|<[^>]*)' )
 
+SIGNATURE_TRIGGERS = {
+  'c,cpp' : [ '(', ',', ')' ],
+  'objc' : [ ':', '[', '(', ',', ']', ')' ], # TODO: This is way too simplistic
+}
+
+PREPARED_SIGNATURE_TRIGGERS = FiletypeTriggerDictFromSpec( SIGNATURE_TRIGGERS )
+
 
 class ClangCompleter( Completer ):
   def __init__( self, user_options ):
@@ -61,9 +75,63 @@ class ClangCompleter( Completer ):
     self._files_being_compiled = EphemeralValuesSet()
     self._logger = logging.getLogger( __name__ )
 
+    self._prepared_signature_triggers = PreparedTriggers(
+      user_trigger_map = None,
+      filetype_set = set( self.SupportedFiletypes() ),
+      default_triggers = PREPARED_SIGNATURE_TRIGGERS )
+
 
   def SupportedFiletypes( self ):
     return CLANG_FILETYPES
+
+
+  def ShouldUseNowInner( self, request_data ):
+    return (
+      super( ClangCompleter, self ).ShouldUseNowInner( request_data ) or
+      self.ShouldTriggerSignatureHintsNow( request_data ) )
+
+
+  def ShouldTriggerSignatureHintsNow( self, request_data ):
+    if not self._prepared_signature_triggers:
+      return False
+
+    current_line = request_data[ 'line_value' ]
+    start_codepoint = request_data[ 'start_codepoint' ] - 1
+    column_codepoint = request_data[ 'column_codepoint' ] - 1
+    filetype = self._CurrentFiletype( request_data[ 'filetypes' ] )
+
+    return self._prepared_signature_triggers.MatchesForFiletype(
+        current_line, start_codepoint, column_codepoint, filetype )
+
+
+  def ComputeSignatureHints( self, request_data ):
+    filename = request_data[ 'filepath' ]
+    if not filename:
+      return
+
+    if self._completer.UpdatingTranslationUnit(
+        ToCppStringCompatible( filename ) ):
+      return []
+
+    flags = self._FlagsForRequest( request_data )
+    if not flags:
+      return []
+
+    files = self.GetUnsavedFilesVector( request_data )
+    line = request_data[ 'line_num' ]
+    column = request_data[ 'start_column' ]
+    with self._files_being_compiled.GetExclusive( filename ):
+      results = self._completer.SignatureHintsForLocationInFile(
+          ToCppStringCompatible( filename ),
+          line,
+          column,
+          files,
+          flags )
+
+    if not results:
+      return []
+
+    return [ ConvertCompletionData( x ) for x in results ]
 
 
   def GetUnsavedFilesVector( self, request_data ):
@@ -124,6 +192,10 @@ class ClangCompleter( Completer ):
 
 
   def ComputeCandidatesInner( self, request_data ):
+    # FIXME: HAAAAACK
+    if self.ShouldTriggerSignatureHintsNow( request_data ):
+      return self.ComputeSignatureHints( request_data )
+
     flags, filename = self._FlagsForRequest( request_data )
     if not flags:
       raise RuntimeError( NO_COMPILE_FLAGS_MESSAGE )

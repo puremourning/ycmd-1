@@ -31,8 +31,13 @@ namespace YouCompleteMe {
 using DiagnosticWrap =
   std::shared_ptr< std::remove_pointer< CXDiagnostic >::type >;
 
+/**
+ * filter is a set of bits from the CompletionKind enum. if a bit is not set, it
+ * is not included in the output. BY default all items are included.
+ */
 std::vector< CompletionData > ToCompletionDataVector(
-  CXCodeCompleteResults *results );
+  CXCodeCompleteResults *results,
+  unsigned int filter = std::numeric_limits< unsigned int >::max() );
 
 // NOTE: CXUnsavedFiles store pointers to data in UnsavedFiles, so UnsavedFiles
 // need to outlive CXUnsavedFiles!
