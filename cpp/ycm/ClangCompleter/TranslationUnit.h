@@ -62,7 +62,8 @@ public:
   std::vector< CompletionData > CandidatesForLocation(
     int line,
     int column,
-    const std::vector< UnsavedFile > &unsaved_files );
+    const std::vector< UnsavedFile > &unsaved_files,
+    unsigned int filter = std::numeric_limits< unsigned int >::max() );
 
   YCM_DLL_EXPORT Location GetDeclarationLocation(
     int line,
