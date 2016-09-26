@@ -102,6 +102,8 @@ BOOST_PYTHON_MODULE(ycm_core)
     .def( "UpdateTranslationUnit", &ClangCompleter::UpdateTranslationUnit )
     .def( "CandidatesForLocationInFile",
           &ClangCompleter::CandidatesForLocationInFile )
+    .def( "SignatureHintsForLocationInFile",
+          &ClangCompleter::SignatureHintsForLocationInFile )
     .def( "GetTypeAtLocation", &ClangCompleter::GetTypeAtLocation )
     .def( "GetEnclosingFunctionAtLocation",
           &ClangCompleter::GetEnclosingFunctionAtLocation )

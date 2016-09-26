@@ -24,19 +24,24 @@
 
 namespace YouCompleteMe {
 
+/**
+ * Represents the type of completion item. 
+ *
+ * Also a set of bits that can be used for filtering completion items.
+ */
 enum CompletionKind {
-  STRUCT = 0,
-  CLASS,
-  ENUM,
-  TYPE,
-  MEMBER,
-  FUNCTION,
-  VARIABLE,
-  MACRO,
-  PARAMETER,
-  NAMESPACE,
-  OVERLOAD,
-  UNKNOWN
+  STRUCT     = 0x1u,
+  CLASS      = 0x1u << 1,
+  ENUM       = 0x1u << 2,
+  TYPE       = 0x1u << 3,
+  MEMBER     = 0x1u << 4,
+  FUNCTION   = 0x1u << 5,
+  VARIABLE   = 0x1u << 6,
+  MACRO      = 0x1u << 7,
+  PARAMETER  = 0x1u << 8,
+  NAMESPACE  = 0x1u << 9,
+  OVERLOAD   = 0x1u << 9,
+  UNKNOWN    = 0x1u << 10
 };
 
 // This class holds pieces of information about a single completion coming from
