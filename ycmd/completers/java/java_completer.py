@@ -26,14 +26,13 @@ standard_library.install_aliases()
 import logging
 import os
 import threading
-import socket
 import time
 
 from subprocess import PIPE
 
-from ycmd.completers.completer import Completer
 from ycmd import utils
-from ycmd.completers.java import lsapi
+
+from ycmd.completers.language_server import language_server_completer
 
 _logger = logging.getLogger( __name__ )
 
@@ -74,99 +73,7 @@ def ShouldEnableJavaCompleter():
   return True
 
 
-class Server( threading.Thread ):
-  """Encapsulates communication with the server, which is necessarily
-  asyncronous. The server requires that the client open and listen on the ports
-  (presumably to eliminate the race condition), and is able to send both
-  solicited replies and unsolicited messages to the client asyncronously.
-  Indeed, for now clear reason, the general approach is independent 'input' and
-  'output' sockets"""
-  def __init__( self, input_port, output_port ):
-    super( Server, self ).__init__()
-
-    self._input_port = input_port
-    self._input_socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-
-    self._output_port = output_port
-    self._output_socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
-
-    self._client_read_socket = None
-    self._client_write_socket = None
-
-    self.input_connected = False
-    self.output_connected = False
-
-
-  def run( self ):
-    self._input_socket.bind( ( 'localhost', self._input_port ) )
-    self._input_socket.listen( 0 )
-
-    self._output_socket.bind( ( 'localhost', self._output_port ) )
-    self._output_socket.listen( 0 )
-
-    tries = 10
-    while tries > 0 and not self._TryServerConnectionBlocking():
-      _logger.debug( "Server hasn't connected: {0} tries remaining".format(
-        tries ) )
-    tries -= 1
-
-
-  def TryServerConnection( self ):
-    return self.input_connected and self.output_connected
-
-
-  def _TryServerConnectionBlocking( self ):
-    ( self._client_read_socket, _ ) = self._input_socket.accept()
-    self.input_connected = True
-    _logger.info( 'Input socket connected' )
-
-    ( self._client_write_socket, _ ) = self._output_socket.accept()
-    self.output_connected = True
-    _logger.info( 'Output socket connected' )
-
-    return True
-
-
-  def Write( self, data ):
-    assert self.output_connected
-    assert self._client_write_socket
-
-    total_sent = 0
-    while total_sent < len( data ):
-      sent = self._client_write_socket.send( data[ total_sent: ] )
-      if sent == 0:
-        raise RuntimeError( 'write socket failed' )
-
-      total_sent += sent
-
-    _logger.debug( 'Write complete' )
-
-
-  def Read( self, size=-1 ):
-    # From now on we will only read from self._client_read_socket and write to
-    # _client_write_socket
-    if size < 0:
-      data = self._client_read_socket.recv( 2048 )
-      if data == '':
-        raise RuntimeError( 'read socket failed' )
-
-      return data
-
-    chunks = []
-    bytes_read = 0
-    while bytes_read < size:
-      chunk = self._client_read_socket.recv( min( size - bytes_read , 2048 ) )
-      if chunk == '':
-        raise RuntimeError( 'read socket failed' )
-
-      chunks.append( chunk )
-      bytes_read += len( chunk )
-
-    return utils.ToBytes( '' ).join( chunks )
-
-
-
-class JavaCompleter( Completer ):
+class JavaCompleter( language_server_completer.LanguageServerCompleter ):
   def __init__( self, user_options):
     super( JavaCompleter, self ).__init__( user_options )
 
@@ -177,23 +84,6 @@ class JavaCompleter( Completer ):
       self._server = None
       self._Reset()
       self._StartServer()
-
-
-  def ComputeCandidatesInner( self, request_data ):
-    pass
-
-
-  def OnFileReadyToParse( self, request_data ):
-    pass
-
-
-  # The remainder is all server state handling and completer boilerplate
-
-  def GetSubcommandsMap( self ):
-    return {
-      'RestartServer': ( lambda self, request_data, args:
-                            self._RestartServer() ),
-    }
 
 
   def SupportedFiletypes( self ):
@@ -235,8 +125,9 @@ class JavaCompleter( Completer ):
       self._server_stdin_port = utils.GetUnusedLocalhostPort()
       self._server_stdout_port = utils.GetUnusedLocalhostPort()
 
-      self._server = Server( self._server_stdin_port,
-                             self._server_stdout_port )
+      self._server = language_server_completer.TCPServer(
+        self._server_stdin_port,
+        self._server_stdout_port )
 
       self._server.start()
 
@@ -313,106 +204,6 @@ class JavaCompleter( Completer ):
       self._response = dict()
       self._notification = list()
       self._WaitForInitiliase()
-
-
-  def _WaitForInitiliase( self ):
-    # TODO: Race conditions!
-    request_id = len( self._response )
-
-    msg = lsapi.Initialise( request_id )
-    _logger.info( 'Sending initialise request to server: {0}'.format( msg ) )
-    self._server.Write( msg )
-    while request_id not in self._response:
-      self._ReadMessage()
-
-    response = self._response[ request_id ]
-    del self._response[ request_id ]
-
-    _logger.info( 'Got a response to initialise: {0}'.format( response ) )
-
-
-  def _ReadMessage( self ):
-    # TODO: This like 100% needs to be thread-safe. Currently it is not and that
-    # is totally busted).
-    # Reading messages should be entirely done in another thread (in
-    # real-time) and the "response" and "notification" objects should be
-    # synchronised queues. Then the handler threads just send messages and
-    # sleep until stuff is put in those queues. Any handler doing any work
-    # handles the notifications.
-    # This was the original intention, but it took a while to make the code even
-    # work, so compression should come later
-    headers = {}
-    headers_complete = False
-    while not headers_complete:
-      read_bytes = 0
-      last_line = 0
-      data = self._server.Read()
-      _logger.debug( 'Read data: {0}'.format( data ) )
-
-      while read_bytes < len( data ):
-        if data[ read_bytes ] == bytes( b'\n' ):
-          line = data[ last_line : read_bytes ].strip()
-          _logger.debug( 'Read line: {0}'.format( line ) )
-          last_line = read_bytes
-
-          if not line:
-            headers_complete = True
-            read_bytes += 1
-            break
-          else:
-            key, value = utils.ToUnicode( line ).split( ':', 1 )
-            headers[ key.strip() ] = value.strip()
-
-        read_bytes += 1
-
-    # The response message is a JSON object which comes back on one line.
-    # Since this might change in the future, we use the 'Content-Length'
-    # header.
-    if 'Content-Length' not in headers:
-      raise RuntimeError( "Missing 'Content-Length' header" )
-    content_length = int( headers[ 'Content-Length' ] )
-
-    _logger.debug( 'Need to read {0} bytes of content'.format(
-      content_length ) )
-
-    content = bytes( b'' )
-    content_read = 0
-    if read_bytes < len( data ):
-      data = data[ read_bytes: ]
-      content_to_read = min( content_length - content_read, len( data ) )
-      content += data[ : content_to_read ]
-      content_read += len( content )
-
-    while content_read < content_length:
-      data = self._server.Read( content_length - content_read )
-      content_to_read = min( content_length - content_read, len( data ) )
-      content += data[ : content_to_read ]
-      content_read += len( content )
-
-    message = lsapi.Parse( content )
-    self._DespatchMessage( message )
-
-
-  def _DespatchMessage( self, message ):
-    _logger.debug( 'Received message: {0}'.format( message ) )
-    if 'id' in message:
-      self._response[ message[ 'id' ] ] = message
-    else:
-      # TODO: how to handle notifications
-      self._notification.append( message )
-
-
-  def _StopServer( self ):
-    with self._server_state_mutex:
-      if self._ServerIsRunning():
-        self._server_handle.terminate()
-        try:
-          utils.WaitUntilProcessIsTerminated( self._server_handle,
-                                              timeout = 5 )
-        except RuntimeError:
-          _logger.exception( 'Error while stopping java server' )
-
-      self._Reset()
 
 
   def _RestartServer( self ):
