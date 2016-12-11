@@ -26,7 +26,13 @@ standard_library.install_aliases()
 import os
 import json
 
+from collections import defaultdict
+
 from ycmd.utils import ToBytes
+
+
+# TODO: Need a whole document management system!
+LAST_VERSION = defaultdict( int )
 
 
 def BuildRequest( request_id, method, parameters ):
@@ -38,10 +44,10 @@ def BuildRequest( request_id, method, parameters ):
 
 
 def BuildNotification( method, parameters ):
-  return {
+  return _Message( {
     'method': method,
     'params': parameters,
-  }
+  } )
 
 
 def Initialise( request_id ):
@@ -52,6 +58,37 @@ def Initialise( request_id ):
     'initializationOptions': { },
     'capabilities': { }
   } )
+
+
+def DidOpenTextDocument( file_name, file_types, file_contents ):
+  LAST_VERSION[ file_name ] = LAST_VERSION[ file_name ] + 1
+  return BuildNotification( 'textDocument/didOpen', {
+    'textDocument': {
+      'uri': _MakeUriForFile( file_name ),
+      'languageId': '/'.join( file_types ),
+      'version': LAST_VERSION[ file_name ],
+      'text': file_contents
+    }
+  } )
+
+
+def Completion( request_id, request_data ):
+  return BuildRequest( request_id, 'textDocument/completion', {
+    'textDocument': {
+      'uri': _MakeUriForFile( request_data[ 'filepath' ] ),
+    },
+    'position': {
+      # TODO: The API asks for 0-based offsets. These -1's are not good enough
+      # when using multi-byte characters. See the tern completeer for an
+      # approach.
+      'line': request_data[ 'line_num' ] - 1,
+      'character': request_data[ 'start_column' ] - 1,
+    }
+  } )
+
+
+def _MakeUriForFile( file_name ):
+  return 'file://{0}'.format( file_name )
 
 
 def _Message( message ):
