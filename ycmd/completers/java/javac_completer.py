@@ -36,26 +36,15 @@ from ycmd.completers.language_server import language_server_completer
 
 _logger = logging.getLogger( __name__ )
 
-LANGUAGE_SERVER_HOME = os.path.join( os.path.dirname( __file__ ),
-                                     '..',
-                                     '..',
-                                     '..',
-                                     'third_party',
-                                     'java-language-server',
-                                     'org.jboss.tools.vscode.product',
-                                     'target',
-                                     'repository')
-
-# TODO: Java 8 required (validate this)
 PATH_TO_JAVA = utils.PathToFirstExistingExecutable( [ 'java' ] )
-
-WORKSPACE_PATH = os.path.join( os.path.dirname( __file__ ),
-                               '..',
-                               '..',
-                               '..',
-                               'third_party',
-                               'java-language-server',
-                               'jdt_ws' )
+LS_JAR = os.path.join( os.path.dirname( __file__ ),
+                       '..',
+                       '..',
+                       '..',
+                       'third_party',
+                       'vscode-javac',
+                       'out',
+                       'fat-jar.jar' )
 
 
 def ShouldEnableJavaCompleter():
@@ -64,7 +53,7 @@ def ShouldEnableJavaCompleter():
     _logger.warning( "Not enabling java completion: Couldn't find java" )
     return False
 
-  if not os.path.exists( LANGUAGE_SERVER_HOME ):
+  if not os.path.exists( LS_JAR ):
     _logger.warning( 'Not using java completion: not installed' )
     return False
 
@@ -92,9 +81,8 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
   def DebugInfo( self, request_data ):
     if self._ServerIsRunning():
-      return 'Server running on stdout: {0}, stdin: {2}'.format(
-        self._server_stdout_port,
-        self._server_stdin_port )
+      return 'Server running on port {0}'.format(
+        self._server_port )
 
     return 'Server is not running :('
 
@@ -111,8 +99,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
 
   def _Reset( self ):
-    self._server_stdin_port = 0
-    self._server_stdout_port = 0
+    self._server_port = 0
     self._server_handle = None
 
     # TODO: close the sockets in the servre
@@ -122,43 +109,24 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
   def _StartServer( self ):
     with self._server_state_mutex:
       _logger.info( 'Starting Tern server...' )
-      self._server_stdin_port = utils.GetUnusedLocalhostPort()
-      self._server_stdout_port = utils.GetUnusedLocalhostPort()
+      self._server_port = utils.GetUnusedLocalhostPort()
 
-      self._server = language_server_completer.TCPMultiStreamServer(
-        self._server_stdin_port,
-        self._server_stdout_port )
+      self._server = language_server_completer.TCPSingleStreamServer(
+        self._server_port )
 
       self._server.start()
 
-      env = os.environ.copy()
-      env[ 'STDIN_PORT' ] = str( self._server_stdin_port )
-      env[ 'STDOUT_PORT' ] = str( self._server_stdout_port )
-
       command = [
         PATH_TO_JAVA,
-        '-Declipse.application=org.jboss.tools.vscode.java.id1',
-        '-Dosgi.bundles.defaultStartLevel=4',
-        '-Declipse.product=org.jboss.tools.vscode.java.product',
-        '-Dlog.protocol=true',
-        '-Dlog.level=ALL',
-        '-jar',
-        # TODO: Use a glob like the vscode client does ?
-        os.path.abspath ( os.path.join(
-          LANGUAGE_SERVER_HOME,
-          'plugins',
-          'org.eclipse.equinox.launcher_1.4.0.v20160926-1553.jar' ) ),
-        '-configuration',
-        # TODO: select config for host environment (work out what it does)
-        os.path.abspath( os.path.join( LANGUAGE_SERVER_HOME, 'config_mac' ) ),
-        '-data',
-        # TODO: user option for a workspace path?
-        os.path.abspath( WORKSPACE_PATH ),
+        '-cp', os.path.abspath ( LS_JAR ),
+        '-Djavacs.port={0}'.format( self._server_port ),
+        'org.javacs.Main'
       ]
 
-      _logger.debug( 'Starting java-server with the following command: '
+      _logger.debug( 'Starting javac-server with the following command: '
                     + ' '.join( command ) )
 
+      # TODO: Fix these
       server_stdout = 'server_stdout'
       server_stderr = 'server_stderr'
 
@@ -170,24 +138,20 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
           self._server_handle = utils.SafePopen( command,
                                                  stdin = PIPE,
                                                  stdout = stdout,
-                                                 stderr = stderr,
-                                                 env = env )
+                                                 stderr = stderr )
 
       if self._ServerIsRunning():
-        _logger.info( 'java-langage-server started, '
-                      'with stdin {0}, stdout {1}'.format(
-                        self._server_stdin_port,
-                        self._server_stdout_port ) )
+        _logger.info( 'javac server started on port {0}'.format(
+          self._server_port ) )
       else:
-        _logger.warning( 'java-language-server failed to start' )
+        _logger.warning( 'javac server failed to start' )
         return
 
       # Awaiting connection
       # spinlock
       # TODO: timeout
       while not self._server.TryServerConnection():
-        _logger.debug( 'Awaiting connection on ports: IN {0}, OUT {1}'.format(
-          self._server_stdin_port, self._server_stdout_port ) )
+        _logger.debug( 'Awaiting connection...' )
         time.sleep( 1 )
 
       # OK, so now we have to fire the Initialise request to the server:
@@ -204,22 +168,6 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       self._response = dict()
       self._notification = list()
       self._WaitForInitiliase()
-
-
-  def _StopServer( self ):
-    with self._server_state_mutex:
-      if self._ServerIsRunning():
-        _logger.info( 'Stopping java server with PID {0}'.format(
-                          self._server_handle.pid ) )
-        self._server_handle.terminate()
-        try:
-          utils.WaitUntilProcessIsTerminated( self._server_handle,
-                                              timeout = 5 )
-          _logger.info( 'Tern server stopped' )
-        except RuntimeError:
-          _logger.exception( 'Error while stopping java server' )
-
-      self._CleanUp()
 
 
   def _RestartServer( self ):
