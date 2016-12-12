@@ -27,6 +27,7 @@ import logging
 import threading
 import socket
 import json
+import os
 
 from ycmd.completers.completer import Completer
 from ycmd import utils
@@ -36,16 +37,81 @@ from ycmd import responses
 _logger = logging.getLogger( __name__ )
 
 
+class TCPSingleStreamServer( threading.Thread ):
+  def __init__( self, port ):
+    super( TCPSingleStreamServer, self ).__init__()
 
-class TCPServer( threading.Thread ):
-  """Encapsulates communication with the server, which is necessarily
-  asyncronous. The server requires that the client open and listen on the ports
-  (presumably to eliminate the race condition), and is able to send both
-  solicited replies and unsolicited messages to the client asyncronously.
-  Indeed, for now clear reason, the general approach is independent 'input' and
-  'output' sockets"""
+    self._port = port
+    self._socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+    self._client_socket = None
+    self.client_connected = False
+
+
+  def run( self ):
+    self._socket.bind( ( 'localhost', self._port ) )
+    self._socket.listen( 0 )
+
+    tries = 10
+    while tries > 0 and not self._TryServerConnectionBlocking():
+      _logger.debug( "Server hasn't connected: {0} tries remaining".format(
+        tries ) )
+    tries -= 1
+
+
+  def TryServerConnection( self ):
+    return self.client_connected
+
+
+  def _TryServerConnectionBlocking( self ):
+    ( self._client_socket, _ ) = self._socket.accept()
+    self.client_connected = True
+    _logger.info( 'socket connected' )
+
+    return True
+
+
+  def Write( self, data ):
+    assert self.client_connected
+    assert self._client_socket
+
+    total_sent = 0
+    while total_sent < len( data ):
+      sent = self._client_socket.send( data[ total_sent: ] )
+      if sent == 0:
+        raise RuntimeError( 'write socket failed' )
+
+      total_sent += sent
+
+    _logger.debug( 'Write complete' )
+
+
+  def Read( self, size=-1 ):
+    assert self.client_connected
+    assert self._client_socket
+
+    if size < 0:
+      data = self._client_socket.recv( 2048 )
+      if data == '':
+        raise RuntimeError( 'read socket failed' )
+
+      return data
+
+    chunks = []
+    bytes_read = 0
+    while bytes_read < size:
+      chunk = self._client_socket.recv( min( size - bytes_read , 2048 ) )
+      if chunk == '':
+        raise RuntimeError( 'read socket failed' )
+
+      chunks.append( chunk )
+      bytes_read += len( chunk )
+
+    return utils.ToBytes( '' ).join( chunks )
+
+
+class TCPMultiStreamServer( threading.Thread ):
   def __init__( self, input_port, output_port ):
-    super( TCPServer, self ).__init__()
+    super( TCPMultiStreamServer, self ).__init__()
 
     self._input_port = input_port
     self._input_socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
@@ -133,23 +199,17 @@ class TCPServer( threading.Thread ):
 class LanguageServerCompleter( Completer ):
   def __init__( self, user_options):
     super( LanguageServerCompleter, self ).__init__( user_options )
-
-    # Used to ensure that starting/stopping of the server is synchronised
-    self._server_state_mutex = threading.RLock()
-
-    with self._server_state_mutex:
-      self._server = None
-      self._Reset()
-      self._StartServer()
+    self._notification = list()
+    self._response = dict()
 
 
   def ComputeCandidatesInner( self, request_data ):
 
     # Need to update the file contents. TODO: so inefficient!
-    self.OnFileReadyToParse( request_data )
+    self._RefreshFiles( request_data )
 
     # TODO: Must absolutely FIX the race conditions here!!!
-    request_id = len( self._response )
+    request_id = str ( len( self._response ) )
 
     msg = lsapi.Completion( request_id, request_data )
     _logger.info( 'Sending completion request to server: {0}'.format( msg ) )
@@ -214,6 +274,10 @@ class LanguageServerCompleter( Completer ):
 
   def OnFileReadyToParse( self, request_data ):
     # TODO: Maintain state about opened, closed etc. files?
+    self._RefreshFiles( request_data )
+
+
+  def _RefreshFiles( self, request_data ):
     for file_name, file_data in request_data[ 'file_data' ].iteritems():
       msg = lsapi.DidOpenTextDocument( file_name,
                                        file_data[ 'filetypes' ],
@@ -233,7 +297,7 @@ class LanguageServerCompleter( Completer ):
 
   def _WaitForInitiliase( self ):
     # TODO: Race conditions!
-    request_id = len( self._response )
+    request_id = str ( len( self._response ) )
 
     msg = lsapi.Initialise( request_id )
     _logger.info( 'Sending initialise request to server: {0}'.format( msg ) )
@@ -259,6 +323,7 @@ class LanguageServerCompleter( Completer ):
     # work, so compression should come later
     headers = {}
     headers_complete = False
+    prefix = bytes( b'' )
     while not headers_complete:
       read_bytes = 0
       last_line = 0
@@ -267,7 +332,8 @@ class LanguageServerCompleter( Completer ):
 
       while read_bytes < len( data ):
         if data[ read_bytes ] == bytes( b'\n' ):
-          line = data[ last_line : read_bytes ].strip()
+          line = prefix + data[ last_line : read_bytes ].strip()
+          prefix = ''
           _logger.debug( 'Read line: {0}'.format( line ) )
           last_line = read_bytes
 
@@ -280,6 +346,9 @@ class LanguageServerCompleter( Completer ):
             headers[ key.strip() ] = value.strip()
 
         read_bytes += 1
+
+      if not headers_complete:
+        prefix = data[ last_line : ]
 
     # The response message is a JSON object which comes back on one line.
     # Since this might change in the future, we use the 'Content-Length'
@@ -312,7 +381,7 @@ class LanguageServerCompleter( Completer ):
   def _DespatchMessage( self, message ):
     _logger.debug( 'Received message: {0}'.format( message ) )
     if 'id' in message:
-      self._response[ message[ 'id' ] ] = message
+      self._response[ str( message[ 'id' ] ) ] = message
     else:
       # TODO: how to handle notifications
       self._notification.append( message )
