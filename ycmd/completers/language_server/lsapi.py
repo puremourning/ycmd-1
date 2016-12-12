@@ -25,6 +25,7 @@ standard_library.install_aliases()
 
 import os
 import json
+from urllib import parse as urlparse
 
 from collections import defaultdict
 
@@ -89,6 +90,12 @@ def Completion( request_id, request_data ):
 
 def _MakeUriForFile( file_name ):
   return 'file://{0}'.format( file_name )
+
+
+def UriToFilePath( uri ):
+  # TODO: This assumes file://
+  # TODO: work out how urlparse works with __future__
+  return urlparse.urlparse( uri ).path
 
 
 def _Message( message ):
