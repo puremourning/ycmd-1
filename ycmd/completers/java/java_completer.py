@@ -219,7 +219,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         except RuntimeError:
           _logger.exception( 'Error while stopping java server' )
 
-      self._CleanUp()
+      self._Reset()
 
 
   def _RestartServer( self ):
