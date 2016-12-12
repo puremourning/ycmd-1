@@ -276,6 +276,43 @@ class LanguageServerCompleter( Completer ):
     # TODO: Maintain state about opened, closed etc. files?
     self._RefreshFiles( request_data )
 
+    def BuildLocation( filename, loc ):
+      # TODO: Look at tern complete, requires file contents to convert codepoint
+      # offset to byte offset
+      return responses.Location( line = loc[ 'line' ] + 1,
+                                 column = loc[ 'character' ] + 1,
+                                 filename = os.path.realpath( filename ) )
+
+    def BuildRange( filename, r ):
+      return responses.Range( BuildLocation( filename, r[ 'start' ] ),
+                              BuildLocation( filename, r[ 'end' ] ) )
+
+
+    def BuildDiagnostic( filename, diag ):
+      r = BuildRange( filename, diag[ 'range' ] )
+      SEVERITY = [
+        None,
+        'Error',
+        'Warning',
+        'Information',
+        'Hint',
+      ]
+
+      return responses.Diagnostic(
+        ranges = [ r ],
+        location = r.start,
+        location_extent = r,
+        text = diag[ 'message' ],
+        kind = SEVERITY[ diag[ 'severity' ] ],
+        fixit_available = False )
+
+    # TODO: Maybe we need to prevent duplicates?
+    for notification in reversed( self._notification ):
+      _logger.debug( 'notification: {0}'.format( notification[ 'method' ] ) )
+      if notification[ 'method' ] == 'textDocument/publishDiagnostics':
+        return [ BuildDiagnostic( notification[ 'params' ][ 'uri' ], x )
+                 for x in notification[ 'params' ][ 'diagnostics' ] ]
+
 
   def _RefreshFiles( self, request_data ):
     for file_name, file_data in request_data[ 'file_data' ].iteritems():
