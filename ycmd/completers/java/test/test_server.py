@@ -43,3 +43,5 @@ if __name__ == '__main__':
   from ycmd.completers.java.hook import GetCompleter
   from ycmd.user_options_store import DefaultOptions
   completer = GetCompleter( DefaultOptions() )
+
+  completer.Shutdown()
