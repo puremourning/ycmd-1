@@ -39,20 +39,59 @@ from ycmd.completers.language_server import lsapi
 _logger = logging.getLogger( __name__ )
 
 
+class Response( object ):
+  def __init__( self ):
+    self._event = threading.Event()
+    self._message = None
+
+
+  def ResponseReceived( self, message ):
+    self._message = message
+    self._event.set()
+
+
+  def AwaitResponse( self ):
+    self._event.wait( timeout = 5 )
+
+    if not self._event.isSet():
+      raise RuntimeError( 'Response Timeout' )
+
+    return self._message
+
 
 class LanguageServerConnection( object ):
   def __init__( self ):
     super( LanguageServerConnection, self ).__init__()
-    self._responses = queue.Queue()
+
+    self._lastId = 0
+    self._responses = {}
+    self._responseMutex = threading.Lock()
     self._notifications = queue.Queue()
 
 
+  def NextRequestId( self ):
+    with self._responseMutex:
+      self._lastId += 1
+      return str( self._lastId )
+
+
+  def WriteRequest( self, request_id, message ):
+    response = Response()
+
+    with self._responseMutex:
+      assert request_id not in self._responses
+      self._responses[ request_id ] = response
+
+    self._Write( message )
+    return response.AwaitResponse()
+
+
+  def WriteNotification( self, message ):
+    self._Write( message )
+
+
   def _run_loop( self, socket ):
-    tries = 10
-    while tries > 0 and not self._TryServerConnectionBlocking():
-      _logger.debug( "Server hasn't connected: {0} tries remaining".format(
-        tries ) )
-    tries -= 1
+    self._TryServerConnectionBlocking()
 
     # As there is only one socket, we can just block on read
     while True:
@@ -120,7 +159,9 @@ class LanguageServerConnection( object ):
   def _DespatchMessage( self, message ):
     _logger.debug( 'Received message: {0}'.format( message ) )
     if 'id' in message:
-      self._responses.put( message )
+      with self._responseMutex:
+        assert str( message[ 'id' ] ) in self._responses
+        self._responses[ str( message[ 'id' ] ) ].ResponseReceived( message )
     else:
       self._notifications.put( message )
 
@@ -132,7 +173,7 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     self._port = port
     self._socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
     self._client_socket = None
-    self.client_connected = False
+    self._connection_event = threading.Event()
 
 
   def run( self ):
@@ -143,19 +184,19 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
 
 
   def TryServerConnection( self ):
-    return self.client_connected
+    return self._connection_event.wait( timeout = 10 )
 
 
   def _TryServerConnectionBlocking( self ):
     ( self._client_socket, _ ) = self._socket.accept()
-    self.client_connected = True
+    self._connection_event.set()
     _logger.info( 'socket connected' )
 
     return True
 
 
-  def Write( self, data ):
-    assert self.client_connected
+  def _Write( self, data ):
+    assert self._connection_event.isSet()
     assert self._client_socket
 
     total_sent = 0
@@ -170,7 +211,7 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
 
 
   def Read( self, size=-1 ):
-    assert self.client_connected
+    assert self._connection_event.isSet()
     assert self._client_socket
 
     if size < 0:
@@ -235,7 +276,7 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
     return True
 
 
-  def Write( self, data ):
+  def _Write( self, data ):
     assert self.output_connected
     assert self._client_write_socket
 
@@ -278,31 +319,23 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 class LanguageServerCompleter( Completer ):
   def __init__( self, user_options):
     super( LanguageServerCompleter, self ).__init__( user_options )
+    self._latest_diagnostics = {
+      'uri': None,
+      'diagnostics': []
+    }
 
 
   def ComputeCandidatesInner( self, request_data ):
 
-    # Need to update the file contents. TODO: so inefficient!
+    # Need to update the file contents. TODO: so inefficient (and doesn't work
+    # for the eclipse based completer for some reason)!
     self._RefreshFiles( request_data )
 
-    # TODO: Must absolutely FIX the race conditions here, even qsize is not
-    # syncronised!!!
-    request_id = str ( self._server._responses.qsize() )
-
+    request_id = self._server.NextRequestId()
     msg = lsapi.Completion( request_id, request_data )
+
     _logger.info( 'Sending completion request to server: {0}'.format( msg ) )
-    self._server.Write( msg )
-
-    # TODO: AAAAH so broken threading....
-    while True:
-      response = self._server._responses.get()
-      if str( response[ 'id' ] ) == request_id:
-        # OK, it is our message
-        break
-      else:
-        # TODO: this is really stupid. Use a better container
-        self._server._responses.put( msg )
-
+    response = self._server.WriteRequest( request_id, msg )
     _logger.info( 'Got a response to completion: {0}'.format(
       json.dumps( response, indent=2 ) ) )
 
@@ -402,13 +435,13 @@ class LanguageServerCompleter( Completer ):
     except queue.Empty:
       pass
 
-    if latest_diagnostics:
-      diags = [ BuildDiagnostic( latest_diagnostics[ 'params' ][ 'uri' ], x )
-                for x in latest_diagnostics[ 'params' ][ 'diagnostics' ] ]
-      _logger.debug( 'Diagnostics: {0}'.format( diags ) )
-      return diags
-    else:
-      _logger.debug( 'No diagnostics' )
+    if latest_diagnostics is not None:
+      self._latest_diagnostics = latest_diagnostics[ 'params' ]
+
+    diags = [ BuildDiagnostic( self._latest_diagnostics[ 'uri' ], x )
+              for x in self._latest_diagnostics[ 'diagnostics' ] ]
+    _logger.debug( 'Diagnostics: {0}'.format( diags ) )
+    return diags
 
 
   def _RefreshFiles( self, request_data ):
@@ -417,32 +450,13 @@ class LanguageServerCompleter( Completer ):
                                        file_data[ 'filetypes' ],
                                        file_data[ 'contents' ] )
       _logger.info( 'Sending did open request to server: {0}'.format( msg ) )
-      self._server.Write( msg )
-
-
-  # The remainder is all server state handling and completer boilerplate
-
-  def GetSubcommandsMap( self ):
-    return {
-      'RestartServer': ( lambda self, request_data, args:
-                            self._RestartServer() ),
-    }
+      self._server.WriteNotification( msg )
 
 
   def _WaitForInitiliase( self ):
-    # TODO: Race conditions!
-    request_id = str ( self._server._responses.qsize() )
+    request_id = self._server.NextRequestId()
 
     msg = lsapi.Initialise( request_id )
     _logger.info( 'Sending initialise request to server: {0}'.format( msg ) )
-    self._server.Write( msg )
-    while True:
-      response = self._server._responses.get()
-      _logger.info( 'popped a response off the queue' )
-      if str( response[ 'id' ] ) == request_id:
-        # OK, it is our message
-        break
-      else:
-        self._server._responses.put( response )
-
+    response = self._server.WriteRequest( request_id, msg )
     _logger.info( 'Got a response to initialise: {0}'.format( response ) )

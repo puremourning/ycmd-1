@@ -102,13 +102,13 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     self._server_port = 0
     self._server_handle = None
 
-    # TODO: close the sockets in the servre
+    # TODO: close the sockets in the server
     self._server = None
 
 
   def _StartServer( self ):
     with self._server_state_mutex:
-      _logger.info( 'Starting Tern server...' )
+      _logger.info( 'Starting javac server...' )
       self._server_port = utils.GetUnusedLocalhostPort()
 
       self._server = language_server_completer.TCPSingleStreamServer(
@@ -147,12 +147,8 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         _logger.warning( 'javac server failed to start' )
         return
 
-      # Awaiting connection
-      # spinlock
-      # TODO: timeout
-      while not self._server.TryServerConnection():
-        _logger.debug( 'Awaiting connection...' )
-        time.sleep( 1 )
+      # Await connection
+      self._server.TryServerConnection()
 
       # OK, so now we have to fire the Initialise request to the server:
       #
@@ -165,9 +161,30 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       #   message can be picked by the server.
       # - notifications should be dropped.
 
-      self._response = dict()
-      self._notification = list()
       self._WaitForInitiliase()
+
+
+  def _StopServer( self ):
+    with self._server_state_mutex:
+      if self._ServerIsRunning():
+        _logger.info( 'Stopping java server with PID {0}'.format(
+                          self._server_handle.pid ) )
+        self._server_handle.terminate()
+        try:
+          utils.WaitUntilProcessIsTerminated( self._server_handle,
+                                              timeout = 5 )
+          _logger.info( 'javac server stopped' )
+        except RuntimeError:
+          _logger.exception( 'Error while stopping java server' )
+
+      self._Reset()
+
+
+  def GetSubcommandsMap( self ):
+    return {
+      'RestartServer': ( lambda self, request_data, args:
+                            self._RestartServer() ),
+    }
 
 
   def _RestartServer( self ):
