@@ -222,6 +222,13 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       self._Reset()
 
 
+  def GetSubcommandsMap( self ):
+    return {
+      'RestartServer': ( lambda self, request_data, args:
+                            self._RestartServer() ),
+    }
+
+
   def _RestartServer( self ):
     with self._server_state_mutex:
       self._StopServer()
