@@ -56,6 +56,10 @@ class Response( object ):
     if not self._event.isSet():
       raise RuntimeError( 'Response Timeout' )
 
+    if 'error' in self._message:
+      raise RuntimeError( 'Request failed: {0}'.format(
+        self._message[ 'error' ][ 'message' ] ) )
+
     return self._message
 
 
@@ -68,6 +72,8 @@ class LanguageServerConnection( object ):
     self._responseMutex = threading.Lock()
     self._notifications = queue.Queue()
 
+    self._connection_event = threading.Event()
+
 
   def NextRequestId( self ):
     with self._responseMutex:
@@ -75,7 +81,7 @@ class LanguageServerConnection( object ):
       return str( self._lastId )
 
 
-  def WriteRequest( self, request_id, message ):
+  def GetResponse( self, request_id, message ):
     response = Response()
 
     with self._responseMutex:
@@ -86,26 +92,38 @@ class LanguageServerConnection( object ):
     return response.AwaitResponse()
 
 
-  def WriteNotification( self, message ):
+  def SendNotification( self, message ):
     self._Write( message )
 
 
+  def TryServerConnection( self ):
+    self._connection_event.wait( timeout = 10 )
+
+    if not self._connection_event.isSet():
+      raise RuntimeError( 'Timed out waiting for server to connect' )
+
+
   def _run_loop( self, socket ):
+    # Wait for the connection to fully establsh (block)
     self._TryServerConnectionBlocking()
 
-    # As there is only one socket, we can just block on read
-    while True:
-      self._ReadMessage( )
+    self._connection_event.set()
+
+    # Blocking loop which reads whole messages and calls _DespatchMessage
+    self._ReadMessages( )
 
 
-  def _ReadMessage( self ):
-    headers = {}
+  def _ReadHeaders( self, data ):
     headers_complete = False
     prefix = bytes( b'' )
+    headers = {}
+
     while not headers_complete:
       read_bytes = 0
       last_line = 0
-      data = self.Read()
+      if len( data ) == 0:
+        data = self.Read()
+
       _logger.debug( 'Read data: {0}'.format( data ) )
 
       while read_bytes < len( data ):
@@ -128,32 +146,52 @@ class LanguageServerConnection( object ):
       if not headers_complete:
         prefix = data[ last_line : ]
 
-    # The response message is a JSON object which comes back on one line.
-    # Since this might change in the future, we use the 'Content-Length'
-    # header.
-    if 'Content-Length' not in headers:
-      raise RuntimeError( "Missing 'Content-Length' header" )
-    content_length = int( headers[ 'Content-Length' ] )
 
-    _logger.debug( 'Need to read {0} bytes of content'.format(
-      content_length ) )
+    return ( data, read_bytes, headers )
 
-    content = bytes( b'' )
-    content_read = 0
-    if read_bytes < len( data ):
-      data = data[ read_bytes: ]
-      content_to_read = min( content_length - content_read, len( data ) )
-      content += data[ : content_to_read ]
-      content_read += len( content )
 
-    while content_read < content_length:
-      data = self.Read( content_length - content_read )
-      content_to_read = min( content_length - content_read, len( data ) )
-      content += data[ : content_to_read ]
-      content_read += len( content )
+  def _ReadMessages( self ):
+    data = bytes( b'' )
+    while True:
+      ( data, read_bytes, headers ) = self._ReadHeaders( data )
 
-    message = lsapi.Parse( content )
-    self._DespatchMessage( message )
+      if 'Content-Length' not in headers:
+        raise RuntimeError( "Missing 'Content-Length' header" )
+
+      content_length = int( headers[ 'Content-Length' ] )
+
+      _logger.debug( 'Need to read {0} bytes of content'.format(
+        content_length ) )
+
+      # We need to read content_length bytes for the payload of this message.
+      # This may be in the remainder of `data`, but equally we may need to read
+      # more data from the socket.
+      content = bytes( b'' )
+      content_read = 0
+      if read_bytes < len( data ):
+        # There are bytes left in data, use them
+        data = data[ read_bytes: ]
+
+        # Read up to content_length bytes from data
+        content_to_read = min( content_length, len( data ) )
+        content += data[ : content_to_read ]
+        content_read += len( content )
+        read_bytes = content_to_read
+
+      while content_read < content_length:
+        # There is more content to read, but data is exhausted - read more from
+        # the socket
+        data = self.Read( content_length - content_read )
+        content_to_read = min( content_length - content_read, len( data ) )
+        content += data[ : content_to_read ]
+        content_read += len( content )
+        read_bytes = content_to_read
+
+      self._DespatchMessage( lsapi.Parse( content ) )
+
+      # We only consumed len( content ) of data. If there is more, we start
+      # again with the remainder and look for headers
+      data = data[ read_bytes : ]
 
 
   def _DespatchMessage( self, message ):
@@ -173,7 +211,6 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     self._port = port
     self._socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
     self._client_socket = None
-    self._connection_event = threading.Event()
 
 
   def run( self ):
@@ -183,13 +220,8 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     self._run_loop( self._client_socket )
 
 
-  def TryServerConnection( self ):
-    return self._connection_event.wait( timeout = 10 )
-
-
   def _TryServerConnectionBlocking( self ):
     ( self._client_socket, _ ) = self._socket.accept()
-    self._connection_event.set()
     _logger.info( 'socket connected' )
 
     return True
@@ -238,6 +270,8 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
   def __init__( self, input_port, output_port ):
     super( TCPMultiStreamServer, self ).__init__()
 
+    self._connection_event = threading.Event()
+
     self._input_port = input_port
     self._input_socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
 
@@ -246,9 +280,6 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
     self._client_read_socket = None
     self._client_write_socket = None
-
-    self.input_connected = False
-    self.output_connected = False
 
 
   def run( self ):
@@ -260,24 +291,16 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
     self._run_loop( self._client_read_socket )
 
-  def TryServerConnection( self ):
-    return self.input_connected and self.output_connected
-
 
   def _TryServerConnectionBlocking( self ):
     ( self._client_read_socket, _ ) = self._input_socket.accept()
-    self.input_connected = True
     _logger.info( 'Input socket connected' )
 
     ( self._client_write_socket, _ ) = self._output_socket.accept()
-    self.output_connected = True
     _logger.info( 'Output socket connected' )
-
-    return True
 
 
   def _Write( self, data ):
-    assert self.output_connected
     assert self._client_write_socket
 
     total_sent = 0
@@ -292,7 +315,6 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
 
   def Read( self, size=-1 ):
-    assert self.input_connected
     assert self._client_read_socket
 
     if size < 0:
@@ -323,6 +345,10 @@ class LanguageServerCompleter( Completer ):
       'uri': None,
       'diagnostics': []
     }
+    self._syncType = 'Full'
+
+    self._serverFileState = {}
+    self._fileStateMutex = threading.Lock()
 
 
   def ComputeCandidatesInner( self, request_data ):
@@ -335,7 +361,7 @@ class LanguageServerCompleter( Completer ):
     msg = lsapi.Completion( request_id, request_data )
 
     _logger.info( 'Sending completion request to server: {0}'.format( msg ) )
-    response = self._server.WriteRequest( request_id, msg )
+    response = self._server.GetResponse( request_id, msg )
     _logger.info( 'Got a response to completion: {0}'.format(
       json.dumps( response, indent=2 ) ) )
 
@@ -386,7 +412,6 @@ class LanguageServerCompleter( Completer ):
 
 
   def OnFileReadyToParse( self, request_data ):
-    # TODO: Maintain state about opened, closed etc. files?
     self._RefreshFiles( request_data )
 
     def BuildLocation( filename, loc ):
@@ -411,13 +436,19 @@ class LanguageServerCompleter( Completer ):
         'Information',
         'Hint',
       ]
+      SEVERITY_TO_YCM_SEVERITY = {
+        'Error': 'ERROR',
+        'Warning': 'WARNING',
+        'Information': 'WARNING',
+        'Hint': 'WARNING'
+      }
 
       return responses.BuildDiagnosticData ( responses.Diagnostic(
         ranges = [ r ],
         location = r.start_,
         location_extent = r,
         text = diag[ 'message' ],
-        kind = SEVERITY[ diag[ 'severity' ] ] ) )
+        kind = SEVERITY_TO_YCM_SEVERITY[ SEVERITY[ diag[ 'severity' ] ] ] ) )
 
     # TODO: Maybe we need to prevent duplicates? Anyway, handle all of the
     # notification messages
@@ -436,7 +467,10 @@ class LanguageServerCompleter( Completer ):
       pass
 
     if latest_diagnostics is not None:
+      _logger.debug( 'new diagnostics, updating latest received' )
       self._latest_diagnostics = latest_diagnostics[ 'params' ]
+    else:
+      _logger.debug( 'No new diagnostics, using latest received' )
 
     diags = [ BuildDiagnostic( self._latest_diagnostics[ 'uri' ], x )
               for x in self._latest_diagnostics[ 'diagnostics' ] ]
@@ -445,18 +479,72 @@ class LanguageServerCompleter( Completer ):
 
 
   def _RefreshFiles( self, request_data ):
-    for file_name, file_data in request_data[ 'file_data' ].iteritems():
-      msg = lsapi.DidOpenTextDocument( file_name,
-                                       file_data[ 'filetypes' ],
-                                       file_data[ 'contents' ] )
-      _logger.info( 'Sending did open request to server: {0}'.format( msg ) )
-      self._server.WriteNotification( msg )
+    with self._fileStateMutex:
+      for file_name, file_data in request_data[ 'file_data' ].iteritems():
+        file_state = 'New'
+        if file_name in self._serverFileState:
+          file_state = self._serverFileState[ file_name ]
+
+        if file_state == 'New' or self._syncType == 'Full':
+          msg = lsapi.DidOpenTextDocument( file_name,
+                                           file_data[ 'filetypes' ],
+                                           file_data[ 'contents' ] )
+        else:
+          # FIXME: DidChangeTextDocument doesn't actally do anything different
+          # from DidOpenTextDocument because we don't actually have a mechanism
+          # for generating the diffs (which would just be a waste of time)
+          #
+          # One option would be to just replcae the entire file, but some
+          # servers (i'm looking at you javac completer) don't update
+          # diagnostics until you open or save a document. Sigh.
+          msg = lsapi.DidChangeTextDocument( file_name,
+                                             file_data[ 'filetypes' ],
+                                             file_data[ 'contents' ] )
+
+        self._serverFileState[ file_name ] = 'Open'
+        self._server.SendNotification( msg )
+
+      for file_name in self._serverFileState.iterkeys():
+        if file_name not in request_data[ 'file_data' ]:
+          msg = lsapi.DidCloseTextDocument( file_name )
+          del self._serverFileState[ file_name ]
+          self._server.SendNotification( msg )
 
 
   def _WaitForInitiliase( self ):
     request_id = self._server.NextRequestId()
 
     msg = lsapi.Initialise( request_id )
-    _logger.info( 'Sending initialise request to server: {0}'.format( msg ) )
-    response = self._server.WriteRequest( request_id, msg )
-    _logger.info( 'Got a response to initialise: {0}'.format( response ) )
+    _logger.debug( 'Sending initialise request to server: {0}'.format( msg ) )
+    response = self._server.GetResponse( request_id, msg )
+    _logger.debug( 'Got a response to initialise: {0}'.format( response ) )
+
+    if 'textDocumentSync' in response[ 'result' ][ 'capabilities' ]:
+      SYNC_TYPE = [
+        'None',
+        'Full',
+        'Incremental'
+      ]
+      self._syncType = SYNC_TYPE[
+        response[ 'result' ][ 'capabilities' ][ 'textDocumentSync' ] ]
+      _logger.info( 'Server requires sync type of {0}'.format(
+        self._syncType ) )
+
+
+  def _GetType( self, request_data ):
+    request_id = self._server.NextRequestId()
+    response = self._server.GetResponse( request_id,
+                                         lsapi.Hover( request_id,
+                                                      request_data ) )
+
+    if isinstance( response[ 'result' ][ 'contents' ], list ):
+      if len( response[ 'result' ][ 'contents' ] ):
+        info = response[ 'result' ][ 'contents' ][ 0 ]
+      else:
+        raise RuntimeError( 'No information' )
+    else:
+      info = response[ 'result' ][ 'contents' ]
+
+
+
+    return responses.BuildDisplayMessageResponse( str( info ) )

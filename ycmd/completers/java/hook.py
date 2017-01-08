@@ -24,7 +24,7 @@ standard_library.install_aliases()
 from builtins import *  # noqa
 
 
-from ycmd.completers.java.javac_completer import (
+from ycmd.completers.java.java_completer import (
   ShouldEnableJavaCompleter, JavaCompleter )
 
 
