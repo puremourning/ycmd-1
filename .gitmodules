@@ -32,3 +32,6 @@
 [submodule "third_party/python-future"]
 	path = third_party/python-future
 	url = https://github.com/PythonCharmers/python-future
+[submodule "cpp/ycm/profile/google-benchmark"]
+	path = cpp/ycm/profile/google-benchmark
+	url = https://github.com/google/benchmark
