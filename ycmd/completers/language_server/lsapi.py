@@ -73,6 +73,21 @@ def DidOpenTextDocument( file_name, file_types, file_contents ):
   } )
 
 
+def DidChangeTextDocument( file_name, file_types, file_contents ):
+  # FIXME: The servers seem to all state they want incremental updates. It
+  # remains to be seen if they really do.
+  return DidOpenTextDocument( file_name, file_types, file_contents )
+
+
+def DidCloseTextDocument( file_name ):
+  return BuildNotification( 'textDocument/didClose', {
+    'textDocument': {
+      'uri': _MakeUriForFile( file_name ),
+      'version': LAST_VERSION[ file_name ],
+    },
+  } )
+
+
 def Completion( request_id, request_data ):
   return BuildRequest( request_id, 'textDocument/completion', {
     'textDocument': {
@@ -80,11 +95,23 @@ def Completion( request_id, request_data ):
     },
     'position': {
       # TODO: The API asks for 0-based offsets. These -1's are not good enough
-      # when using multi-byte characters. See the tern completeer for an
+      # when using multi-byte characters. See the tern completer for an
       # approach.
       'line': request_data[ 'line_num' ] - 1,
       'character': request_data[ 'start_column' ] - 1,
     }
+  } )
+
+
+def Hover( request_id, request_data ):
+  return BuildRequest( request_id, 'textDocument/hover', {
+    'textDocument': {
+      'uri': _MakeUriForFile( request_data[ 'filepath' ] ),
+    },
+    'position': {
+      'line': request_data[ 'line_num' ] - 1,
+      'character': request_data[ 'start_column' ] - 1,
+    },
   } )
 
 

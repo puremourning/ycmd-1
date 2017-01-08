@@ -185,10 +185,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       # Awaiting connection
       # spinlock
       # TODO: timeout
-      while not self._server.TryServerConnection():
-        _logger.debug( 'Awaiting connection on ports: IN {0}, OUT {1}'.format(
-          self._server_stdin_port, self._server_stdout_port ) )
-        time.sleep( 1 )
+      self._server.TryServerConnection()
 
       # OK, so now we have to fire the Initialise request to the server:
       #
@@ -200,9 +197,6 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       # - for a request the respond should be errored with code: -32001. The
       #   message can be picked by the server.
       # - notifications should be dropped.
-
-      self._response = dict()
-      self._notification = list()
       self._WaitForInitiliase()
 
 
@@ -226,6 +220,8 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     return {
       'RestartServer': ( lambda self, request_data, args:
                             self._RestartServer() ),
+      'GetType':       (lambda self, request_data, args:
+                            self._GetType( request_data ) )
     }
 
 
