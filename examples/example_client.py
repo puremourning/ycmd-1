@@ -82,7 +82,16 @@ class YcmdHandle( object ):
         as options_file:
       json.dump( prepared_options, options_file )
       server_port = GetUnusedLocalhostPort()
-      ycmd_args = [ sys.executable,
+
+      python_executable = sys.executable
+      python_used_during_building = os.path.join( DIR_OF_THIS_SCRIPT,
+                                                  '..',
+                                                  'PYTHON_USED_DURING_BUILDING')
+      if os.path.exists( python_used_during_building ):
+        with open( python_used_during_building, encoding = 'utf8' ) as f:
+          python_executable = f.read().strip()
+
+      ycmd_args = [ python_executable,
                     PATH_TO_YCMD,
                     '--port={0}'.format( server_port ),
                     '--options_file={0}'.format( options_file.name ),
