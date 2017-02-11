@@ -29,7 +29,7 @@ import threading
 
 from subprocess import PIPE
 
-from ycmd import utils
+from ycmd import ( utils, responses )
 
 from ycmd.completers.language_server import language_server_completer
 
@@ -76,11 +76,17 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
   def __init__( self, user_options):
     super( JavaCompleter, self ).__init__( user_options )
 
+    self._server_keep_logfiles = user_options[ 'server_keep_logfiles' ]
+
     # Used to ensure that starting/stopping of the server is synchronised
     self._server_state_mutex = threading.RLock()
 
     with self._server_state_mutex:
       self._server = None
+      self._server_handle = None
+      self._server_stderr = None
+      self._server_stdout = None
+
       self._Reset()
       self._StartServer()
 
@@ -90,12 +96,16 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
 
   def DebugInfo( self, request_data ):
-    if self._ServerIsRunning():
-      return 'Server running on stdout: {0}, stdin: {2}'.format(
-        self._server_stdout_port,
-        self._server_stdin_port )
-
-    return 'Server is not running :('
+    return responses.BuildDebugInfoResponse(
+      name = "Java",
+      servers = [
+        responses.DebugInfoServer(
+          name = "Java Language Server",
+          handle = self._server_handle,
+          executable = LANGUAGE_SERVER_HOME,
+          logfiles = [ self._server_stdout, self._server_stderr ],
+          port = [ self._server_stdout_port, self._server_stdin_port ] )
+      ] )
 
 
   def Shutdown( self ):
@@ -110,6 +120,17 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
 
   def _Reset( self ):
+    if self._server_handle:
+      utils.CloseStandardStreams( self._server_handle )
+
+    if not self._server_keep_logfiles:
+      if self._server_stdout:
+        utils.RemoveIfExists( self._server_stdout )
+        self._server_stdout = None
+      if self._server_stderr:
+        utils.RemoveIfExists( self._server_stderr )
+        self._server_stderr = None
+
     self._server_stdin_port = 0
     self._server_stdout_port = 0
     self._server_handle = None
@@ -158,14 +179,18 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       _logger.debug( 'Starting java-server with the following command: '
                     + ' '.join( command ) )
 
-      server_stdout = 'server_stdout'
-      server_stderr = 'server_stderr'
+      LOGFILE_FORMAT = 'java_language_server_{port}_{std}_'
 
-      _logger.debug( 'server_stdout: {0}'.format( server_stdout ) )
-      _logger.debug( 'server_stderr: {0}'.format( server_stderr ) )
+      self._server_stdout = utils.CreateLogfile(
+          LOGFILE_FORMAT.format( port = self._server_stdout_port,
+                                 std = 'stdout' ) )
 
-      with utils.OpenForStdHandle( server_stdout ) as stdout:
-        with utils.OpenForStdHandle( server_stderr ) as stderr:
+      self._server_stderr = utils.CreateLogfile(
+          LOGFILE_FORMAT.format( port = self._server_stdin_port,
+                                 std = 'stderr' ) )
+
+      with utils.OpenForStdHandle( self._server_stdout ) as stdout:
+        with utils.OpenForStdHandle( self._server_stderr ) as stderr:
           self._server_handle = utils.SafePopen( command,
                                                  stdin = PIPE,
                                                  stdout = stdout,

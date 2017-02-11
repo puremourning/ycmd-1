@@ -146,6 +146,7 @@ class LanguageServerConnection( object ):
 
       if not headers_complete:
         prefix = data[ last_line : ]
+        data = ''
 
 
     return ( data, read_bytes, headers )
