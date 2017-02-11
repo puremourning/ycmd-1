@@ -378,6 +378,14 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
     return True
 
 
+  def PollForMessages( self, request_data ):
+    return self.PollForMessagesInner( request_data )
+
+
+  def PollForMessagesInner( self, request_data ):
+    raise RuntimeError( "Completer does not support messages" )
+
+
 class CompletionsCache( object ):
   """Completions for a particular request. Importantly, columns are byte
   offsets, not unicode codepoints."""
