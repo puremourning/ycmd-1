@@ -26,7 +26,6 @@ standard_library.install_aliases()
 import logging
 import os
 import threading
-import time
 
 from subprocess import PIPE
 
@@ -183,8 +182,6 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         return
 
       # Awaiting connection
-      # spinlock
-      # TODO: timeout
       self._server.TryServerConnection()
 
       # OK, so now we have to fire the Initialise request to the server:
