@@ -71,6 +71,7 @@ class LanguageServerConnection( object ):
     self._responses = {}
     self._responseMutex = threading.Lock()
     self._notifications = queue.Queue()
+    self._diagnostics = queue.Queue()
 
     self._connection_event = threading.Event()
 
@@ -200,6 +201,10 @@ class LanguageServerConnection( object ):
       with self._responseMutex:
         assert str( message[ 'id' ] ) in self._responses
         self._responses[ str( message[ 'id' ] ) ].ResponseReceived( message )
+    elif message[ 'method' ] == 'textDocument/publishDiagnostics':
+      # HACK: We use different mechanisms to publish diagnostics and other
+      # async. events (for now)
+      self._diagnostics.put( message )
     else:
       self._notifications.put( message )
 
@@ -349,10 +354,10 @@ class LanguageServerCompleter( Completer ):
 
     self._serverFileState = {}
     self._fileStateMutex = threading.Lock()
+    self._server = LanguageServerConnection()
 
 
   def ComputeCandidatesInner( self, request_data ):
-
     # Need to update the file contents. TODO: so inefficient (and doesn't work
     # for the eclipse based completer for some reason)!
     self._RefreshFiles( request_data )
@@ -455,7 +460,7 @@ class LanguageServerCompleter( Completer ):
     latest_diagnostics = None
     try:
       while True:
-        notification = self._server._notifications.get_nowait()
+        notification = self._server._diagnostics.get_nowait()
         _logger.debug( 'notification {0}: {1}'.format(
           notification[ 'method' ],
           json.dumps( notification[ 'params' ], indent = 2 ) ) )
@@ -478,6 +483,33 @@ class LanguageServerCompleter( Completer ):
     return diags
 
 
+  def PollForMessagesInner( self, request_data ):
+    try:
+      # TODO/FIXME: We should reduce the timeout if we loop
+      while True:
+        notification = self._server._notifications.get( timeout = 10 )
+        _logger.info( 'Received notification: {0}'.format(
+          json.dumps( notification, indent=2 ) ) )
+        message = self._ConvertNotificationToMessage( request_data,
+                                                      notification )
+        if message:
+          return message
+    except queue.Empty:
+      return True
+
+
+  def _ConvertNotificationToMessage( self, request_data, notification ):
+    if notification[ 'method' ] == 'window/showMessage':
+      return responses.BuildDisplayMessageResponse(
+        notification[ 'params' ][ 'message' ] )
+    elif notification[ 'method' ] == 'language/status':
+      return responses.BuildDisplayMessageResponse(
+        'Language server status: {0}'.format(
+          notification[ 'params' ][ 'message' ] ) )
+
+    return None
+
+
   def _RefreshFiles( self, request_data ):
     with self._fileStateMutex:
       for file_name, file_data in request_data[ 'file_data' ].iteritems():
@@ -490,7 +522,7 @@ class LanguageServerCompleter( Completer ):
                                            file_data[ 'filetypes' ],
                                            file_data[ 'contents' ] )
         else:
-          # FIXME: DidChangeTextDocument doesn't actally do anything different
+          # FIXME: DidChangeTextDocument doesn't actually do anything different
           # from DidOpenTextDocument because we don't actually have a mechanism
           # for generating the diffs (which would just be a waste of time)
           #
@@ -544,7 +576,5 @@ class LanguageServerCompleter( Completer ):
         raise RuntimeError( 'No information' )
     else:
       info = response[ 'result' ][ 'contents' ]
-
-
 
     return responses.BuildDisplayMessageResponse( str( info ) )
