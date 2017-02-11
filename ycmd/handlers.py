@@ -250,6 +250,17 @@ def Shutdown():
   return _JsonResponse( True )
 
 
+@app.post( '/receive_messages' )
+def ReceiveMessages():
+  # Receive messages is a "long-poll" handler.
+  # The client makes the request with a long timeout (1 hour).
+  # When we have data to send, we send it and close the socket.
+  # The client then sends a new request.
+  request_data = RequestWrap( request.json )
+  completer = _GetCompleterForRequestData( request_data )
+  return _JsonResponse( completer.PollForMessages( request_data ) )
+
+
 # The type of the param is Bottle.HTTPError
 def ErrorHandler( httperror ):
   body = _JsonResponse( BuildExceptionResponse( httperror.exception,
