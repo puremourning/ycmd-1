@@ -19,6 +19,7 @@ import re
 import shlex
 import subprocess
 import sys
+import errno
 
 PY_MAJOR, PY_MINOR = sys.version_info[ 0 : 2 ]
 if not ( ( PY_MAJOR == 2 and PY_MINOR >= 6 ) or
@@ -303,6 +304,10 @@ def ParseArguments():
                                 'specified directory, and do not delete the '
                                 'build output. This is useful for incremental '
                                 'builds, and required for coverage data' )
+  parser.add_argument( '--incremental',
+                       help   = "For developers: don't wipe out the build-dir "
+                                "before building",
+                       action = 'store_true' )
 
   args = parser.parse_args()
 
@@ -315,6 +320,11 @@ def ParseArguments():
        not args.all_completers ):
     sys.exit( 'ERROR: you can\'t pass --system-libclang without also passing '
               '--clang-completer or --all as well.' )
+
+
+  if args.incremental and not args.build_dir:
+    sys.exit( 'ERROR: --incremental may only be used in combination with '
+              '--build-dir' )
   return args
 
 
@@ -401,12 +411,16 @@ def BuildYcmdLib( args ):
   if args.build_dir:
     build_dir = os.path.abspath( args.build_dir )
 
-    if os.path.exists( build_dir ):
+    if os.path.exists( build_dir ) and not args.incremental:
       print( 'The supplied build directory ' + build_dir + ' exists, '
              'deleting it.' )
       rmtree( build_dir, ignore_errors = OnTravisOrAppVeyor() )
 
-    os.makedirs( build_dir )
+    try:
+      os.makedirs( build_dir )
+    except OSError as error:
+      if not args.incremental or error.errno != errno.EEXIST:
+        raise
   else:
     build_dir = mkdtemp( prefix = 'ycm_build_' )
 
