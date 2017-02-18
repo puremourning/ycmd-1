@@ -85,6 +85,17 @@ def OnTravisOrAppVeyor():
   return 'CI' in os.environ
 
 
+def FindExecutableOrDie( executable, message ):
+  path = FindExecutable( executable )
+
+  if not path:
+    sys.exit( "ERROR: Unabel to find executable '{0}'. {1}".format(
+      executable,
+      message ) )
+
+  return path
+
+
 # On Windows, distutils.spawn.find_executable only works for .exe files
 # but .bat and .cmd files are also executables, so we use our own
 # implementation.
@@ -264,6 +275,8 @@ def ParseArguments():
                        help = 'Build Go semantic completion engine.' )
   parser.add_argument( '--racer-completer', action = 'store_true',
                        help = 'Build rust semantic completion engine.' )
+  parser.add_argument( '--jdt-completer', action = 'store_true',
+                       help = 'Build java completer based on eclipse JDT' )
   parser.add_argument( '--system-boost', action = 'store_true',
                        help = 'Use the system boost instead of bundled one. '
                        'NOT RECOMMENDED OR SUPPORTED!')
@@ -458,24 +471,23 @@ def BuildOmniSharp():
 
 
 def BuildGoCode():
-  if not FindExecutable( 'go' ):
-    sys.exit( 'ERROR: go is required to build gocode.' )
+  go = FindExecutableOrDie( 'go', 'go is required to build gocode.' )
 
   os.chdir( p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'gocode' ) )
-  CheckCall( [ 'go', 'build' ] )
+  CheckCall( [ go, 'build' ] )
   os.chdir( p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'godef' ) )
-  CheckCall( [ 'go', 'build', 'godef.go' ] )
+  CheckCall( [ go, 'build', 'godef.go' ] )
 
 
 def BuildRacerd():
   """
   Build racerd. This requires a reasonably new version of rustc/cargo.
   """
-  if not FindExecutable( 'cargo' ):
-    sys.exit( 'ERROR: cargo is required for the Rust completer.' )
+  cargo = FindExecutableOrDie( 'cargo',
+                               'cargo is required for the Rust completer.' )
 
   os.chdir( p.join( DIR_OF_THIRD_PARTY, 'racerd' ) )
-  args = [ 'cargo', 'build' ]
+  args = [ cargo, 'build' ]
   # We don't use the --release flag on Travis/AppVeyor because it makes building
   # racerd 2.5x slower and we don't care about the speed of the produced racerd.
   if not OnTravisOrAppVeyor():
@@ -488,9 +500,7 @@ def SetUpTern():
   node = PathToFirstExistingExecutable( [ 'nodejs', 'node' ] )
   if not node:
     sys.exit( 'ERROR: node is required to set up Tern.' )
-  npm = FindExecutable( 'npm' )
-  if not npm:
-    sys.exit( 'ERROR: npm is required to set up Tern.' )
+  npm = FindExecutableOrDie( 'npm', 'ERROR: npm is required to set up Tern.' )
 
   # We install Tern into a runtime directory. This allows us to control
   # precisely the version (and/or git commit) that is used by ycmd.  We use a
@@ -514,6 +524,20 @@ def SetUpTern():
   CheckCall( [ npm, 'install', '--production' ] )
 
 
+def BuildJDTLanguageServer():
+  mvn = FindExecutableOrDie(
+    'mvn',
+    'Apache maven is required to install JDL language server' )
+  java = FindExecutableOrDie(
+    'java',
+    'java is required to install JDT language server' )
+
+  os.chdir( p.join( DIR_OF_THIS_SCRIPT,
+                    'third_party',
+                    'eclipse.jdt.ls' ) )
+  CheckCall( [ mvn, 'verify' ] )
+
+
 def WritePythonUsedDuringBuild():
   path = p.join( DIR_OF_THIS_SCRIPT, 'PYTHON_USED_DURING_BUILDING' )
   with open( path, 'w' ) as f:
@@ -534,6 +558,8 @@ def Main():
     SetUpTern()
   if args.racer_completer or args.all_completers:
     BuildRacerd()
+  if args.jdt_completer or args.all_completers:
+    BuildJDTLanguageServer()
 
 
 if __name__ == '__main__':
