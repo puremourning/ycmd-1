@@ -26,6 +26,7 @@ standard_library.install_aliases()
 import logging
 import os
 import threading
+import glob
 
 from subprocess import PIPE
 
@@ -40,8 +41,8 @@ LANGUAGE_SERVER_HOME = os.path.join( os.path.dirname( __file__ ),
                                      '..',
                                      '..',
                                      'third_party',
-                                     'java-language-server',
-                                     'org.jboss.tools.vscode.product',
+                                     'eclipse.jdt.ls',
+                                     'org.eclipse.jdt.ls.product',
                                      'target',
                                      'repository')
 
@@ -53,7 +54,7 @@ WORKSPACE_PATH = os.path.join( os.path.dirname( __file__ ),
                                '..',
                                '..',
                                'third_party',
-                               'java-language-server',
+                               'eclipse.jdt.ls',
                                'jdt_ws' )
 
 
@@ -70,6 +71,32 @@ def ShouldEnableJavaCompleter():
   # TODO: Check java version
 
   return True
+
+
+def _PathToLauncherJar():
+  # The file name changes between version of eclipse, so we use a glob as
+  # recommended by the language server developers
+  p = glob.glob(
+    os.path.abspath(
+      os.path.join(
+        LANGUAGE_SERVER_HOME,
+        'plugins',
+        'org.eclipse.equinox.launcher_*.jar' ) ) )
+
+  _logger.debug( 'Found launchers: {0}'.format( p ) )
+
+  return p[ 0 ]
+
+
+def _LauncherConfiguration():
+  if utils.OnMac():
+    config = 'config_mac'
+  elif utils.OnWindows():
+    config = 'config_win'
+  else:
+    config = 'config_linux'
+
+  return os.path.abspath( os.path.join( LANGUAGE_SERVER_HOME, config ) )
 
 
 class JavaCompleter( language_server_completer.LanguageServerCompleter ):
@@ -141,7 +168,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
   def _StartServer( self ):
     with self._server_state_mutex:
-      _logger.info( 'Starting Tern server...' )
+      _logger.info( 'Starting JDT Language Server...' )
       self._server_stdin_port = utils.GetUnusedLocalhostPort()
       self._server_stdout_port = utils.GetUnusedLocalhostPort()
 
@@ -157,27 +184,24 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
       command = [
         PATH_TO_JAVA,
-        '-Declipse.application=org.jboss.tools.vscode.java.id1',
+        '-Declipse.application=org.eclipse.jdt.ls.core.id1',
         '-Dosgi.bundles.defaultStartLevel=4',
-        '-Declipse.product=org.jboss.tools.vscode.java.product',
+        '-Declipse.product=org.eclipse.jdt.ls.core.product',
         '-Dlog.protocol=true',
         '-Dlog.level=ALL',
+        '-noverify',
+        '-Xmx1G',
         '-jar',
-        # TODO: Use a glob like the vscode client does ?
-        os.path.abspath ( os.path.join(
-          LANGUAGE_SERVER_HOME,
-          'plugins',
-          'org.eclipse.equinox.launcher_1.4.0.v20160926-1553.jar' ) ),
+        _PathToLauncherJar(),
         '-configuration',
-        # TODO: select config for host environment (work out what it does)
-        os.path.abspath( os.path.join( LANGUAGE_SERVER_HOME, 'config_mac' ) ),
+        _LauncherConfiguration(),
         '-data',
         # TODO: user option for a workspace path?
         os.path.abspath( WORKSPACE_PATH ),
       ]
 
       _logger.debug( 'Starting java-server with the following command: '
-                    + ' '.join( command ) )
+                     '{0}'.format( ' '.join( command ) ) )
 
       LOGFILE_FORMAT = 'java_language_server_{port}_{std}_'
 
@@ -198,12 +222,12 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
                                                  env = env )
 
       if self._ServerIsRunning():
-        _logger.info( 'java-langage-server started, '
+        _logger.info( 'JDT Language Server started, '
                       'with stdin {0}, stdout {1}'.format(
                         self._server_stdin_port,
                         self._server_stdout_port ) )
       else:
-        _logger.warning( 'java-language-server failed to start' )
+        _logger.warning( 'JDT Language Server failed to start' )
         return
 
       # Awaiting connection
