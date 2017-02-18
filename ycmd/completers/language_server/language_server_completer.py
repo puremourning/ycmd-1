@@ -518,6 +518,12 @@ class LanguageServerCompleter( Completer ):
       return responses.BuildDisplayMessageResponse(
         'Language server status: {0}'.format(
           notification[ 'params' ][ 'message' ] ) )
+    elif notification[ 'method' ] == 'language/actionableNotification':
+      # TODO: YcmCompleter subcommand to action these!
+      # TODO: Severity / warning etc. in the response
+      return responses.BuildDisplayMessageResponse(
+        'Language server reported: {0}'.format(
+          notification[ 'params' ][ 'message' ] ) )
 
     return None
 
