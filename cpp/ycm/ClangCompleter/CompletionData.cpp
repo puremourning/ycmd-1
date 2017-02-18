@@ -237,9 +237,9 @@ void CompletionData::ExtractDataFromChunk( CXCompletionString completion_string,
         OptionalChunkToString( completion_string, chunk_num ) );
     } else if ( kind == CXCompletionChunk_CurrentParameter ) {
       everything_except_return_type_
-        .append( "*" )
+        .append( "|" )
         .append( ChunkToString( completion_string, chunk_num ) )
-        .append( "*" );
+        .append( "|" );
     } else {
       everything_except_return_type_.append(
         ChunkToString( completion_string, chunk_num ) );

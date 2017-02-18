@@ -57,6 +57,42 @@ def FiletypeTriggerDictFromSpec( trigger_dict_spec ):
   return triggers_for_filetype
 
 
+DEFAULT_FILETYPE_TRIGGERS = {
+  'c' : [ '->', '.' ],
+  'objc,objcpp' : [
+    '->',
+    '.',
+    r're!\[[_a-zA-Z]+\w*\s',    # bracketed calls
+    r're!^\s*[^\W\d]\w*\s',     # bracketless calls
+    r're!\[.*\]\s',             # method composition
+  ],
+  'ocaml' : [ '.', '#' ],
+  'cpp,cuda,objcpp' : [ '->', '.', '::' ],
+  'perl' : [ '->' ],
+  'php' : [ '->', '::' ],
+  ( 'cs,'
+    'd,'
+    'elixir,'
+    'go,'
+    'groovy,'
+    'java,'
+    'javascript,'
+    'julia,'
+    'perl6,'
+    'python,'
+    'scala,'
+    'typescript,'
+    'vb' ) : [ '.' ],
+  'ruby,rust' : [ '.', '::' ],
+  'lua' : [ '.', ':' ],
+  'erlang' : [ ':' ],
+}
+
+
+PREPARED_DEFAULT_FILETYPE_TRIGGERS = FiletypeTriggerDictFromSpec(
+    DEFAULT_FILETYPE_TRIGGERS )
+
+
 class PreparedTriggers( object ):
   def __init__( self,
                 user_trigger_map = None,
@@ -194,43 +230,6 @@ def FilterAndSortCandidatesWrap( candidates, sort_property, query,
                                   ToCppStringCompatible( sort_property ),
                                   ToCppStringCompatible( query ),
                                   max_candidates )
-
-
-TRIGGER_REGEX_PREFIX = 're!'
-
-DEFAULT_FILETYPE_TRIGGERS = {
-  'c' : [ '->', '.' ],
-  'objc,objcpp' : [
-    '->',
-    '.',
-    r're!\[[_a-zA-Z]+\w*\s',    # bracketed calls
-    r're!^\s*[^\W\d]\w*\s',     # bracketless calls
-    r're!\[.*\]\s',             # method composition
-  ],
-  'ocaml' : [ '.', '#' ],
-  'cpp,cuda,objcpp' : [ '->', '.', '::' ],
-  'perl' : [ '->' ],
-  'php' : [ '->', '::' ],
-  ( 'cs,'
-    'd,'
-    'elixir,'
-    'go,'
-    'groovy,'
-    'java,'
-    'javascript,'
-    'julia,'
-    'perl6,'
-    'python,'
-    'scala,'
-    'typescript,'
-    'vb' ) : [ '.' ],
-  'ruby,rust' : [ '.', '::' ],
-  'lua' : [ '.', ':' ],
-  'erlang' : [ ':' ],
-}
-
-PREPARED_DEFAULT_FILETYPE_TRIGGERS = _FiletypeTriggerDictFromSpec(
-    DEFAULT_FILETYPE_TRIGGERS )
 
 
 def GetFileContents( request_data, filename ):

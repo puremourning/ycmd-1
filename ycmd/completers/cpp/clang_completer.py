@@ -34,15 +34,10 @@ import ycm_core
 from ycmd import responses
 from ycmd.utils import re, ToBytes, ToCppStringCompatible, ToUnicode
 from ycmd.completers.completer import Completer
-<<<<<<< HEAD
+from ycmd.completers.completer_utils import ( FiletypeTriggerDictFromSpec,
+                                              PreparedTriggers )
 from ycmd.completers.cpp.flags import ( Flags, PrepareFlagsForClang,
                                         UserIncludePaths )
-=======
-from ycmd.completers.completer_utils import ( GetIncludeStatementValue,
-                                              FiletypeTriggerDictFromSpec,
-                                              PreparedTriggers )
-from ycmd.completers.cpp.flags import Flags, PrepareFlagsForClang
->>>>>>> 1ff3a80c... Signature hints that trigger on ( and , etc.
 from ycmd.completers.cpp.ephemeral_values_set import EphemeralValuesSet
 from ycmd.completers.cpp.include_cache import IncludeCache, IncludeList
 from ycmd.responses import NoExtraConfDetected, UnknownExtraConf
@@ -58,11 +53,18 @@ NO_DOCUMENTATION_MESSAGE = 'No documentation available for current context'
 INCLUDE_REGEX = re.compile( '(\s*#\s*(?:include|import)\s*)(?:"[^"]*|<[^>]*)' )
 
 SIGNATURE_TRIGGERS = {
-  'c,cpp' : [ '(', ',', ')' ],
-  'objc' : [ ':', '[', '(', ',', ']', ')' ], # TODO: This is way too simplistic
+  'c,cpp' : [ '(', ',' ],
+  'objc' : [ ':', '[', '(', ',' ], # TODO: This is way too simplistic
+}
+
+SIGNATURE_CANCEL_TRIGGERS = {
+  'c,cpp' : [ ')' ],
+  'objc' : [ ')', ']' ], # TODO: This is way too simplistic
 }
 
 PREPARED_SIGNATURE_TRIGGERS = FiletypeTriggerDictFromSpec( SIGNATURE_TRIGGERS )
+PREPARED_SIGNATURE_CANCEL_TRIGGERS = FiletypeTriggerDictFromSpec(
+  SIGNATURE_CANCEL_TRIGGERS )
 
 
 class ClangCompleter( Completer ):
@@ -79,22 +81,17 @@ class ClangCompleter( Completer ):
       user_trigger_map = None,
       filetype_set = set( self.SupportedFiletypes() ),
       default_triggers = PREPARED_SIGNATURE_TRIGGERS )
+    self._prepared_signature_cancel_triggers = PreparedTriggers(
+      user_trigger_map = None,
+      filetype_set = set( self.SupportedFiletypes() ),
+      default_triggers = PREPARED_SIGNATURE_CANCEL_TRIGGERS )
 
 
   def SupportedFiletypes( self ):
     return CLANG_FILETYPES
 
 
-  def ShouldUseNowInner( self, request_data ):
-    return (
-      super( ClangCompleter, self ).ShouldUseNowInner( request_data ) or
-      self.ShouldTriggerSignatureHintsNow( request_data ) )
-
-
   def ShouldTriggerSignatureHintsNow( self, request_data ):
-    if not self._prepared_signature_triggers:
-      return False
-
     current_line = request_data[ 'line_value' ]
     start_codepoint = request_data[ 'start_codepoint' ] - 1
     column_codepoint = request_data[ 'column_codepoint' ] - 1
@@ -102,6 +99,22 @@ class ClangCompleter( Completer ):
 
     return self._prepared_signature_triggers.MatchesForFiletype(
         current_line, start_codepoint, column_codepoint, filetype )
+
+
+  def ShouldCancelSignatureHintsNow( self, request_data ):
+    current_line = request_data[ 'line_value' ]
+    start_codepoint = request_data[ 'start_codepoint' ] - 1
+    column_codepoint = request_data[ 'column_codepoint' ] - 1
+    filetype = self._CurrentFiletype( request_data[ 'filetypes' ] )
+
+    ret = self._prepared_signature_cancel_triggers.MatchesForFiletype(
+        current_line, start_codepoint, column_codepoint, filetype )
+
+    self._logger.debug( 'ShouldCancelSignatureHintsNow: {0} = {1}'.format(
+      current_line,
+      ret ) )
+
+    return ret
 
 
   def ComputeSignatureHints( self, request_data ):
@@ -162,7 +175,10 @@ class ClangCompleter( Completer ):
   def ShouldUseNowInner( self, request_data ):
     if self.ShouldCompleteIncludeStatement( request_data ):
       return True
-    return super( ClangCompleter, self ).ShouldUseNowInner( request_data )
+    return (
+      super( ClangCompleter, self ).ShouldUseNowInner( request_data ) or
+      self.ShouldTriggerSignatureHintsNow( request_data ) or
+      self.ShouldCancelSignatureHintsNow( request_data ) )
 
 
   def GetIncludePaths( self, request_data ):
@@ -194,7 +210,7 @@ class ClangCompleter( Completer ):
   def ComputeCandidatesInner( self, request_data ):
     # FIXME: HAAAAACK
     if self.ShouldTriggerSignatureHintsNow( request_data ):
-      return self.ComputeSignatureHints( request_data )
+      return ( self.ComputeSignatureHints( request_data ), [ 'START_HINTS' ] )
 
     flags, filename = self._FlagsForRequest( request_data )
     if not flags:
@@ -220,10 +236,15 @@ class ClangCompleter( Completer ):
           files,
           flags )
 
-    if not results:
+    complete_flags = []
+    if self.ShouldCancelSignatureHintsNow( request_data ):
+      self._logger.debug( 'STOP_HINTS' )
+      complete_flags = [ 'STOP_HINTS' ]
+
+    if not results and not complete_flags:
       raise RuntimeError( NO_COMPLETIONS_MESSAGE )
 
-    return [ ConvertCompletionData( x ) for x in results ]
+    return ( [ ConvertCompletionData( x ) for x in results ], complete_flags )
 
 
   def GetSubcommandsMap( self ):
