@@ -92,6 +92,7 @@ def GetCompletions():
 
   errors = None
   completions = None
+  flags = []
 
   if do_filetype_completion:
     try:
@@ -116,10 +117,15 @@ def GetCompletions():
     completions = ( _server_state.GetGeneralCompleter()
                                  .ComputeCandidates( request_data ) )
 
+  if completions and isinstance( completions, tuple ):
+    flags = completions[ 1 ]
+    completions = completions[ 0 ]
+
   return _JsonResponse(
       BuildCompletionResponse( completions if completions else [],
                                request_data.CompletionStartColumn(),
-                               errors = errors ) )
+                               errors = errors,
+                               flags = flags ) )
 
 
 @app.post( '/filter_and_sort_candidates' )

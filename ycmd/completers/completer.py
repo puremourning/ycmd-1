@@ -215,29 +215,34 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
          not self.ShouldUseNow( request_data ) ):
       return []
 
-    candidates = self._GetCandidatesFromSubclass( request_data )
+    ( candidates, flags ) = self._GetCandidatesFromSubclass( request_data )
     if request_data[ 'query' ]:
       candidates = self.FilterAndSortCandidates( candidates,
                                                  request_data[ 'query' ] )
-    return candidates
+    return ( candidates, flags )
 
 
   def _GetCandidatesFromSubclass( self, request_data ):
+    flags = []
     cache_completions = self._completions_cache.GetCompletionsIfCacheValid(
           request_data[ 'line_num' ],
           request_data[ 'start_column' ],
           self.CompletionType( request_data ) )
 
     if cache_completions:
-      return cache_completions
+      return ( cache_completions, flags )
     else:
       raw_completions = self.ComputeCandidatesInner( request_data )
+      if isinstance( raw_completions, tuple ):
+        flags = raw_completions[ 1 ]
+        raw_completions = raw_completions[ 0 ]
+
       self._completions_cache.Update(
           request_data[ 'line_num' ],
           request_data[ 'start_column' ],
           self.CompletionType( request_data ),
           raw_completions )
-      return raw_completions
+      return ( raw_completions, flags )
 
 
   def ComputeCandidatesInner( self, request_data ):
