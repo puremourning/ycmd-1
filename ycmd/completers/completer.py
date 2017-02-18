@@ -383,7 +383,8 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
 
 
   def PollForMessagesInner( self, request_data ):
-    raise RuntimeError( "Completer does not support messages" )
+    # Most completers don't implement this
+    return False
 
 
 class CompletionsCache( object ):
