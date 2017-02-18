@@ -257,7 +257,12 @@ def ReceiveMessages():
   # When we have data to send, we send it and close the socket.
   # The client then sends a new request.
   request_data = RequestWrap( request.json )
-  completer = _GetCompleterForRequestData( request_data )
+  try:
+    completer = _GetCompleterForRequestData( request_data )
+  except:
+    # No semantic completer for this filetype, don't requery
+    return _JsonResponse( False )
+
   return _JsonResponse( completer.PollForMessages( request_data ) )
 
 
