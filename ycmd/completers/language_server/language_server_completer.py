@@ -29,6 +29,7 @@ import socket
 import json
 import os
 import queue
+import re
 
 from ycmd.completers.completer import Completer
 from ycmd import utils
@@ -408,6 +409,19 @@ class LanguageServerCompleter( Completer ):
         'Reference',
       ]
 
+      # TODO: We probably need to implement this and (at least) strip out the
+      # snippet parts?
+      INSERT_TEXT_FORMAT = [
+        None, # 1-based
+        'PlainText',
+        'Snippet'
+      ]
+
+      if 'insertTexFormat' in item and item[ 'insertTextFormat' ]:
+        text_format = item[ 'insertTextFormat' ]
+      else:
+        text_format = 'PlainText'
+
       if 'textEdit' in item and item[ 'textEdit' ]:
         # TODO: This is a very annoying way to supply completions, but YCM could
         # technically support it via FixIt
@@ -418,7 +432,7 @@ class LanguageServerCompleter( Completer ):
         insertion_text = item[ 'label' ]
 
       return responses.BuildCompletionData(
-        insertion_text,
+        self._MutateCompletionText( insertion_text, text_format ),
         None,
         None,
         item[ 'label' ],
@@ -535,6 +549,8 @@ class LanguageServerCompleter( Completer ):
         if file_name in self._serverFileState:
           file_state = self._serverFileState[ file_name ]
 
+        _logger.debug( 'Refreshing file {0}: State is {1}'.format(
+          file_name, file_state ) )
         if file_state == 'New' or self._syncType == 'Full':
           msg = lsapi.DidOpenTextDocument( file_name,
                                            file_data[ 'filetypes' ],
@@ -596,3 +612,7 @@ class LanguageServerCompleter( Completer ):
       info = response[ 'result' ][ 'contents' ]
 
     return responses.BuildDisplayMessageResponse( str( info ) )
+
+
+  def _MutateCompletionText( self, insertion_text, text_format ):
+    return re.sub( '{{[^}]*}}', '', insertion_text )
