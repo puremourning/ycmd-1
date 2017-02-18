@@ -54,8 +54,7 @@ WORKSPACE_PATH = os.path.join( os.path.dirname( __file__ ),
                                '..',
                                '..',
                                'third_party',
-                               'eclipse.jdt.ls',
-                               'jdt_ws' )
+                               'eclipse.jdt.ls-workspace' )
 
 
 def ShouldEnableJavaCompleter():
@@ -196,7 +195,6 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         '-configuration',
         _LauncherConfiguration(),
         '-data',
-        # TODO: user option for a workspace path?
         os.path.abspath( WORKSPACE_PATH ),
       ]
 
