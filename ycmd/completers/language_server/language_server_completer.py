@@ -375,6 +375,17 @@ class LanguageServerCompleter( Completer ):
       return key not in item or not item[ 'key' ]
 
     def MakeCompletion( item ):
+      # First, resolve the completion.
+      # TODO: Maybe we need some way to do this based on a trigger
+      # TODO: Need a better API around request IDs. We no longer care about them
+      # _at all_ here.
+      # TODO: Only do this annoying step if the resolveProvider flag is true for
+      # the server in question.
+      resolve_id = self._server.NextRequestId()
+      resolve = lsapi.ResolveCompletion( resolve_id, item )
+      response = self._server.GetResponse( resolve_id, resolve )
+      item = response[ 'result' ]
+
       ITEM_KIND = [
         None,  # 1-based
         'Text',
