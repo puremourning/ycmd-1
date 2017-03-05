@@ -601,5 +601,32 @@ class LanguageServerCompleter( Completer ):
     return responses.BuildDisplayMessageResponse( str( info ) )
 
 
+  def _GoToDeclaration( self, request_data ):
+    request_id = self.GetServer().NextRequestId()
+    response = self.GetServer().GetResponse( request_id,
+                                             lsapi.Definition( request_id,
+                                                               request_data ) )
+
+    if isinstance( response[ 'result' ], list ):
+      positions = response[ 'result' ]
+      return [
+        responses.BuildGoToResponseFromLocation(
+          # TODO: Codepoint to byte offset
+          responses.Location( position[ 'range' ][ 'start' ][ 'line' ],
+                              position[ 'range' ][ 'start' ][ 'character' ],
+                              lsapi.UriToFilePath( position[ 'uri' ] ) )
+        ) for position in positions
+      ]
+    else:
+      position = response[ 'result' ]
+      return responses.BuildGoToResponseFromLocation(
+        # TODO: Codepoint to byte offset
+        responses.Location( position[ 'range' ][ 'start' ][ 'line' ],
+                            position[ 'range' ][ 'start' ][ 'character' ],
+                            lsapi.UriToFilePath( position[ 'uri' ] ) )
+      )
+
   def _MutateCompletionText( self, insertion_text, text_format ):
     return re.sub( '{{[^}]*}}', '', insertion_text )
+
+
