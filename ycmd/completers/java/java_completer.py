@@ -117,6 +117,10 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       self._StartServer()
 
 
+  def GetServer( self ):
+    return self._server
+
+
   def SupportedFiletypes( self ):
     return [ 'java' ]
 
