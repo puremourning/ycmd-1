@@ -544,12 +544,19 @@ def BuildJDTLanguageServer():
     'Apache maven is required to install JDL language server' )
   java = FindExecutableOrDie(
     'java',
-    'java is required to install JDT language server' )
+    'java is required to run the JDT language server' )
 
   os.chdir( p.join( DIR_OF_THIS_SCRIPT,
                     'third_party',
                     'eclipse.jdt.ls' ) )
-  CheckCall( [ mvn, 'verify' ] )
+
+  # Maven actually just straight up sucks. There is seemingly no way to do
+  # working, reliable incremental builds. It also takes _forever_ doing things
+  # that you _don't want it to do_, like downloading the internet.
+  # Alas, I'm not aware of a better way, and these are the instructions provided
+  # by the people that made JDT language server, so we waste the user's time
+  # (somewhat) unnecessarily.
+  CheckCall( [ mvn, 'clean', 'package' ] )
 
 
 def WritePythonUsedDuringBuild():
