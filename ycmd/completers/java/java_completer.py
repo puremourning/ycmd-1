@@ -235,17 +235,29 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       # Awaiting connection
       self._server.TryServerConnection()
 
-      # OK, so now we have to fire the Initialise request to the server:
-      #
-      # LS PROTOCOL - Initialise request
-      #
-      # The initialize request is sent as the first request from the client to
-      # the server. If the server receives request or notification before the
-      # initialize request it should act as follows:
-      # - for a request the respond should be errored with code: -32001. The
-      #   message can be picked by the server.
-      # - notifications should be dropped.
-      self._WaitForInitiliase()
+    # OK, so now we have to fire the Initialise request to the server:
+    #
+    # LS PROTOCOL - Initialise request
+    #
+    # The initialize request is sent as the first request from the client to
+    # the server. If the server receives request or notification before the
+    # initialize request it should act as follows:
+    # - for a request the respond should be errored with code: -32001. The
+    #   message can be picked by the server.
+    # - notifications should be dropped.
+    #
+    # TODO/FIXME: I think this causes a hang on startup waiting for the
+    # server. I suspect this is holding the server state mutex, and any
+    # requests that come in (such as OnFileReadyToParse) just get blocked
+    # waiting for this to happen. The fix is to have a proper state model, or
+    # at least a simple one, rather than leaning on a lock (assuming that is
+    # the actual problem)
+    #
+    # For now, we just make this request happen outside of the lock, just in
+    # case. However, it may just be that this waiting state just blocks the main
+    # thread on startup
+    #
+    self._WaitForInitiliase()
 
 
   def _StopServer( self ):
