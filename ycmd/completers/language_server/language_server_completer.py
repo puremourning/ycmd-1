@@ -90,11 +90,15 @@ class LanguageServerConnection( object ):
       assert request_id not in self._responses
       self._responses[ request_id ] = response
 
+    _logger.debug( 'TX: Sending message {0}'.format(
+      json.dumps( message, indent=2 ) ) )
     self._Write( message )
     return response.AwaitResponse()
 
 
   def SendNotification( self, message ):
+    _logger.debug( 'TX: Sending Notification {0}'.format(
+      json.dumps( message, indent=2 ) ) )
     self._Write( message )
 
 
@@ -126,13 +130,10 @@ class LanguageServerConnection( object ):
       if len( data ) == 0:
         data = self.Read()
 
-      _logger.debug( 'Read data: {0}'.format( data ) )
-
       while read_bytes < len( data ):
         if data[ read_bytes ] == bytes( b'\n' ):
           line = prefix + data[ last_line : read_bytes ].strip()
           prefix = ''
-          _logger.debug( 'Read line: {0}'.format( line ) )
           last_line = read_bytes
 
           if not line:
@@ -162,9 +163,6 @@ class LanguageServerConnection( object ):
         raise RuntimeError( "Missing 'Content-Length' header" )
 
       content_length = int( headers[ 'Content-Length' ] )
-
-      _logger.debug( 'Need to read {0} bytes of content'.format(
-        content_length ) )
 
       # We need to read content_length bytes for the payload of this message.
       # This may be in the remainder of `data`, but equally we may need to read
@@ -198,7 +196,7 @@ class LanguageServerConnection( object ):
 
 
   def _DespatchMessage( self, message ):
-    _logger.debug( 'Received message: {0}'.format( message ) )
+    _logger.debug( 'RX: Received message: {0}'.format( message ) )
     if 'id' in message:
       with self._responseMutex:
         assert str( message[ 'id' ] ) in self._responses
@@ -229,7 +227,7 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
 
   def _TryServerConnectionBlocking( self ):
     ( self._client_socket, _ ) = self._socket.accept()
-    _logger.info( 'socket connected' )
+    _logger.info( 'language server socket connected' )
 
     return True
 
@@ -245,8 +243,6 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
         raise RuntimeError( 'write socket failed' )
 
       total_sent += sent
-
-    _logger.debug( 'Write complete' )
 
 
   def Read( self, size=-1 ):
@@ -301,10 +297,10 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
   def _TryServerConnectionBlocking( self ):
     ( self._client_read_socket, _ ) = self._input_socket.accept()
-    _logger.info( 'Input socket connected' )
+    _logger.info( 'Language server Input socket connected' )
 
     ( self._client_write_socket, _ ) = self._output_socket.accept()
-    _logger.info( 'Output socket connected' )
+    _logger.info( 'Language server Output socket connected' )
 
 
   def _Write( self, data ):
@@ -317,8 +313,6 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
         raise RuntimeError( 'write socket failed' )
 
       total_sent += sent
-
-    _logger.debug( 'Write complete' )
 
 
   def Read( self, size=-1 ):
@@ -356,21 +350,29 @@ class LanguageServerCompleter( Completer ):
 
     self._serverFileState = {}
     self._fileStateMutex = threading.Lock()
-    self._server = LanguageServerConnection()
+
+
+  def GetServer( sefl ):
+    """Method that must be implemented by derived classes to return an instance
+    of LanguageServerConnection appropriate for the language server in
+    question"""
+    # TODO: I feel like abc.abstractmethod could be used here, but I'm not sure
+    # if it is totally python2/3 safe, and TBH it doesn't do a lot more than
+    # this simple raise here, so...
+    raise NameError( "GetServer must be implemented in LanguageServerCompleter "
+                     "subclasses" )
 
 
   def ComputeCandidatesInner( self, request_data ):
     # Need to update the file contents. TODO: so inefficient (and doesn't work
-    # for the eclipse based completer for some reason)!
+    # for the eclipse based completer for some reason - possibly because it
+    # is busy parsing the file when it actually should be providing
+    # completions)!
     self._RefreshFiles( request_data )
 
-    request_id = self._server.NextRequestId()
+    request_id = self.GetServer().NextRequestId()
     msg = lsapi.Completion( request_id, request_data )
-
-    _logger.info( 'Sending completion request to server: {0}'.format( msg ) )
-    response = self._server.GetResponse( request_id, msg )
-    _logger.info( 'Got a response to completion: {0}'.format(
-      json.dumps( response, indent=2 ) ) )
+    response = self.GetServer().GetResponse( request_id, msg )
 
     def Falsy( key, item ):
       return key not in item or not item[ 'key' ]
@@ -382,9 +384,9 @@ class LanguageServerCompleter( Completer ):
       # _at all_ here.
       # TODO: Only do this annoying step if the resolveProvider flag is true for
       # the server in question.
-      resolve_id = self._server.NextRequestId()
+      resolve_id = self.GetServer().NextRequestId()
       resolve = lsapi.ResolveCompletion( resolve_id, item )
-      response = self._server.GetResponse( resolve_id, resolve )
+      response = self.GetServer().GetResponse( resolve_id, resolve )
       item = response[ 'result' ]
 
       ITEM_KIND = [
@@ -446,8 +448,8 @@ class LanguageServerCompleter( Completer ):
     self._RefreshFiles( request_data )
 
     def BuildLocation( filename, loc ):
-      # TODO: Look at tern complete, requires file contents to convert codepoint
-      # offset to byte offset
+      # TODO: Look at tern completer, requires file contents to convert
+      # codepoint offset to byte offset
       return responses.Location( line = loc[ 'line' ] + 1,
                                  column = loc[ 'character' ] + 1,
                                  filename = os.path.realpath( filename ) )
@@ -486,26 +488,17 @@ class LanguageServerCompleter( Completer ):
     latest_diagnostics = None
     try:
       while True:
-        notification = self._server._diagnostics.get_nowait()
-        _logger.debug( 'notification {0}: {1}'.format(
-          notification[ 'method' ],
-          json.dumps( notification[ 'params' ], indent = 2 ) ) )
-
+        notification = self.GetServer()._diagnostics.get_nowait()
         if notification[ 'method' ] == 'textDocument/publishDiagnostics':
-          _logger.debug( 'latest_diagnostics updated' )
           latest_diagnostics = notification
     except queue.Empty:
       pass
 
     if latest_diagnostics is not None:
-      _logger.debug( 'new diagnostics, updating latest received' )
       self._latest_diagnostics = latest_diagnostics[ 'params' ]
-    else:
-      _logger.debug( 'No new diagnostics, using latest received' )
 
     diags = [ BuildDiagnostic( self._latest_diagnostics[ 'uri' ], x )
               for x in self._latest_diagnostics[ 'diagnostics' ] ]
-    _logger.debug( 'Diagnostics: {0}'.format( diags ) )
     return diags
 
 
@@ -513,9 +506,7 @@ class LanguageServerCompleter( Completer ):
     try:
       # TODO/FIXME: We should reduce the timeout if we loop
       while True:
-        notification = self._server._notifications.get( timeout = 10 )
-        _logger.info( 'Received notification: {0}'.format(
-          json.dumps( notification, indent=2 ) ) )
+        notification = self.GetServer()._notifications.get( timeout = 10 )
         message = self._ConvertNotificationToMessage( request_data,
                                                       notification )
         if message:
@@ -549,8 +540,6 @@ class LanguageServerCompleter( Completer ):
         if file_name in self._serverFileState:
           file_state = self._serverFileState[ file_name ]
 
-        _logger.debug( 'Refreshing file {0}: State is {1}'.format(
-          file_name, file_state ) )
         if file_state == 'New' or self._syncType == 'Full':
           msg = lsapi.DidOpenTextDocument( file_name,
                                            file_data[ 'filetypes' ],
@@ -568,22 +557,20 @@ class LanguageServerCompleter( Completer ):
                                              file_data[ 'contents' ] )
 
         self._serverFileState[ file_name ] = 'Open'
-        self._server.SendNotification( msg )
+        self.GetServer().SendNotification( msg )
 
       for file_name in self._serverFileState.iterkeys():
         if file_name not in request_data[ 'file_data' ]:
           msg = lsapi.DidCloseTextDocument( file_name )
           del self._serverFileState[ file_name ]
-          self._server.SendNotification( msg )
+          self.GetServer().SendNotification( msg )
 
 
   def _WaitForInitiliase( self ):
-    request_id = self._server.NextRequestId()
+    request_id = self.GetServer().NextRequestId()
 
     msg = lsapi.Initialise( request_id )
-    _logger.debug( 'Sending initialise request to server: {0}'.format( msg ) )
-    response = self._server.GetResponse( request_id, msg )
-    _logger.debug( 'Got a response to initialise: {0}'.format( response ) )
+    response = self.GetServer().GetResponse( request_id, msg )
 
     if 'textDocumentSync' in response[ 'result' ][ 'capabilities' ]:
       SYNC_TYPE = [
@@ -593,13 +580,13 @@ class LanguageServerCompleter( Completer ):
       ]
       self._syncType = SYNC_TYPE[
         response[ 'result' ][ 'capabilities' ][ 'textDocumentSync' ] ]
-      _logger.info( 'Server requires sync type of {0}'.format(
+      _logger.info( 'Language Server requires sync type of {0}'.format(
         self._syncType ) )
 
 
   def _GetType( self, request_data ):
-    request_id = self._server.NextRequestId()
-    response = self._server.GetResponse( request_id,
+    request_id = self.GetServer().NextRequestId()
+    response = self.GetServer().GetResponse( request_id,
                                          lsapi.Hover( request_id,
                                                       request_data ) )
 
