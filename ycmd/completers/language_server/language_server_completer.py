@@ -32,6 +32,7 @@ import queue
 import re
 
 from ycmd.completers.completer import Completer
+from ycmd.completers.completer_utils import GetFileContents
 from ycmd import utils
 from ycmd import responses
 
@@ -411,30 +412,8 @@ class LanguageServerCompleter( Completer ):
         'Reference',
       ]
 
-      # TODO: We probably need to implement this and (at least) strip out the
-      # snippet parts?
-      INSERT_TEXT_FORMAT = [
-        None, # 1-based
-        'PlainText',
-        'Snippet'
-      ]
-
-      if 'insertTexFormat' in item and item[ 'insertTextFormat' ]:
-        text_format = item[ 'insertTextFormat' ]
-      else:
-        text_format = 'PlainText'
-
-      if 'textEdit' in item and item[ 'textEdit' ]:
-        # TODO: This is a very annoying way to supply completions, but YCM could
-        # technically support it via FixIt
-        insertion_text = item[ 'textEdit' ][ 'newText' ]
-      elif 'insertText' in item and item[ 'insertText' ]:
-        insertion_text = item[ 'insertText' ]
-      else:
-        insertion_text = item[ 'label' ]
-
       return responses.BuildCompletionData(
-        self._MutateCompletionText( insertion_text, text_format ),
+        self._GetInsertionText( request_data, item ),
         None,
         None,
         item[ 'label' ],
@@ -636,7 +615,64 @@ class LanguageServerCompleter( Completer ):
                             lsapi.UriToFilePath( position[ 'uri' ] ) )
       )
 
-  def _MutateCompletionText( self, insertion_text, text_format ):
-    return re.sub( '{{[^}]*}}', '', insertion_text )
+  def _GetInsertionText( self, request_data, item ):
+    # TODO: We probably need to implement this and (at least) strip out the
+    # snippet parts?
+    INSERT_TEXT_FORMAT = [
+      None, # 1-based
+      'PlainText',
+      'Snippet'
+    ]
 
+    if 'textEdit' in item and item[ 'textEdit' ]:
+      new_range = item[ 'textEdit' ][ 'range' ]
+      if ( new_range[ 'start' ][ 'line' ] != new_range[ 'end' ][ 'line' ] or
+           new_range[ 'start' ][ 'line' ] + 1 != request_data[ 'line_num' ] ):
+        # We can't support completions that span lines
+        insertion_text = item[ 'label' ]
+      else:
+        file_contents = utils.SplitLines(
+          GetFileContents( request_data, request_data[ 'filepath' ] ) )
 
+        original_line = file_contents[ new_range[ 'start' ][ 'line' ] ]
+        expected_start_col = request_data[ 'start_codepoint' ]
+
+        # HACK: We need to work out the common prefix after the start_col
+        # Example:
+        #
+        #  With cursor on the caret:
+        #    |import java.lang.testing _other_stuff_
+        #    |                 ^
+        #
+        #  JDT returns a replacement for the range as below:
+        #
+        #    |       java.lang.testing.*; _other_stuff_
+        #    |       ^         ^
+        #
+        new_line = original_line[ : new_range[ 'start' ][ 'character' ] ]
+        new_line += item[ 'textEdit' ][ 'newText' ]
+        new_line += original_line[ new_range[ 'end' ][ 'character' ] : ]
+
+        insertion_text_len = len( new_line ) - len( original_line )
+        insertion_text = new_line[ expected_start_col - 1 :
+                                   expected_start_col - 1 + insertion_text_len ]
+
+    elif 'insertText' in item and item[ 'insertText' ]:
+      insertion_text = item[ 'insertText' ]
+    else:
+      insertion_text = item[ 'label' ]
+
+    if 'insertTextFormat' in item and item[ 'insertTextFormat' ]:
+      text_format = INSERT_TEXT_FORMAT[ item[ 'insertTextFormat' ] ]
+    else:
+      text_format = 'PlainText'
+
+    if text_format == 'Snippet':
+      # TODO: This is not the snippet format! This is the format that was
+      # secretly supported in vscode, but has been superseded by a real format
+      # which is more like SnipMate
+      #
+      # FIXME!
+      return re.sub( '{{[^}]*}}', '', insertion_text )
+    else:
+      return insertion_text
