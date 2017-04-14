@@ -647,7 +647,7 @@ class LanguageServerCompleter( Completer ):
         #  JDT returns a replacement for the range as below:
         #
         #    |       java.lang.testing.*; _other_stuff_
-        #    |       ^         ^
+        #    |       ^               ^
         #
         new_line = original_line[ : new_range[ 'start' ][ 'character' ] ]
         new_line += item[ 'textEdit' ][ 'newText' ]
