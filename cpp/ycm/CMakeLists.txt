@@ -168,7 +168,8 @@ if ( USE_CLANG_COMPLETER AND
 endif()
 
 if ( USE_CLANG_COMPLETER )
-  message( STATUS "Using libclang to provide semantic completion for C/C++/ObjC" )
+  message( STATUS
+           "Using libclang to provide semantic completion for C/C++/ObjC" )
 else()
   message( STATUS "NOT using libclang, no semantic completion for "
                   "C/C++/ObjC will be available" )
