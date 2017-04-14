@@ -96,7 +96,7 @@ if ( USE_CLANG_COMPLETER AND
   endif()
 
   if( CLANG_DOWNLOAD )
-    message( "Downloading Clang ${CLANG_VERSION}" )
+    message( STATUS "Downloading Clang ${CLANG_VERSION}" )
 
     set( CLANG_URL "http://llvm.org/releases/${CLANG_VERSION}" )
     file(
@@ -104,7 +104,7 @@ if ( USE_CLANG_COMPLETER AND
       SHOW_PROGRESS EXPECTED_HASH SHA256=${CLANG_SHA256}
     )
   else()
-    message( "Using Clang archive: ${CLANG_LOCAL_FILE}" )
+    message( STATUS "Using Clang archive: ${CLANG_LOCAL_FILE}" )
   endif()
 
   # Copy and extract the Clang archive in the building directory.
@@ -168,10 +168,10 @@ if ( USE_CLANG_COMPLETER AND
 endif()
 
 if ( USE_CLANG_COMPLETER )
-  message( "Using libclang to provide semantic completion for C/C++/ObjC" )
+  message( STATUS "Using libclang to provide semantic completion for C/C++/ObjC" )
 else()
-  message( "NOT using libclang, no semantic completion for C/C++/ObjC will be "
-           "available" )
+  message( STATUS "NOT using libclang, no semantic completion for "
+                  "C/C++/ObjC will be available" )
 endif()
 
 if ( PATH_TO_LLVM_ROOT )
@@ -314,7 +314,7 @@ if ( EXTERNAL_LIBCLANG_PATH OR USE_SYSTEM_LIBCLANG )
   # On Linux, the library target is a symlink of the soversion one.  Since it
   # will be copied in the project folder, we need the symlinked library.
   get_filename_component( LIBCLANG_TARGET "${EXTERNAL_LIBCLANG_PATH}" REALPATH )
-  message( "Using external libclang: ${LIBCLANG_TARGET}" )
+  message( STATUS "Using external libclang: ${LIBCLANG_TARGET}" )
 else()
   set( LIBCLANG_TARGET )
 endif()

@@ -19,7 +19,6 @@ import re
 import shlex
 import subprocess
 import sys
-import errno
 
 PY_MAJOR, PY_MINOR = sys.version_info[ 0 : 2 ]
 if not ( ( PY_MAJOR == 2 and PY_MINOR >= 6 ) or
@@ -142,12 +141,28 @@ def NumCores():
     return 1
 
 
-def CheckDeps():
-  if not PathToFirstExistingExecutable( [ 'cmake' ] ):
-    sys.exit( 'ERROR: please install CMake and retry.')
-
-
 def CheckCall( args, **kwargs ):
+  quiet = kwargs.get( 'quiet', False )
+  kwargs.pop( 'quiet', None )
+  status_message = kwargs.get( 'status_message', None )
+  kwargs.pop( 'status_message', None )
+
+  if not quiet:
+    return _CheckCall( args, **kwargs )
+
+  if not status_message:
+    status_message = 'Running {0}'.format( args[ 0 ] )
+
+  print( status_message + '...', end='' )
+  # TODO: Why does __future_ not support flush= on print_function ?
+  sys.stdout.flush()
+  with open( os.devnull, 'w' ) as devnull:
+    kwargs[ 'stdout' ] = devnull
+    _CheckCall( args, **kwargs )
+  print( "DONE" )
+
+
+def _CheckCall( args, **kwargs ):
   exit_message = kwargs.get( 'exit_message', None )
   kwargs.pop( 'exit_message', None )
   try:
@@ -236,16 +251,18 @@ def FindPythonLibraries():
   sys.exit( NO_PYTHON_LIBRARY_ERROR )
 
 
-def CustomPythonCmakeArgs():
+def CustomPythonCmakeArgs( args ):
   # The CMake 'FindPythonLibs' Module does not work properly.
   # So we are forced to do its job for it.
-  print( 'Searching Python {major}.{minor} libraries...'.format(
-    major = PY_MAJOR, minor = PY_MINOR ) )
+  if not args.quiet:
+    print( 'Searching Python {major}.{minor} libraries...'.format(
+      major = PY_MAJOR, minor = PY_MINOR ) )
 
   python_library, python_include = FindPythonLibraries()
 
-  print( 'Found Python library: {0}'.format( python_library ) )
-  print( 'Found Python headers folder: {0}'.format( python_include ) )
+  if not args.quiet:
+    print( 'Found Python library: {0}'.format( python_library ) )
+    print( 'Found Python headers folder: {0}'.format( python_include ) )
 
   return [
     '-DPYTHON_LIBRARY={0}'.format( python_library ),
@@ -308,6 +325,10 @@ def ParseArguments():
                        help   = "For developers: don't wipe out the build-dir "
                                 "before building",
                        action = 'store_true' )
+  parser.add_argument( '--quiet',
+                       help = "Quiet installation mode. Just print overall "
+                              "progress",
+                       action = 'store_true' )
 
   args = parser.parse_args()
 
@@ -356,7 +377,7 @@ def GetCmakeArgs( parsed_args ):
   return cmake_args
 
 
-def RunYcmdTests( build_dir ):
+def RunYcmdTests( args, build_dir ):
   tests_dir = p.join( build_dir, 'ycm', 'tests' )
   os.chdir( tests_dir )
   new_env = os.environ.copy()
@@ -369,7 +390,10 @@ def RunYcmdTests( build_dir ):
   else:
     new_env[ 'LD_LIBRARY_PATH' ] = DIR_OF_THIS_SCRIPT
 
-  CheckCall( p.join( tests_dir, 'ycm_core_tests' ), env = new_env )
+  CheckCall( p.join( tests_dir, 'ycm_core_tests' ),
+             env = new_env,
+             quiet = args.quiet,
+             status_message = 'Running ycmd tests' )
 
 
 def RunYcmdBenchmarks( build_dir ):
@@ -408,6 +432,8 @@ def ExitIfYcmdLibInUseOnWindows():
 
 
 def BuildYcmdLib( args ):
+  cmake = FindExecutableOrDie( 'cmake', 'cmake is required to build ycmd' )
+
   if args.build_dir:
     build_dir = os.path.abspath( args.build_dir )
 
@@ -426,7 +452,7 @@ def BuildYcmdLib( args ):
 
   try:
     full_cmake_args = [ '-G', GetGenerator( args ) ]
-    full_cmake_args.extend( CustomPythonCmakeArgs() )
+    full_cmake_args.extend( CustomPythonCmakeArgs( args ) )
     full_cmake_args.extend( GetCmakeArgs( args ) )
     full_cmake_args.append( p.join( DIR_OF_THIS_SCRIPT, 'cpp' ) )
 
@@ -441,7 +467,10 @@ def BuildYcmdLib( args ):
       'issue tracker, including the entire output of this script\n'
       'and the invocation line used to run it.' )
 
-    CheckCall( [ 'cmake' ] + full_cmake_args, exit_message = exit_message )
+    CheckCall( [ cmake ] + full_cmake_args,
+               exit_message = exit_message,
+               quiet = args.quiet,
+               status_message = 'Generating ycmd build configuration' )
 
     build_targets = [ 'ycm_core' ]
     if 'YCM_TESTRUN' in os.environ:
@@ -458,7 +487,11 @@ def BuildYcmdLib( args ):
     for target in build_targets:
       build_command = ( [ 'cmake', '--build', '.', '--target', target ] +
                         build_config )
-      CheckCall( build_command, exit_message = exit_message )
+      CheckCall( build_command,
+                 exit_message = exit_message,
+                 quiet = args.quiet,
+                 status_message = 'Compiling ycmd target: {0}'.format(
+                   target ) )
 
     if 'YCM_TESTRUN' in os.environ:
       RunYcmdTests( build_dir )
@@ -473,7 +506,7 @@ def BuildYcmdLib( args ):
       rmtree( build_dir, ignore_errors = OnTravisOrAppVeyor() )
 
 
-def BuildOmniSharp():
+def BuildOmniSharp( args ):
   build_command = PathToFirstExistingExecutable(
     [ 'msbuild', 'msbuild.exe', 'xbuild' ] )
   if not build_command:
@@ -481,19 +514,25 @@ def BuildOmniSharp():
 
   os.chdir( p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'OmniSharpServer' ) )
   CheckCall( [ build_command, '/property:Configuration=Release',
-                              '/property:TargetFrameworkVersion=v4.5' ] )
+                              '/property:TargetFrameworkVersion=v4.5' ],
+             quiet = args.quiet,
+             status_message = 'Building OmniSharp for C=Sharp completion' )
 
 
-def BuildGoCode():
+def BuildGoCode( args ):
   go = FindExecutableOrDie( 'go', 'go is required to build gocode.' )
 
   os.chdir( p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'gocode' ) )
-  CheckCall( [ go, 'build' ] )
+  CheckCall( [ go, 'build' ],
+             quiet = args.quiet,
+             status_message = 'Building gocode for go completion' )
   os.chdir( p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'godef' ) )
-  CheckCall( [ go, 'build', 'godef.go' ] )
+  CheckCall( [ go, 'build', 'godef.go' ],
+             quiet = args.quiet,
+             status_message = 'Building godef for go definintion' )
 
 
-def BuildRacerd():
+def BuildRacerd( args ):
   """
   Build racerd. This requires a reasonably new version of rustc/cargo.
   """
@@ -501,15 +540,17 @@ def BuildRacerd():
                                'cargo is required for the Rust completer.' )
 
   os.chdir( p.join( DIR_OF_THIRD_PARTY, 'racerd' ) )
-  args = [ cargo, 'build' ]
+  cmdline = [ cargo, 'build' ]
   # We don't use the --release flag on Travis/AppVeyor because it makes building
   # racerd 2.5x slower and we don't care about the speed of the produced racerd.
   if not OnTravisOrAppVeyor():
-    args.append( '--release' )
-  CheckCall( args )
+    cmdline.append( '--release' )
+  CheckCall( cmdline,
+             quiet = args.quiet,
+             status_message = 'Building racerd for Rust completion' )
 
 
-def SetUpTern():
+def SetUpTern( args ):
   # On Debian-based distributions, node is by default installed as nodejs.
   node = PathToFirstExistingExecutable( [ 'nodejs', 'node' ] )
   if not node:
@@ -535,16 +576,15 @@ def SetUpTern():
   # (third_party/tern_runtime) that defines the packages that we require,
   # including Tern and any plugins which we require as standard.
   os.chdir( p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'tern_runtime' ) )
-  CheckCall( [ npm, 'install', '--production' ] )
+  CheckCall( [ npm, 'install', '--production' ],
+             quiet = args.quiet,
+             status_message = 'Setting up Tern for JavaScript completion' )
 
 
-def BuildJDTLanguageServer():
+def BuildJDTLanguageServer( args ):
   mvn = FindExecutableOrDie(
     'mvn',
-    'Apache maven is required to install JDL language server' )
-  java = FindExecutableOrDie(
-    'java',
-    'java is required to run the JDT language server' )
+    'Apache maven is required to install JDT language server' )
 
   os.chdir( p.join( DIR_OF_THIS_SCRIPT,
                     'third_party',
@@ -556,7 +596,10 @@ def BuildJDTLanguageServer():
   # Alas, I'm not aware of a better way, and these are the instructions provided
   # by the people that made JDT language server, so we waste the user's time
   # (somewhat) unnecessarily.
-  CheckCall( [ mvn, 'clean', 'package' ] )
+  CheckCall( [ mvn, 'clean', 'package' ],
+             quiet = args.quiet,
+             status_message = 'Building JDT Language Server for Java '
+                              'completion' )
 
 
 def WritePythonUsedDuringBuild():
@@ -566,21 +609,20 @@ def WritePythonUsedDuringBuild():
 
 
 def Main():
-  CheckDeps()
   args = ParseArguments()
   ExitIfYcmdLibInUseOnWindows()
   BuildYcmdLib( args )
   WritePythonUsedDuringBuild()
   if args.omnisharp_completer or args.all_completers:
-    BuildOmniSharp()
+    BuildOmniSharp( args )
   if args.gocode_completer or args.all_completers:
-    BuildGoCode()
+    BuildGoCode( args )
   if args.tern_completer or args.all_completers:
-    SetUpTern()
+    SetUpTern( args )
   if args.racer_completer or args.all_completers:
-    BuildRacerd()
+    BuildRacerd( args )
   if args.jdt_completer or args.all_completers:
-    BuildJDTLanguageServer()
+    BuildJDTLanguageServer( args )
 
 
 if __name__ == '__main__':
