@@ -24,15 +24,15 @@ def ParseArguments():
                        help = 'Choose the Microsoft Visual '
                        'Studio version. (default: 15).' )
 
-  return parser.parse_args()
+  return parser.parse_known_args()
 
 
-def BuildYcmdLibsAndRunBenchmark( args ):
+def BuildYcmdLibsAndRunBenchmark( args, extra_args ):
   build_cmd = [
     sys.executable,
     p.join( DIR_OF_THIS_SCRIPT, 'build.py' ),
     '--clang-completer'
-  ]
+  ] + extra_args
 
   os.environ[ 'YCM_BENCHMARK' ] = '1'
 
@@ -43,8 +43,8 @@ def BuildYcmdLibsAndRunBenchmark( args ):
 
 
 def Main():
-  args = ParseArguments()
-  BuildYcmdLibsAndRunBenchmark( args )
+  args, extra_args = ParseArguments()
+  BuildYcmdLibsAndRunBenchmark( args, extra_args )
 
 
 if __name__ == "__main__":
