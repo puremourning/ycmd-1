@@ -53,19 +53,31 @@ class Response( object ):
 
 
   def AwaitResponse( self ):
-    self._event.wait( timeout = 5 )
+    self._event.wait( timeout = 1 )
 
     if not self._event.isSet():
       raise RuntimeError( 'Response Timeout' )
 
     if 'error' in self._message:
-      raise RuntimeError( 'Request failed: {0}'.format(
-        self._message[ 'error' ][ 'message' ] ) )
+      error = self._message[ 'error' ]
+      raise RuntimeError( 'Request failed: {0}: {1}'.format(
+        error.get( 'code', 0 ),
+        error.get( 'message', 'No message' ) ) )
 
     return self._message
 
 
 class LanguageServerConnection( object ):
+  """
+    Abstract language server communication object.
+
+    Implementations are required to provide the following methods:
+      - _TryServerConnectionBlocking: Connect to the server and return when the
+                                      connection is established
+      - _Write: Write some data to the server
+      - _Read: Read some data from the server, blocking until some data is
+               available
+  """
   def __init__( self ):
     super( LanguageServerConnection, self ).__init__()
 
@@ -93,6 +105,7 @@ class LanguageServerConnection( object ):
 
     _logger.debug( 'TX: Sending message {0}'.format(
       json.dumps( message, indent=2 ) ) )
+
     self._Write( message )
     return response.AwaitResponse()
 
@@ -110,7 +123,7 @@ class LanguageServerConnection( object ):
       raise RuntimeError( 'Timed out waiting for server to connect' )
 
 
-  def _run_loop( self, socket ):
+  def _run_loop( self ):
     # Wait for the connection to fully establsh (block)
     self._TryServerConnectionBlocking()
 
@@ -129,7 +142,7 @@ class LanguageServerConnection( object ):
       read_bytes = 0
       last_line = 0
       if len( data ) == 0:
-        data = self.Read()
+        data = self._Read()
 
       while read_bytes < len( data ):
         if data[ read_bytes ] == bytes( b'\n' ):
@@ -137,11 +150,13 @@ class LanguageServerConnection( object ):
           prefix = ''
           last_line = read_bytes
 
-          if not line:
+          if not line.strip():
+            _logger.debug( "Headers complete" )
             headers_complete = True
             read_bytes += 1
             break
           else:
+            _logger.debug( "Header line: {0}".format( line ) )
             key, value = utils.ToUnicode( line ).split( ':', 1 )
             headers[ key.strip() ] = value.strip()
 
@@ -183,7 +198,7 @@ class LanguageServerConnection( object ):
       while content_read < content_length:
         # There is more content to read, but data is exhausted - read more from
         # the socket
-        data = self.Read( content_length - content_read )
+        data = self._Read( content_length - content_read )
         content_to_read = min( content_length - content_read, len( data ) )
         content += data[ : content_to_read ]
         content_read += len( content )
@@ -210,6 +225,19 @@ class LanguageServerConnection( object ):
       self._notifications.put( message )
 
 
+  def _TryServerConnectionBlocking( self ):
+    raise RuntimeError( 'Not implemented' )
+
+
+  def _Write( self, data ):
+    raise RuntimeError( 'Not implemented' )
+
+
+  def _Read( self, size=-1 ):
+    raise RuntimeError( 'Not implemented' )
+
+
+
 class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
   def __init__( self, port ):
     super( TCPSingleStreamServer, self ).__init__()
@@ -223,7 +251,7 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     self._socket.bind( ( 'localhost', self._port ) )
     self._socket.listen( 0 )
 
-    self._run_loop( self._client_socket )
+    self._run_loop()
 
 
   def _TryServerConnectionBlocking( self ):
@@ -246,7 +274,7 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
       total_sent += sent
 
 
-  def Read( self, size=-1 ):
+  def _Read( self, size=-1 ):
     assert self._connection_event.isSet()
     assert self._client_socket
 
@@ -293,7 +321,7 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
     self._output_socket.bind( ( 'localhost', self._output_port ) )
     self._output_socket.listen( 0 )
 
-    self._run_loop( self._client_read_socket )
+    self._run_loop()
 
 
   def _TryServerConnectionBlocking( self ):
@@ -316,7 +344,7 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
       total_sent += sent
 
 
-  def Read( self, size=-1 ):
+  def _Read( self, size=-1 ):
     assert self._client_read_socket
 
     if size < 0:
@@ -338,6 +366,43 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
     return utils.ToBytes( '' ).join( chunks )
 
+
+class StandardIOLanguageServerConnection( LanguageServerConnection,
+                                          threading.Thread ):
+  def __init__( self, server_stdin, server_stdout ):
+    super( StandardIOLanguageServerConnection, self ).__init__()
+
+    self.server_stdin = server_stdin
+    self.server_stdout = server_stdout
+
+
+  def run( self ):
+    self._run_loop()
+
+
+  def _TryServerConnectionBlocking( self ):
+    return True
+
+
+  def _Write( self, data ):
+    to_write = data + utils.ToBytes( '\r\n' )
+    _logger.debug( 'Writing: ' + utils.ToUnicode( to_write ) )
+    self.server_stdin.write( to_write )
+    self.server_stdin.flush()
+
+
+  def _Read( self, size=-1 ):
+    if size > -1:
+      data = self.server_stdout.read( size )
+    else:
+      data = self.server_stdout.readline()
+
+    if not data:
+      # The connection diea
+      raise RuntimeError( "Connection to server died" )
+
+    _logger.debug( "Data!!: {0}".format( data ) )
+    return data
 
 
 class LanguageServerCompleter( Completer ):
@@ -375,20 +440,22 @@ class LanguageServerCompleter( Completer ):
     msg = lsapi.Completion( request_id, request_data )
     response = self.GetServer().GetResponse( request_id, msg )
 
-    def Falsy( key, item ):
-      return key not in item or not item[ 'key' ]
+    do_resolve = (
+      'completionProvider' in self._server_capabilities and
+      self._server_capabilities[ 'completionProvider' ].get( 'resolveProvider',
+                                                             False ) )
 
     def MakeCompletion( item ):
       # First, resolve the completion.
       # TODO: Maybe we need some way to do this based on a trigger
       # TODO: Need a better API around request IDs. We no longer care about them
       # _at all_ here.
-      # TODO: Only do this annoying step if the resolveProvider flag is true for
-      # the server in question.
-      resolve_id = self.GetServer().NextRequestId()
-      resolve = lsapi.ResolveCompletion( resolve_id, item )
-      response = self.GetServer().GetResponse( resolve_id, resolve )
-      item = response[ 'result' ]
+
+      if do_resolve:
+        resolve_id = self.GetServer().NextRequestId()
+        resolve = lsapi.ResolveCompletion( resolve_id, item )
+        response = self.GetServer().GetResponse( resolve_id, resolve )
+        item = response[ 'result' ]
 
       ITEM_KIND = [
         None,  # 1-based
@@ -417,10 +484,14 @@ class LanguageServerCompleter( Completer ):
         None,
         None,
         item[ 'label' ],
-        ITEM_KIND[ item[ 'kind' ] ],
+        ITEM_KIND[ item.get( 'kind', 0 ) ],
         None )
 
-    return [ MakeCompletion( i ) for i in response[ 'result' ][ 'items' ] ]
+    if isinstance( response[ 'result' ], list ):
+      items = response[ 'result' ]
+    else:
+      items = response[ 'result' ][ 'items' ]
+    return [ MakeCompletion( i ) for i in items ]
 
 
   def OnFileReadyToParse( self, request_data ):
@@ -550,6 +621,8 @@ class LanguageServerCompleter( Completer ):
 
     msg = lsapi.Initialise( request_id )
     response = self.GetServer().GetResponse( request_id, msg )
+
+    self._server_capabilities = response[ 'result' ][ 'capabilities' ]
 
     if 'textDocumentSync' in response[ 'result' ][ 'capabilities' ]:
       SYNC_TYPE = [
