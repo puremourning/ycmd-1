@@ -146,7 +146,7 @@ def UriToFilePath( uri ):
 
 def _Message( message ):
   message[ 'jsonrpc' ] = '2.0'
-  data = ToBytes( json.dumps( message ) )
+  data = ToBytes( json.dumps( message, sort_keys=True ) )
   packet = ToBytes( 'Content-Length: {0}\r\n'
                     'Content-Type: application/vscode-jsonrpc;charset=utf8\r\n'
                     '\r\n'
