@@ -99,7 +99,7 @@ def _LauncherConfiguration():
 
 
 class JavaCompleter( language_server_completer.LanguageServerCompleter ):
-  def __init__( self, user_options):
+  def __init__( self, user_options ):
     super( JavaCompleter, self ).__init__( user_options )
 
     self._server_keep_logfiles = user_options[ 'server_keep_logfiles' ]
@@ -165,7 +165,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     self._server_stdout_port = 0
     self._server_handle = None
 
-    # TODO: close the sockets in the servre
+    # TODO: close the sockets in the server
     self._server = None
 
 
