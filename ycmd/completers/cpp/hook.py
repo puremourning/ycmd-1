@@ -24,9 +24,14 @@ from builtins import *  # noqa
 
 import ycm_core
 from ycmd.completers.cpp.clang_completer import ClangCompleter
+from ycmd.completers.cpp.clangd_completer import ( ClangdCompleter,
+                                                   ShouldEnableClangdCompleter )
 
 
 def GetCompleter( user_options ):
+  if ShouldEnableClangdCompleter():
+    return ClangdCompleter( user_options )
+
   if ycm_core.HasClangSupport():
     return ClangCompleter( user_options )
   else:
