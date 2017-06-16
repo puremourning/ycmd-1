@@ -246,16 +246,12 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     #   message can be picked by the server.
     # - notifications should be dropped.
     #
-    # TODO/FIXME: I think this causes a hang on startup waiting for the
+    # TODO/FIXME: This causes a hang on startup waiting for the
     # server. I suspect this is holding the server state mutex, and any
     # requests that come in (such as OnFileReadyToParse) just get blocked
     # waiting for this to happen. The fix is to have a proper state model, or
     # at least a simple one, rather than leaning on a lock (assuming that is
     # the actual problem)
-    #
-    # For now, we just make this request happen outside of the lock, just in
-    # case. However, it may just be that this waiting state just blocks the main
-    # thread on startup
     #
     self._WaitForInitiliase()
 
@@ -269,7 +265,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         try:
           utils.WaitUntilProcessIsTerminated( self._server_handle,
                                               timeout = 5 )
-          _logger.info( 'Tern server stopped' )
+          _logger.info( 'JDT Language server stopped' )
         except RuntimeError:
           _logger.exception( 'Error while stopping java server' )
 
