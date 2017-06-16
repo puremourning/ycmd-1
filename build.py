@@ -582,13 +582,14 @@ def SetUpTern( args ):
 
 
 def BuildJDTLanguageServer( args ):
-  mvn = FindExecutableOrDie(
-    'mvn',
-    'Apache maven is required to install JDT language server' )
-
   os.chdir( p.join( DIR_OF_THIS_SCRIPT,
                     'third_party',
                     'eclipse.jdt.ls' ) )
+
+  if OnWindows():
+    mvnw = 'mvnw.cmd'
+  else:
+    mvnw = './mvnw'
 
   # Maven actually just straight up sucks. There is seemingly no way to do
   # working, reliable incremental builds. It also takes _forever_ doing things
@@ -596,7 +597,7 @@ def BuildJDTLanguageServer( args ):
   # Alas, I'm not aware of a better way, and these are the instructions provided
   # by the people that made JDT language server, so we waste the user's time
   # (somewhat) unnecessarily.
-  CheckCall( [ mvn, 'clean', 'package' ],
+  CheckCall( [ mvnw, 'clean', 'package' ],
              quiet = args.quiet,
              status_message = 'Building JDT Language Server for Java '
                               'completion' )
