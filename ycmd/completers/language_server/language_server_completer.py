@@ -32,7 +32,7 @@ import queue
 import re
 
 from ycmd.completers.completer import Completer
-from ycmd.completers.completer_utils import GetFileContents
+# from ycmd.completers.completer_utils import GetFileContents
 from ycmd import utils
 from ycmd import responses
 
@@ -479,13 +479,14 @@ class LanguageServerCompleter( Completer ):
         'Reference',
       ]
 
+      ( insertion_text, fixits ) = self._GetInsertionText( request_data, item )
       return responses.BuildCompletionData(
-        self._GetInsertionText( request_data, item ),
+        insertion_text,
         None,
         None,
         item[ 'label' ],
         ITEM_KIND[ item.get( 'kind', 0 ) ],
-        None )
+        fixits )
 
     if isinstance( response[ 'result' ], list ):
       items = response[ 'result' ]
@@ -496,18 +497,6 @@ class LanguageServerCompleter( Completer ):
 
   def OnFileReadyToParse( self, request_data ):
     self._RefreshFiles( request_data )
-
-    def BuildLocation( filename, loc ):
-      # TODO: Look at tern completer, requires file contents to convert
-      # codepoint offset to byte offset
-      return responses.Location( line = loc[ 'line' ] + 1,
-                                 column = loc[ 'character' ] + 1,
-                                 filename = os.path.realpath( filename ) )
-
-    def BuildRange( filename, r ):
-      return responses.Range( BuildLocation( filename, r[ 'start' ] ),
-                              BuildLocation( filename, r[ 'end' ] ) )
-
 
     def BuildDiagnostic( filename, diag ):
       filename = lsapi.UriToFilePath( filename )
@@ -697,38 +686,32 @@ class LanguageServerCompleter( Completer ):
       'Snippet'
     ]
 
+    fixits = None
+
+    # Per the protocol, textEdit takes precedence over insertText, and must be
+    # on the same line (and containing) the originally requested position
     if 'textEdit' in item and item[ 'textEdit' ]:
       new_range = item[ 'textEdit' ][ 'range' ]
       if ( new_range[ 'start' ][ 'line' ] != new_range[ 'end' ][ 'line' ] or
            new_range[ 'start' ][ 'line' ] + 1 != request_data[ 'line_num' ] ):
-        # We can't support completions that span lines
-        insertion_text = item[ 'label' ]
+        # We can't support completions that span lines. The protocol forbids it
+        raise RuntimeError( 'Invalid textEdit supplied. Must be on a single '
+                            'line' )
       else:
-        file_contents = utils.SplitLines(
-          GetFileContents( request_data, request_data[ 'filepath' ] ) )
+        request_data[ 'start_codepoint' ] = (
+          new_range[ 'start' ][ 'character' ] + 1 )
+        insertion_text = item[ 'textEdit' ][ 'newText' ]
 
-        original_line = file_contents[ new_range[ 'start' ][ 'line' ] ]
-        expected_start_col = request_data[ 'start_codepoint' ]
+      additionalTextEdits = item.get( 'additionalTextEdits', None )
 
-        # HACK: We need to work out the common prefix after the start_col
-        # Example:
-        #
-        #  With cursor on the caret:
-        #    |import java.lang.testing _other_stuff_
-        #    |                 ^
-        #
-        #  JDT returns a replacement for the range as below:
-        #
-        #    |       java.lang.testing.*; _other_stuff_
-        #    |       ^               ^
-        #
-        new_line = original_line[ : new_range[ 'start' ][ 'character' ] ]
-        new_line += item[ 'textEdit' ][ 'newText' ]
-        new_line += original_line[ new_range[ 'end' ][ 'character' ] : ]
+      if additionalTextEdits:
+        chunks = [ responses.FixItChunk( e[ 'newText' ],
+                                         BuildRange( request_data[ 'filepath' ],
+                                                     e[ 'range' ] ) )
+                   for e in additionalTextEdits ]
 
-        insertion_text_len = len( new_line ) - len( original_line )
-        insertion_text = new_line[ expected_start_col - 1 :
-                                   expected_start_col - 1 + insertion_text_len ]
+        fixits = responses.BuildFixItResponse(
+          [ responses.FixIt( chunks[ 0].range.start_, chunks ) ] )
 
     elif 'insertText' in item and item[ 'insertText' ]:
       insertion_text = item[ 'insertText' ]
@@ -746,6 +729,19 @@ class LanguageServerCompleter( Completer ):
       # which is more like SnipMate
       #
       # FIXME!
-      return re.sub( '{{[^}]*}}', '', insertion_text )
-    else:
-      return insertion_text
+      insertion_text = re.sub( '{{[^}]*}}', '', insertion_text )
+
+    return ( insertion_text, fixits )
+
+
+def BuildLocation( filename, loc ):
+  # TODO: Look at tern completer, requires file contents to convert
+  # codepoint offset to byte offset
+  return responses.Location( line = loc[ 'line' ] + 1,
+                             column = loc[ 'character' ] + 1,
+                             filename = os.path.realpath( filename ) )
+
+
+def BuildRange( filename, r ):
+  return responses.Range( BuildLocation( filename, r[ 'start' ] ),
+                          BuildLocation( filename, r[ 'end' ] ) )
