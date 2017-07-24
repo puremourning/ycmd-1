@@ -54,8 +54,8 @@ def BuildNotification( method, parameters ):
 def Initialise( request_id ):
   return BuildRequest( request_id, 'initialize', {
     'processId': os.getpid(),
-    # TODO: should this be the workspace path ? Hrm...
-    'rootPath': os.getcwd(),
+    'rootPath': os.getcwd(), # deprecated
+    'rootUri': _MakeUriForFile( os.getcwd() ),
     'initializationOptions': { },
     'capabilities': { }
   } )
