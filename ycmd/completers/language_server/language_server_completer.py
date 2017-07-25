@@ -85,7 +85,6 @@ class LanguageServerConnection( object ):
     self._responses = {}
     self._responseMutex = threading.Lock()
     self._notifications = queue.Queue()
-    self._diagnostics = queue.Queue()
 
     self._connection_event = threading.Event()
 
@@ -151,12 +150,10 @@ class LanguageServerConnection( object ):
           last_line = read_bytes
 
           if not line.strip():
-            _logger.debug( "Headers complete" )
             headers_complete = True
             read_bytes += 1
             break
           else:
-            _logger.debug( "Header line: {0}".format( line ) )
             key, value = utils.ToUnicode( line ).split( ':', 1 )
             headers[ key.strip() ] = value.strip()
 
@@ -217,10 +214,6 @@ class LanguageServerConnection( object ):
       with self._responseMutex:
         assert str( message[ 'id' ] ) in self._responses
         self._responses[ str( message[ 'id' ] ) ].ResponseReceived( message )
-    elif message[ 'method' ] == 'textDocument/publishDiagnostics':
-      # HACK: We use different mechanisms to publish diagnostics and other
-      # async. events (for now)
-      self._diagnostics.put( message )
     else:
       self._notifications.put( message )
 
@@ -386,7 +379,6 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
 
   def _Write( self, data ):
     to_write = data + utils.ToBytes( '\r\n' )
-    _logger.debug( 'Writing: ' + utils.ToUnicode( to_write ) )
     self.server_stdin.write( to_write )
     self.server_stdin.flush()
 
@@ -401,17 +393,13 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
       # The connection diea
       raise RuntimeError( "Connection to server died" )
 
-    _logger.debug( "Data!!: {0}".format( data ) )
     return data
 
 
 class LanguageServerCompleter( Completer ):
   def __init__( self, user_options):
     super( LanguageServerCompleter, self ).__init__( user_options )
-    self._latest_diagnostics = {
-      'uri': None,
-      'diagnostics': []
-    }
+
     self._syncType = 'Full'
 
     self._serverFileState = {}
@@ -498,52 +486,15 @@ class LanguageServerCompleter( Completer ):
   def OnFileReadyToParse( self, request_data ):
     self._RefreshFiles( request_data )
 
-    def BuildDiagnostic( filename, diag ):
-      filename = lsapi.UriToFilePath( filename )
-      r = BuildRange( filename, diag[ 'range' ] )
-      SEVERITY = [
-        None,
-        'Error',
-        'Warning',
-        'Information',
-        'Hint',
-      ]
-      SEVERITY_TO_YCM_SEVERITY = {
-        'Error': 'ERROR',
-        'Warning': 'WARNING',
-        'Information': 'WARNING',
-        'Hint': 'WARNING'
-      }
-
-      return responses.BuildDiagnosticData ( responses.Diagnostic(
-        ranges = [ r ],
-        location = r.start_,
-        location_extent = r,
-        text = diag[ 'message' ],
-        kind = SEVERITY_TO_YCM_SEVERITY[ SEVERITY[ diag[ 'severity' ] ] ] ) )
-
-    # TODO: Maybe we need to prevent duplicates? Anyway, handle all of the
-    # notification messages
-    latest_diagnostics = None
-    try:
-      while True:
-        notification = self.GetServer()._diagnostics.get_nowait()
-        if notification[ 'method' ] == 'textDocument/publishDiagnostics':
-          latest_diagnostics = notification
-    except queue.Empty:
-      pass
-
-    if latest_diagnostics is not None:
-      self._latest_diagnostics = latest_diagnostics[ 'params' ]
-
-    diags = [ BuildDiagnostic( self._latest_diagnostics[ 'uri' ], x )
-              for x in self._latest_diagnostics[ 'diagnostics' ] ]
-    return diags
+    # NOTE: We return diagnostics asynchronously via the long-polling mechanism
+    # because there's a big-old timing issue in that the above refresh doesn't
+    # return diagnostics immediately; we end up lagging at least one parse
+    # request behind. On slow completers (I'm looking at you eclipse), this
+    # leads to a poor user experience.
 
 
   def PollForMessagesInner( self, request_data ):
     try:
-      # TODO/FIXME: We should reduce the timeout if we loop
       while True:
         notification = self.GetServer()._notifications.get( timeout = 10 )
         message = self._ConvertNotificationToMessage( request_data,
@@ -568,6 +519,13 @@ class LanguageServerCompleter( Completer ):
       return responses.BuildDisplayMessageResponse(
         'Language server reported: {0}'.format(
           notification[ 'params' ][ 'message' ] ) )
+    elif notification[ 'method' ] == 'textDocument/publishDiagnostics':
+      latest_diagnostics = notification[ 'params' ]
+      response = {
+        'diagnostics': [ BuildDiagnostic( latest_diagnostics[ 'uri' ], x )
+                         for x in latest_diagnostics[ 'diagnostics' ] ]
+      }
+      return response
 
     return None
 
@@ -588,8 +546,8 @@ class LanguageServerCompleter( Completer ):
           # from DidOpenTextDocument because we don't actually have a mechanism
           # for generating the diffs (which would just be a waste of time)
           #
-          # One option would be to just replcae the entire file, but some
-          # servers (i'm looking at you javac completer) don't update
+          # One option would be to just replace the entire file, but some
+          # servers (I'm looking at you javac completer) don't update
           # diagnostics until you open or save a document. Sigh.
           msg = lsapi.DidChangeTextDocument( file_name,
                                              file_data[ 'filetypes' ],
@@ -745,3 +703,29 @@ def BuildLocation( filename, loc ):
 def BuildRange( filename, r ):
   return responses.Range( BuildLocation( filename, r[ 'start' ] ),
                           BuildLocation( filename, r[ 'end' ] ) )
+
+
+def BuildDiagnostic( filename, diag ):
+  filename = lsapi.UriToFilePath( filename )
+  r = BuildRange( filename, diag[ 'range' ] )
+  SEVERITY = [
+    None,
+    'Error',
+    'Warning',
+    'Information',
+    'Hint',
+  ]
+  SEVERITY_TO_YCM_SEVERITY = {
+    'Error': 'ERROR',
+    'Warning': 'WARNING',
+    'Information': 'WARNING',
+    'Hint': 'WARNING'
+  }
+
+  return responses.BuildDiagnosticData ( responses.Diagnostic(
+    ranges = [ r ],
+    location = r.start_,
+    location_extent = r,
+    text = diag[ 'message' ],
+    kind = SEVERITY_TO_YCM_SEVERITY[ SEVERITY[ diag[ 'severity' ] ] ] ) )
+
