@@ -494,15 +494,35 @@ class LanguageServerCompleter( Completer ):
 
 
   def PollForMessagesInner( self, request_data ):
+    messages = list()
+
+    # scoop up any pending messages into one big list
     try:
       while True:
-        notification = self.GetServer()._notifications.get( timeout = 10 )
+        notification = self.GetServer()._notifications.get_nowait( )
         message = self._ConvertNotificationToMessage( request_data,
                                                       notification )
         if message:
-          return message
+          messages.append( message )
+    except queue.Empty:
+      # We drained the queue
+      pass
+
+    # If we found some messages, return them immediately
+    if messages:
+      return messages
+
+    # otherwise, block until we get one
+    try:
+      while True:
+        notification = self.GetServer()._notifications.get( timeout=10 )
+        message = self._ConvertNotificationToMessage( request_data,
+                                                      notification )
+        if message:
+          return [ message ]
     except queue.Empty:
       return True
+
 
 
   def _ConvertNotificationToMessage( self, request_data, notification ):
