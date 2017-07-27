@@ -67,6 +67,10 @@ class Response( object ):
     return self._message
 
 
+class LanguageServerConnectionTimeout( Exception ):
+  pass
+
+
 class LanguageServerConnection( object ):
   """
     Abstract language server communication object.
@@ -116,10 +120,11 @@ class LanguageServerConnection( object ):
 
 
   def TryServerConnection( self ):
-    self._connection_event.wait( timeout = 10 )
+    self._connection_event.wait( timeout = 5 )
 
     if not self._connection_event.isSet():
-      raise RuntimeError( 'Timed out waiting for server to connect' )
+      raise LanguageServerConnectionTimeout(
+        'Timed out waiting for server to connect' )
 
 
   def _run_loop( self ):
@@ -418,6 +423,9 @@ class LanguageServerCompleter( Completer ):
 
 
   def ComputeCandidatesInner( self, request_data ):
+    if not self.ServerIsHealthy():
+      return None
+
     # Need to update the file contents. TODO: so inefficient (and doesn't work
     # for the eclipse based completer for some reason - possibly because it
     # is busy parsing the file when it actually should be providing
@@ -484,7 +492,8 @@ class LanguageServerCompleter( Completer ):
 
 
   def OnFileReadyToParse( self, request_data ):
-    self._RefreshFiles( request_data )
+    if self.ServerIsReady():
+      self._RefreshFiles( request_data )
 
     # NOTE: We return diagnostics asynchronously via the long-polling mechanism
     # because there's a big-old timing issue in that the above refresh doesn't
@@ -499,6 +508,10 @@ class LanguageServerCompleter( Completer ):
     # scoop up any pending messages into one big list
     try:
       while True:
+        if not self.GetServer():
+          # The server isn't running or something. Don't re-poll.
+          return False
+
         notification = self.GetServer()._notifications.get_nowait( )
         message = self._ConvertNotificationToMessage( request_data,
                                                       notification )
@@ -515,6 +528,10 @@ class LanguageServerCompleter( Completer ):
     # otherwise, block until we get one
     try:
       while True:
+        if not self.GetServer():
+          # The server isn't running or something. Don't re-poll.
+          return False
+
         notification = self.GetServer()._notifications.get( timeout=10 )
         message = self._ConvertNotificationToMessage( request_data,
                                                       notification )
@@ -655,9 +672,8 @@ class LanguageServerCompleter( Completer ):
                             lsapi.UriToFilePath( position[ 'uri' ] ) )
       )
 
+
   def _GetInsertionText( self, request_data, item ):
-    # TODO: We probably need to implement this and (at least) strip out the
-    # snippet parts?
     INSERT_TEXT_FORMAT = [
       None, # 1-based
       'PlainText',
