@@ -502,30 +502,15 @@ class LanguageServerCompleter( Completer ):
     # leads to a poor user experience.
 
 
-  def PollForMessagesInner( self, request_data ):
-    messages = list()
+  def _PollForMessagesNoBlock( self, request_data, messages ):
+    notification = self.GetServer()._notifications.get_nowait( )
+    message = self._ConvertNotificationToMessage( request_data,
+                                                  notification )
+    if message:
+      messages.append( message )
 
-    # scoop up any pending messages into one big list
-    try:
-      while True:
-        if not self.GetServer():
-          # The server isn't running or something. Don't re-poll.
-          return False
 
-        notification = self.GetServer()._notifications.get_nowait( )
-        message = self._ConvertNotificationToMessage( request_data,
-                                                      notification )
-        if message:
-          messages.append( message )
-    except queue.Empty:
-      # We drained the queue
-      pass
-
-    # If we found some messages, return them immediately
-    if messages:
-      return messages
-
-    # otherwise, block until we get one
+  def _PollForMessagesBlock( self, request_data ):
     try:
       while True:
         if not self.GetServer():
@@ -540,6 +525,28 @@ class LanguageServerCompleter( Completer ):
     except queue.Empty:
       return True
 
+
+  def PollForMessagesInner( self, request_data ):
+    messages = list()
+
+    # scoop up any pending messages into one big list
+    try:
+      while True:
+        if not self.GetServer():
+          # The server isn't running or something. Don't re-poll.
+          return False
+
+        self._PollForMessagesNoBlock( request_data, messages )
+    except queue.Empty:
+      # We drained the queue
+      pass
+
+    # If we found some messages, return them immediately
+    if messages:
+      return messages
+
+    # otherwise, block until we get one
+    return self._PollForMessagesBlock( request_data )
 
 
   def _ConvertNotificationToMessage( self, request_data, notification ):
@@ -779,4 +786,3 @@ def BuildDiagnostic( filename, diag ):
     location_extent = r,
     text = diag[ 'message' ],
     kind = SEVERITY_TO_YCM_SEVERITY[ SEVERITY[ diag[ 'severity' ] ] ] ) )
-
