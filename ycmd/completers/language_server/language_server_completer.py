@@ -618,7 +618,7 @@ class LanguageServerCompleter( Completer ):
         self._serverFileState[ file_name ] = 'Open'
         self.GetServer().SendNotification( msg )
 
-      for file_name in iterkeys(self._serverFileState ):
+      for file_name in iterkeys( self._serverFileState ):
         if file_name not in request_data[ 'file_data' ]:
           msg = lsapi.DidCloseTextDocument( file_name )
           del self._serverFileState[ file_name ]
