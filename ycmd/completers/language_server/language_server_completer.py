@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import absolute_import
 from builtins import *  # noqa
 from future import standard_library
+from future.utils import iteritems, iterkeys
 standard_library.install_aliases()
 
 import abc
@@ -593,7 +594,7 @@ class LanguageServerCompleter( Completer ):
 
   def _RefreshFiles( self, request_data ):
     with self._fileStateMutex:
-      for file_name, file_data in request_data[ 'file_data' ].iteritems():
+      for file_name, file_data in iteritems( request_data[ 'file_data' ] ):
         file_state = 'New'
         if file_name in self._serverFileState:
           file_state = self._serverFileState[ file_name ]
@@ -617,7 +618,7 @@ class LanguageServerCompleter( Completer ):
         self._serverFileState[ file_name ] = 'Open'
         self.GetServer().SendNotification( msg )
 
-      for file_name in self._serverFileState.iterkeys():
+      for file_name in iterkeys(self._serverFileState ):
         if file_name not in request_data[ 'file_data' ]:
           msg = lsapi.DidCloseTextDocument( file_name )
           del self._serverFileState[ file_name ]
@@ -913,7 +914,7 @@ def WorkspaceEditToFixIt( request_data, workspace_edit, text='' ):
     return None
 
   chunks = list()
-  for uri in workspace_edit[ 'changes' ].iterkeys():
+  for uri in iterkeys( workspace_edit[ 'changes' ] ):
     filepath = lsapi.UriToFilePath( uri )
     chunks.extend( [
       responses.FixItChunk( change[ 'newText' ],
