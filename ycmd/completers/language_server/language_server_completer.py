@@ -108,7 +108,7 @@ class LanguageServerConnection( object ):
       self._responses[ request_id ] = response
 
     _logger.debug( 'TX: Sending message {0}'.format(
-      json.dumps( message, indent=2 ) ) )
+      json.dumps( utils.ToUnicode( message ), indent=2 ) ) )
 
     self._Write( message )
     return response.AwaitResponse()
@@ -116,7 +116,7 @@ class LanguageServerConnection( object ):
 
   def SendNotification( self, message ):
     _logger.debug( 'TX: Sending Notification {0}'.format(
-      json.dumps( message, indent=2 ) ) )
+      json.dumps( utils.ToUnicode( message ), indent=2 ) ) )
     self._Write( message )
 
 
