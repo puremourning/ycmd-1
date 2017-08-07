@@ -25,7 +25,6 @@ standard_library.install_aliases()
 
 import abc
 import collections
-import json
 import logging
 import os
 import queue
@@ -53,8 +52,8 @@ class Response( object ):
     self._event.set()
 
 
-  def AwaitResponse( self ):
-    self._event.wait( timeout = 1 )
+  def AwaitResponse( self, timeout ):
+    self._event.wait( timeout )
 
     if not self._event.isSet():
       raise RuntimeError( 'Response Timeout' )
@@ -100,23 +99,22 @@ class LanguageServerConnection( object ):
       return str( self._lastId )
 
 
-  def GetResponse( self, request_id, message ):
+  def GetResponse( self, request_id, message, timeout=1 ):
     response = Response()
 
     with self._responseMutex:
       assert request_id not in self._responses
       self._responses[ request_id ] = response
 
-    _logger.debug( 'TX: Sending message {0}'.format(
-      json.dumps( utils.ToUnicode( message ), indent=2 ) ) )
+    _logger.debug( 'TX: Sending message {0}'.format( message ) )
 
     self._Write( message )
-    return response.AwaitResponse()
+    return response.AwaitResponse( timeout )
 
 
   def SendNotification( self, message ):
-    _logger.debug( 'TX: Sending Notification {0}'.format(
-      json.dumps( utils.ToUnicode( message ), indent=2 ) ) )
+    _logger.debug( 'TX: Sending Notification {0}'.format( message ) )
+
     self._Write( message )
 
 
@@ -150,9 +148,9 @@ class LanguageServerConnection( object ):
         data = self._Read()
 
       while read_bytes < len( data ):
-        if data[ read_bytes ] == bytes( b'\n' ):
+        if utils.ToUnicode( data[ read_bytes: ] )[ 0 ] == '\n':
           line = prefix + data[ last_line : read_bytes ].strip()
-          prefix = ''
+          prefix = bytes( b'' )
           last_line = read_bytes
 
           if not line.strip():
@@ -167,7 +165,7 @@ class LanguageServerConnection( object ):
 
       if not headers_complete:
         prefix = data[ last_line : ]
-        data = ''
+        data = bytes( b'' )
 
 
     return ( data, read_bytes, headers )
@@ -207,6 +205,7 @@ class LanguageServerConnection( object ):
         content_read += len( content )
         read_bytes = content_to_read
 
+      # lsapi will convert content to unicode
       self._DespatchMessage( lsapi.Parse( content ) )
 
       # We only consumed len( content ) of data. If there is more, we start
@@ -279,7 +278,7 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
 
     if size < 0:
       data = self._client_socket.recv( 2048 )
-      if data == '':
+      if data == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
       return data
@@ -288,7 +287,7 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     bytes_read = 0
     while bytes_read < size:
       chunk = self._client_socket.recv( min( size - bytes_read , 2048 ) )
-      if chunk == '':
+      if chunk == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
       chunks.append( chunk )
@@ -348,7 +347,7 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
     if size < 0:
       data = self._client_read_socket.recv( 2048 )
-      if data == '':
+      if data == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
       return data
@@ -357,7 +356,7 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
     bytes_read = 0
     while bytes_read < size:
       chunk = self._client_read_socket.recv( min( size - bytes_read , 2048 ) )
-      if chunk == '':
+      if chunk == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
       chunks.append( chunk )
@@ -629,7 +628,9 @@ class LanguageServerCompleter( Completer ):
     request_id = self.GetServer().NextRequestId()
 
     msg = lsapi.Initialise( request_id )
-    response = self.GetServer().GetResponse( request_id, msg )
+    response = self.GetServer().GetResponse( request_id,
+                                             msg,
+                                             timeout = 3 )
 
     self._server_capabilities = response[ 'result' ][ 'capabilities' ]
 
