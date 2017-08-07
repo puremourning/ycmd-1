@@ -28,6 +28,7 @@ import os
 import threading
 import glob
 
+from shutil import rmtree
 from subprocess import PIPE
 
 from ycmd import ( utils, responses )
@@ -179,9 +180,6 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
 
   def _Reset( self ):
-    if self._server_handle:
-      utils.CloseStandardStreams( self._server_handle )
-
     if not self._server_keep_logfiles:
       if self._server_stdout:
         utils.RemoveIfExists( self._server_stdout )
@@ -195,10 +193,11 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     self._server_handle = None
 
     try:
-      os.rmdir( self._workspace_path )
+      rmtree( self._workspace_path )
     except OSError:
       # We actually just ignore the error because on startup it won't exist
-      pass
+      _logger.exception( 'Failed to remove workspace path: {0}'.format(
+        self._workspace_path ) )
 
     # TODO: close the sockets in the server
     self._server = None
@@ -296,6 +295,9 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
   def _StopServer( self ):
     with self._server_state_mutex:
+      if self._server_handle:
+        utils.CloseStandardStreams( self._server_handle )
+
       if self._ServerIsRunning():
         _logger.info( 'Stopping java server with PID {0}'.format(
                           self._server_handle.pid ) )
