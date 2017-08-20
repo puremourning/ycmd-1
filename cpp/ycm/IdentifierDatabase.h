@@ -67,9 +67,10 @@ public:
   void ClearCandidatesStoredForFile( const std::string &filetype,
                                      const std::string &filepath );
 
+  template<typename TResults>
   void ResultsForQueryAndType( const std::string &query,
                                const std::string &filetype,
-                               std::vector< Result > &results ) const;
+                               TResults &results ) const;
 
 private:
   std::set< const Candidate * > &GetCandidateSet(
@@ -97,6 +98,63 @@ private:
   FiletypeCandidateMap filetype_candidate_map_;
   mutable std::mutex filetype_candidate_map_mutex_;
 };
+
+} // namespace YouCompleteMe
+
+#include "Candidate.h"
+#include "CandidateRepository.h"
+#include "IdentifierUtils.h"
+#include "Result.h"
+#include "Utils.h"
+
+#include <unordered_set>
+
+namespace YouCompleteMe {
+
+template<typename TResults>
+void IdentifierDatabase::ResultsForQueryAndType(
+  const std::string &query,
+  const std::string &filetype,
+  TResults &results ) const {
+  FiletypeCandidateMap::const_iterator it;
+  {
+    std::lock_guard< std::mutex > locker( filetype_candidate_map_mutex_ );
+    it = filetype_candidate_map_.find( filetype );
+
+    if ( it == filetype_candidate_map_.end() || query.empty() )
+      return;
+  }
+  Bitset query_bitset = LetterBitsetFromString( query );
+  bool query_has_uppercase_letters = HasUppercase( query );
+
+  std::unordered_set< const Candidate * > seen_candidates;
+  seen_candidates.reserve( candidate_repository_.NumStoredCandidates() );
+
+  {
+    std::lock_guard< std::mutex > locker( filetype_candidate_map_mutex_ );
+    for ( const FilepathToCandidates::value_type & path_and_candidates :
+              *it->second ) {
+      for ( const Candidate * candidate : *path_and_candidates.second ) {
+        if ( ContainsKey( seen_candidates, candidate ) )
+          continue;
+        else
+          seen_candidates.insert( candidate );
+
+        if ( !candidate->MatchesQueryBitset( query_bitset ) )
+          continue;
+
+        Result result = candidate->QueryMatchResult(
+                          query, query_has_uppercase_letters );
+
+        if ( result.IsSubsequence() )
+          results.push_back( result );
+      }
+    }
+  }
+
+  std::sort( results.begin(), results.end() );
+}
+
 
 } // namespace YouCompleteMe
 

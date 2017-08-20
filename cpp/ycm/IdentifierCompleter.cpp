@@ -78,6 +78,7 @@ std::vector< std::string > IdentifierCompleter::CandidatesForQuery(
   return CandidatesForQueryAndType( query, "" );
 }
 
+#include <deque>
 
 std::vector< std::string > IdentifierCompleter::CandidatesForQueryAndType(
   const std::string &query,
@@ -87,7 +88,7 @@ std::vector< std::string > IdentifierCompleter::CandidatesForQueryAndType(
   if ( !IsPrintable( query ) )
     return std::vector< std::string >();
 
-  std::vector< Result > results;
+  std::deque< Result > results;
   identifier_database_.ResultsForQueryAndType( query, filetype, results );
 
   std::vector< std::string > candidates;
