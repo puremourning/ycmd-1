@@ -805,6 +805,25 @@ class LanguageServerCompleter( Completer ):
     return None
 
 
+  def _Rename( self, request_data, args ):
+    if len( args ) != 1:
+      raise ValueError( 'Please specify a new name to rename it to.\n'
+                        'Usage: RefactorRename <new name>' )
+
+    new_name = args[ 0 ]
+
+    request_id = self.GetServer().NextRequestId()
+    response = self.GetServer().GetResponse(
+      request_id,
+      lsapi.Rename( request_id,
+                    request_data,
+                    new_name ),
+      timeout = 30 )
+
+    return responses.BuildFixItResponse(
+      [ WorkspaceEditToFixIt( request_data, response[ 'result' ] ) ] )
+
+
   def _GetInsertionText( self, request_data, item ):
     INSERT_TEXT_FORMAT = [
       None, # 1-based
