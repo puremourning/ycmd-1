@@ -144,6 +144,18 @@ def Rename( request_id, request_data, new_name ):
   } )
 
 
+def References( request_id, request_data ):
+  return BuildRequest( request_id, 'textDocument/references', {
+    'textDocument': {
+      'uri': _MakeUriForFile( request_data[ 'filepath' ] ),
+    },
+    'position': {
+      'line': request_data[ 'line_num' ] - 1,
+      'character': request_data[ 'start_column' ] - 1,
+    },
+  } )
+
+
 def BuildTextDocumentPositionParams( request_data ):
   return {
     'textDocument': {
