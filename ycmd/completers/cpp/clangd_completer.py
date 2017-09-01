@@ -95,11 +95,27 @@ class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
     return {
       'RestartServer': ( lambda self, request_data, args:
                             self._RestartServer() ),
+      # TODO: We should be able to determine the set of things available from
+      # the capabilities supplied on initialise
+      'GoToDeclaration': ( lambda self, request_data, args:
+                             self._GoToDeclaration( request_data ) ),
+      'GoTo': ( lambda self, request_data, args:
+                             self._GoToDeclaration( request_data ) ),
+      'FixIt': ( lambda self, request_data, args:
+                   self._CodeAction( request_data, args ) ),
     }
 
 
   def HandleServerCommand( self, request_data, command ):
-    return None
+    if command[ 'command' ] == 'clangd.applyFix':
+      return responses.FixIt(
+        responses.Location( request_data[ 'line_num' ],
+                            request_data[ 'column_num' ],
+                            request_data[ 'filepath' ] ),
+        language_server_completer.TextEditToChunks(
+          command[ 'arguments' ][ 0 ],   # file
+          command[ 'arguments' ][ 1 ] ), # TextEdit
+        command[ 'title' ] )
 
 
   def _RestartServer( self ):
