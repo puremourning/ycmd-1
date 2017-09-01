@@ -158,7 +158,7 @@ def BuildTextDocumentPositionParams( request_data ):
 
 def References( request_id, request_data ):
   request = BuildTextDocumentPositionParams( request_data )
-  request[ 'lsapi' ] = { 'includeDeclaration': True }
+  request[ 'context' ] = { 'includeDeclaration': True }
   return BuildRequest( request_id, 'textDocument/references', request )
 
 
