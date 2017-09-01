@@ -48,10 +48,22 @@ class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
     self._server_handle = None
     self._server_stderr = None
 
-    self._StartServer()
+    try:
+      self._StartServer()
+    except:
+      _logger.exception( "The clangd server failed to start." )
+      self._StopServer()
+
 
   def GetServer( self ):
     return self._server
+
+
+  def ShouldUseNowInner( self, request_data ):
+    if not self.ServerIsReady():
+      return False
+
+    return super( ClangdCompleter, self ).ShouldUseNowInner( request_data )
 
 
   def SupportedFiletypes( self ):
@@ -86,6 +98,10 @@ class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
     }
 
 
+  def HandleServerCommand( self, request_data, command ):
+    return None
+
+
   def _RestartServer( self ):
     self._StopServer()
     self._StartServer()
@@ -110,17 +126,16 @@ class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
       self._server_handle.stdout )
 
     self._server.start()
-    self._server.TryServerConnection()
 
-    # Sigh, this annoyingly causes ycmd to hang on startup if it doesn't connect
-    # properly.
-    #
-    # Also, it doesn't seem to connect properly
     try:
-      self._WaitForInitiliase()
-    except RuntimeError as e:
-      _logger.exception( e )
+      self._server.TryServerConnection()
+    except language_server_completer.LanguageServerConnectionTimeout:
+      _logger.warn( 'Java language server failed to start, or did not '
+                    'connect successfully' )
       self._StopServer()
+      return
+
+    self._WaitForInitiliase()
 
 
   def _StopServer( self ):

@@ -250,24 +250,6 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         self._StopServer()
         return
 
-    # OK, so now we have to fire the Initialise request to the server:
-    #
-    # LS PROTOCOL - Initialise request
-    #
-    # The initialize request is sent as the first request from the client to
-    # the server. If the server receives request or notification before the
-    # initialize request it should act as follows:
-    # - for a request the respond should be errored with code: -32001. The
-    #   message can be picked by the server.
-    # - notifications should be dropped.
-    #
-    # TODO/FIXME: This causes a hang on startup waiting for the
-    # server. I suspect this is holding the server state mutex, and any
-    # requests that come in (such as OnFileReadyToParse) just get blocked
-    # waiting for this to happen. The fix is to have a proper state model, or
-    # at least a simple one, rather than leaning on a lock (assuming that is
-    # the actual problem)
-    #
     self._WaitForInitiliase()
 
 
