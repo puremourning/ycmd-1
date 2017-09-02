@@ -113,6 +113,7 @@ class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
                             request_data[ 'column_num' ],
                             request_data[ 'filepath' ] ),
         language_server_completer.TextEditToChunks(
+          request_data,
           command[ 'arguments' ][ 0 ],   # file
           command[ 'arguments' ][ 1 ] ), # TextEdit
         command[ 'title' ] )
