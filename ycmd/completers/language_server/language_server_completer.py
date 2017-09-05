@@ -569,14 +569,17 @@ class LanguageServerCompleter( Completer ):
     return self._PollForMessagesBlock( request_data )
 
 
+  def HandleServerMessage( self, request_data, notification ):
+    return None
+
   def _ConvertNotificationToMessage( self, request_data, notification ):
-    if notification[ 'method' ] == 'window/showMessage':
+    response = self.HandleServerMessage( request_data, notification )
+
+    if response:
+      return response
+    elif notification[ 'method' ] == 'window/showMessage':
       return responses.BuildDisplayMessageResponse(
         notification[ 'params' ][ 'message' ] )
-    elif notification[ 'method' ] == 'language/status':
-      return responses.BuildDisplayMessageResponse(
-        'Language server status: {0}'.format(
-          notification[ 'params' ][ 'message' ] ) )
     elif notification[ 'method' ] == 'language/actionableNotification':
       # TODO: YcmCompleter subcommand to action these!
       # TODO: Severity / warning etc. in the response
