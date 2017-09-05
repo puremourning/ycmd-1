@@ -85,6 +85,11 @@ COMPLETERS = {
     'test': [ '--exclude-dir=ycmd/tests/python' ],
     'aliases': [ 'jedi', 'jedihttp', ]
   },
+  'java': {
+    'build': [ '--jdt-completer' ],
+    'test': [ '--exclude-dir=ycmd/tests/java' ],
+    'aliases': [ 'jdt' ],
+  },
 }
 
 
