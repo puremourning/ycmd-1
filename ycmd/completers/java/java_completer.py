@@ -281,6 +281,8 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     return {
       'RestartServer': ( lambda self, request_data, args:
                             self._RestartServer() ),
+      'StopServer': ( lambda self, request_data, args:
+                            self._StopServer() ),
 
       # TODO: We should be able to determine the set of things available from
       # the capabilities supplied on initialise
@@ -305,7 +307,9 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     if notification[ 'method' ] == 'language/status':
       message = notification[ 'params' ][ 'message' ]
       message_type = notification[ 'params' ][ 'type' ]
+
       if message_type == 'Started':
+        _logger.info( 'Java Language Server initialised successfully.' )
         self._received_ready_message = True
 
       return responses.BuildDisplayMessageResponse(
