@@ -871,9 +871,8 @@ class LanguageServerCompleter( Completer ):
 
 def _PositionToLocation( request_data, position ):
   return BuildLocation( request_data,
-                        position[ 'range' ][ 'start' ],
-                        position[ 'range' ][ 'start' ],
-                        lsapi.UriToFilePath( position[ 'uri' ] ) )
+                        lsapi.UriToFilePath( position[ 'uri' ] ),
+                        position[ 'range' ][ 'start' ] )
 
 
 def BuildLocation( request_data, filename, loc ):
