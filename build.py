@@ -494,7 +494,7 @@ def BuildYcmdLib( args ):
                    target ) )
 
     if 'YCM_TESTRUN' in os.environ:
-      RunYcmdTests( build_dir )
+      RunYcmdTests( args, build_dir )
     if 'YCM_BENCHMARK' in os.environ:
       RunYcmdBenchmarks( build_dir )
   finally:
