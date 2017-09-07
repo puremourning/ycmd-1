@@ -71,6 +71,10 @@ class LanguageServerConnectionTimeout( Exception ):
   pass
 
 
+class LanguageServerConnectionStopped( Exception ):
+  pass
+
+
 class LanguageServerConnection( object ):
   """
     Abstract language server communication object.
@@ -91,6 +95,17 @@ class LanguageServerConnection( object ):
     self._notifications = queue.Queue()
 
     self._connection_event = threading.Event()
+    self._stop_event = threading.Event()
+
+
+  def stop( self ):
+    # Note lowercase stop() to match threading.Thread.start()
+    self._Stop()
+    self._stop_event.set()
+
+
+  def IsStopped( self ):
+    return self._stop_event.is_set()
 
 
   def NextRequestId( self ):
@@ -127,13 +142,19 @@ class LanguageServerConnection( object ):
 
 
   def _run_loop( self ):
-    # Wait for the connection to fully establsh (block)
-    self._TryServerConnectionBlocking()
+    # Wait for the connection to fully establish (this runs in the thread
+    # context, so we block until a connection is received or there is a timeout,
+    # which throws an exception)
+    try:
+      self._TryServerConnectionBlocking()
 
-    self._connection_event.set()
+      self._connection_event.set()
 
-    # Blocking loop which reads whole messages and calls _DespatchMessage
-    self._ReadMessages( )
+      # Blocking loop which reads whole messages and calls _DespatchMessage
+      self._ReadMessages( )
+    except LanguageServerConnectionStopped:
+      _logger.debug( 'Connection was closed cleanly' )
+      pass
 
 
   def _ReadHeaders( self, data ):
@@ -227,6 +248,10 @@ class LanguageServerConnection( object ):
     raise RuntimeError( 'Not implemented' )
 
 
+  def _Stop( self ):
+    raise RuntimeError( 'Not implemented' )
+
+
   def _Write( self, data ):
     raise RuntimeError( 'Not implemented' )
 
@@ -254,9 +279,21 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
 
   def _TryServerConnectionBlocking( self ):
     ( self._client_socket, _ ) = self._socket.accept()
+
+    if self.IsStopped():
+      raise LanguageServerConnectionStopped()
+
     _logger.info( 'language server socket connected' )
 
     return True
+
+
+  def _Stop( self ):
+    if self._client_socket:
+      self._client_socket.close()
+
+    if self._socket:
+      self._socket.close()
 
 
   def _Write( self, data ):
@@ -278,6 +315,10 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
 
     if size < 0:
       data = self._client_socket.recv( 2048 )
+
+      if self.IsStopped():
+        raise LanguageServerConnectionStopped()
+
       if data == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
@@ -287,6 +328,10 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     bytes_read = 0
     while bytes_read < size:
       chunk = self._client_socket.recv( min( size - bytes_read , 2048 ) )
+
+      if self.IsStopped():
+        raise LanguageServerConnectionStopped()
+
       if chunk == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
@@ -324,10 +369,32 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
   def _TryServerConnectionBlocking( self ):
     ( self._client_read_socket, _ ) = self._input_socket.accept()
+
+    if self.IsStopped():
+      raise LanguageServerConnectionStopped()
+
     _logger.info( 'Language server Input socket connected' )
 
     ( self._client_write_socket, _ ) = self._output_socket.accept()
+
+    if self.IsStopped():
+      raise LanguageServerConnectionStopped()
+
     _logger.info( 'Language server Output socket connected' )
+
+
+  def _Stop( self ):
+    if self._client_read_socket:
+      self._client_read_socket.close()
+
+    if self._client_write_socket:
+      self._client_write_socket.close()
+
+    if self._input_socket:
+      self._input_socket.close()
+
+    if self._output_socket:
+      self._output_socket.close()
 
 
   def _Write( self, data ):
@@ -347,6 +414,10 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
     if size < 0:
       data = self._client_read_socket.recv( 2048 )
+
+      if self.IsStopped():
+        raise LanguageServerConnectionStopped()
+
       if data == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
@@ -356,6 +427,10 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
     bytes_read = 0
     while bytes_read < size:
       chunk = self._client_read_socket.recv( min( size - bytes_read , 2048 ) )
+
+      if self.IsStopped():
+        raise LanguageServerConnectionStopped()
+
       if chunk == bytes( b'' ):
         raise RuntimeError( 'read socket failed' )
 
@@ -379,7 +454,12 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
 
 
   def _TryServerConnectionBlocking( self ):
+    # standard in/out don't need to wait for the server to connect to us
     return True
+
+
+  def _Stop( self ):
+    self.server_stdin.close()
 
 
   def _Write( self, data ):
@@ -394,8 +474,12 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
     else:
       data = self.server_stdout.readline()
 
+    if self.IsStopped():
+      raise LanguageServerConnectionStopped()
+
     if not data:
-      # The connection diea
+      # No data means the connection was severed. Connection severed when (not
+      # self.IsStopped()) means the server died unexpectedly.
       raise RuntimeError( "Connection to server died" )
 
     return data
