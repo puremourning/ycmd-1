@@ -36,6 +36,7 @@ from ycmd.utils import GetCurrentDirectory
 
 shared_app = None
 shared_current_dir = None
+DEFAULT_PROJECT_DIR = 'simple_eclipse_project'
 
 
 def PathToTestFile( *args ):
@@ -50,9 +51,13 @@ def setUpPackage():
   subserver, should be done here."""
   global shared_app, shared_current_dir
 
-  shared_app = SetUpApp()
   shared_current_dir = GetCurrentDirectory()
-  os.chdir( PathToTestFile() )
+
+  # By default, we use the eclipse project for convenience. This means we don't
+  # have to @IsolatedYcmdInDirectory( DEFAULT_PROJECT_DIR ) for every test
+  os.chdir( PathToTestFile( DEFAULT_PROJECT_DIR ) )
+
+  shared_app = SetUpApp()
   WaitUntilCompleterServerReady( shared_app )
 
 
@@ -87,7 +92,7 @@ def IsolatedYcmd( test ):
   started, no .ycm_extra_conf.py loaded, etc).
 
   Do NOT attach it to test generators but directly to the yielded tests."""
-  return IsolatedYcmdInDirectory( PathToTestFile() )
+  return IsolatedYcmdInDirectory( PathToTestFile( DEFAULT_PROJECT_DIR ) )
 
 
 def IsolatedYcmdInDirectory( directory ):
