@@ -28,9 +28,7 @@ from nose.tools import eq_
 from pprint import pformat
 import requests
 
-from ycmd.tests.java import ( PathToTestFile,
-                              IsolatedYcmdInDirectory,
-                              WaitUntilCompleterServerReady )
+from ycmd.tests.java import ( PathToTestFile, SharedYcmd )
 from ycmd.tests.test_utils import ( BuildRequest,
                                     CompletionEntryMatcher )
 from ycmd.utils import ReadFile
@@ -82,9 +80,39 @@ def RunTest( app, test ):
   assert_that( response.json, test[ 'expect' ][ 'data' ] )
 
 
-@IsolatedYcmdInDirectory( PathToTestFile( 'simple_eclipse_project' ) )
+OBJECT_METHODS = [
+  CompletionEntryMatcher( 'equals', 'Object' ),
+  CompletionEntryMatcher( 'getClass', 'Object' ),
+  CompletionEntryMatcher( 'hashCode', 'Object' ),
+  CompletionEntryMatcher( 'notify', 'Object' ),
+  CompletionEntryMatcher( 'notifyAll', 'Object' ),
+  CompletionEntryMatcher( 'toString', 'Object' ),
+  CompletionEntryMatcher( 'wait', 'Object', {
+    'menu_text': 'wait(long timeout, int nanos) : void',
+  } ),
+  CompletionEntryMatcher( 'wait', 'Object', {
+    'menu_text': 'wait(long timeout) : void',
+  } ),
+  CompletionEntryMatcher( 'wait', 'Object', {
+    'menu_text': 'wait() : void',
+  } ),
+]
+
+
+# The zealots that designed java made everything inherit from Object (except,
+# possibly Object, or Class, or whichever one they used to break the Smalltalk
+# infinite recursion problem). Anyway, that means that we get a lot of noise
+# suggestions from the Object Class interface. This allows us to write:
+#
+#   contains_inanyorder( *WithObjectMethods( CompletionEntryMatcher( ... ) ) )
+#
+# and focus on what we care about.
+def WithObjectMethods( *args ):
+  return list( OBJECT_METHODS ) + list( args )
+
+
+@SharedYcmd
 def GetCompletions_NoQuery_test( app ):
-  WaitUntilCompleterServerReady( app )
   RunTest( app, {
     'description': 'semantic completion works for builtin types (no query)',
     'request': {
@@ -101,22 +129,10 @@ def GetCompletions_NoQuery_test( app ):
       'response': requests.codes.ok,
       'data': has_entries( {
         'completions': contains_inanyorder(
-          CompletionEntryMatcher( 'equals', 'f' ),
-          CompletionEntryMatcher( 'getClass', 'f' ),
-          CompletionEntryMatcher( 'hashCode', 'f' ),
-          CompletionEntryMatcher( 'notify', 'f' ),
-          CompletionEntryMatcher( 'notifyAll', 'f' ),
-          CompletionEntryMatcher( 'test', 'm' ),
-          CompletionEntryMatcher( 'testString', 'm' ),
-          CompletionEntryMatcher( 'wait', 'f', {
-            'menu_text': 'wait(long timeout, int nanos) : void',
-          } ),
-          CompletionEntryMatcher( 'wait', 'f', {
-            'menu_text': 'wait(long timeout) : void',
-          } ),
-          CompletionEntryMatcher( 'wait', 'f', {
-            'menu_text': 'wait() : void',
-          } ),
+          *WithObjectMethods(
+            CompletionEntryMatcher( 'test', 'TestFactory.Bar' ),
+            CompletionEntryMatcher( 'testString', 'TestFactory.Bar' )
+          )
         ),
         'errors': empty(),
       } )
