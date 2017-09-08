@@ -195,7 +195,6 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       _logger.exception( 'Failed to remove workspace path: {0}'.format(
         self._workspace_path ) )
 
-    # TODO: close the sockets in the server
     self._server = None
 
 
