@@ -511,10 +511,6 @@ class LanguageServerCompleter( Completer ):
     if not self.ServerIsHealthy():
       return None
 
-    # Need to update the file contents. TODO: so inefficient (and doesn't work
-    # for the eclipse based completer for some reason - possibly because it
-    # is busy parsing the file when it actually should be providing
-    # completions)!
     self._RefreshFiles( request_data )
 
     request_id = self.GetServer().NextRequestId()
@@ -735,6 +731,7 @@ class LanguageServerCompleter( Completer ):
           msg = lsapi.DidCloseTextDocument( file_name )
           self.GetServer().SendNotification( msg )
           del self._serverFileState[ file_name ]
+
 
   def _WaitForInitiliase( self ):
     request_id = self.GetServer().NextRequestId()

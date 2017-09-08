@@ -323,7 +323,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         self._received_ready_message = True
 
       return responses.BuildDisplayMessageResponse(
-        'Language server status: {0}'.format( message ) )
+        'Initialising Java completer: {0}'.format( message ) )
 
     return None
 
