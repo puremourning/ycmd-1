@@ -613,7 +613,8 @@ class LanguageServerCompleter( Completer ):
     try:
       while True:
         if not self.GetServer():
-          # The server isn't running or something. Don't re-poll.
+          # The server isn't running or something. Don't re-poll, as this will
+          # just cause errors.
           return False
 
         notification = self.GetServer()._notifications.get( timeout=10 )
@@ -626,9 +627,9 @@ class LanguageServerCompleter( Completer ):
 
 
   def PollForMessagesInner( self, request_data ):
-    messages = list()
 
     # scoop up any pending messages into one big list
+    messages = list()
     try:
       while True:
         if not self.GetServer():
