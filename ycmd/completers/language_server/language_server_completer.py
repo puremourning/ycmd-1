@@ -114,7 +114,7 @@ class LanguageServerConnection( object ):
       return str( self._lastId )
 
 
-  def GetResponse( self, request_id, message, timeout=1 ):
+  def GetResponse( self, request_id, message, timeout=5 ):
     response = Response()
 
     with self._responseMutex:
@@ -667,13 +667,11 @@ class LanguageServerCompleter( Completer ):
           notification[ 'params' ][ 'message' ] ) )
     elif notification[ 'method' ] == 'textDocument/publishDiagnostics':
       # Diagnostics are a little special. We only return diagnostics for the
-      # currently open file. The language server actually might sent us
-      # diagnostics for any file in the project, but (for now) we only show the
-      # current file.
-      #
-      # TODO(Ben): We should actually group up all the diagnostics messages,
-      # populating _latest_diagnostics, and then always send a single message if
-      # _any_ publishDiagnostics message was pending.
+      # requested file, but store them for every file. Language servers can
+      # return diagnostics for the whole project, but this request is
+      # specifically for a particular file.
+      # Any messages we handle which are for other files are returned in the
+      # OnFileReadyToParse request.
       params = notification[ 'params' ]
       uri = params[ 'uri' ]
       self._latest_diagnostics[ uri ] = params[ 'diagnostics' ]
@@ -739,7 +737,7 @@ class LanguageServerCompleter( Completer ):
     msg = lsapi.Initialise( request_id )
     response = self.GetServer().GetResponse( request_id,
                                              msg,
-                                             timeout = 3 )
+                                             timeout = 5 )
 
     self._server_capabilities = response[ 'result' ][ 'capabilities' ]
 
@@ -974,8 +972,8 @@ def BuildRange( request_data, filename, r ):
                           BuildLocation( request_data, filename, r[ 'end' ] ) )
 
 
-def BuildDiagnostic( request_data, filename, diag ):
-  filename = lsapi.UriToFilePath( filename )
+def BuildDiagnostic( request_data, uri, diag ):
+  filename = lsapi.UriToFilePath( uri )
   r = BuildRange( request_data, filename, diag[ 'range' ] )
   SEVERITY = [
     None,
