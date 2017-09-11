@@ -41,6 +41,13 @@ from ycmd.completers.language_server import lsapi
 _logger = logging.getLogger( __name__ )
 
 
+REQUEST_TIMEOUT_COMPLETION = 1
+REQUEST_TIMEOUT_INITIALISE = 30
+REQUEST_TIMEOUT_COMMAND    = 30
+CONNECTION_TIMEOUT         = 5
+MESSAGE_POLL_TIMEOUT       = 10
+
+
 class Response( object ):
   def __init__( self ):
     self._event = threading.Event()
@@ -115,7 +122,7 @@ class LanguageServerConnection( object ):
       return str( self._lastId )
 
 
-  def GetResponse( self, request_id, message, timeout=5 ):
+  def GetResponse( self, request_id, message, timeout ):
     response = Response()
 
     with self._responseMutex:
@@ -135,7 +142,7 @@ class LanguageServerConnection( object ):
 
 
   def TryServerConnection( self ):
-    self._connection_event.wait( timeout = 5 )
+    self._connection_event.wait( timeout = CONNECTION_TIMEOUT )
 
     if not self._connection_event.isSet():
       raise LanguageServerConnectionTimeout(
@@ -523,7 +530,9 @@ class LanguageServerCompleter( Completer ):
 
     request_id = self.GetServer().NextRequestId()
     msg = lsapi.Completion( request_id, request_data )
-    response = self.GetServer().GetResponse( request_id, msg )
+    response = self.GetServer().GetResponse( request_id,
+                                             msg,
+                                             REQUEST_TIMEOUT_COMPLETION )
 
     do_resolve = (
       'completionProvider' in self._server_capabilities and
@@ -539,7 +548,9 @@ class LanguageServerCompleter( Completer ):
       if do_resolve:
         resolve_id = self.GetServer().NextRequestId()
         resolve = lsapi.ResolveCompletion( resolve_id, item )
-        response = self.GetServer().GetResponse( resolve_id, resolve )
+        response = self.GetServer().GetResponse( resolve_id,
+                                                 resolve,
+                                                 REQUEST_TIMEOUT_COMPLETION )
         item = response[ 'result' ]
 
       # Note Vim only displays the first character, so we map them to the
@@ -625,7 +636,8 @@ class LanguageServerCompleter( Completer ):
           # just cause errors.
           return False
 
-        notification = self.GetServer()._notifications.get( timeout=10 )
+        notification = self.GetServer()._notifications.get(
+          timeout = MESSAGE_POLL_TIMEOUT )
         message = self._ConvertNotificationToMessage( request_data,
                                                       notification )
         if message:
@@ -746,7 +758,7 @@ class LanguageServerCompleter( Completer ):
     msg = lsapi.Initialise( request_id )
     response = self.GetServer().GetResponse( request_id,
                                              msg,
-                                             timeout = 30 )
+                                             REQUEST_TIMEOUT_INITIALISE )
 
     self._server_capabilities = response[ 'result' ][ 'capabilities' ]
 
@@ -764,9 +776,11 @@ class LanguageServerCompleter( Completer ):
 
   def _GetHoverResponse( self, request_data ):
     request_id = self.GetServer().NextRequestId()
-    response = self.GetServer().GetResponse( request_id,
-                                         lsapi.Hover( request_id,
-                                                      request_data ) )
+    response = self.GetServer().GetResponse(
+      request_id,
+      lsapi.Hover( request_id,
+                   request_data ),
+      REQUEST_TIMEOUT_COMMAND )
 
     return response[ 'result' ][ 'contents' ]
 
@@ -787,9 +801,11 @@ class LanguageServerCompleter( Completer ):
 
   def _GoToDeclaration( self, request_data ):
     request_id = self.GetServer().NextRequestId()
-    response = self.GetServer().GetResponse( request_id,
-                                             lsapi.Definition( request_id,
-                                                               request_data ) )
+    response = self.GetServer().GetResponse(
+      request_id,
+      lsapi.Definition( request_id,
+                        request_data ),
+      REQUEST_TIMEOUT_COMMAND )
 
     if isinstance( response[ 'result' ], list ):
       return self.LocationListToGoTo( request_data, response )
@@ -801,9 +817,11 @@ class LanguageServerCompleter( Completer ):
 
   def _GoToReferences( self, request_data ):
     request_id = self.GetServer().NextRequestId()
-    response = self.GetServer().GetResponse( request_id,
-                                             lsapi.References( request_id,
-                                                               request_data ) )
+    response = self.GetServer().GetResponse(
+      request_id,
+      lsapi.References( request_id,
+                        request_data ),
+      REQUEST_TIMEOUT_COMMAND )
 
     return self.LocationListToGoTo( request_data, response )
 
@@ -837,7 +855,8 @@ class LanguageServerCompleter( Completer ):
         lsapi.CodeAction( request_id,
                           request_data,
                           matched_diagnostics[ 0 ][ 'range' ],
-                          matched_diagnostics ) )
+                          matched_diagnostics ),
+        REQUEST_TIMEOUT_COMMAND )
 
     else:
       code_actions = self.GetServer().GetResponse(
@@ -856,7 +875,8 @@ class LanguageServerCompleter( Completer ):
               'character': len( request_data[ 'line_value' ] ) - 1,
             }
           },
-          [] ) )
+          [] ),
+        REQUEST_TIMEOUT_COMMAND )
 
     response = [ self.HandleServerCommand( request_data, c )
                  for c in code_actions[ 'result' ] ]
@@ -884,7 +904,7 @@ class LanguageServerCompleter( Completer ):
       lsapi.Rename( request_id,
                     request_data,
                     new_name ),
-      timeout = 30 )
+      REQUEST_TIMEOUT_COMMAND )
 
     return responses.BuildFixItResponse(
       [ WorkspaceEditToFixIt( request_data, response[ 'result' ] ) ] )
