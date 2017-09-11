@@ -738,7 +738,7 @@ class LanguageServerCompleter( Completer ):
     msg = lsapi.Initialise( request_id )
     response = self.GetServer().GetResponse( request_id,
                                              msg,
-                                             timeout = 5 )
+                                             timeout = 30 )
 
     self._server_capabilities = response[ 'result' ][ 'capabilities' ]
 
