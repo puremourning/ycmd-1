@@ -86,7 +86,7 @@ class LanguageServerConnection( object ):
       - _Read: Read some data from the server, blocking until some data is
                available
   """
-  def __init__( self ):
+  def __init__( self, notification_handler = None ):
     super( LanguageServerConnection, self ).__init__()
 
     self._lastId = 0
@@ -96,6 +96,7 @@ class LanguageServerConnection( object ):
 
     self._connection_event = threading.Event()
     self._stop_event = threading.Event()
+    self._notification_handler = notification_handler
 
 
   def stop( self ):
@@ -243,27 +244,34 @@ class LanguageServerConnection( object ):
     else:
       self._notifications.put( message )
 
+      if self._notification_handler:
+        self._notification_handler( self, message )
 
+
+  @abc.abstractmethod
   def _TryServerConnectionBlocking( self ):
-    raise RuntimeError( 'Not implemented' )
+    pass
 
 
+  @abc.abstractmethod
   def _Stop( self ):
-    raise RuntimeError( 'Not implemented' )
+    pass
 
 
+  @abc.abstractmethod
   def _Write( self, data ):
-    raise RuntimeError( 'Not implemented' )
+    pass
 
 
+  @abc.abstractmethod
   def _Read( self, size=-1 ):
-    raise RuntimeError( 'Not implemented' )
+    pass
 
 
 
 class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
-  def __init__( self, port ):
-    super( TCPSingleStreamServer, self ).__init__()
+  def __init__( self, port, notification_handler = None ):
+    super( TCPSingleStreamServer, self ).__init__( notification_handler )
 
     self._port = port
     self._socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
@@ -342,8 +350,8 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
 
 
 class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
-  def __init__( self, input_port, output_port ):
-    super( TCPMultiStreamServer, self ).__init__()
+  def __init__( self, input_port, output_port, notification_handler = None ):
+    super( TCPMultiStreamServer, self ).__init__( notification_handler )
 
     self._connection_event = threading.Event()
 
@@ -442,8 +450,11 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
 
 class StandardIOLanguageServerConnection( LanguageServerConnection,
                                           threading.Thread ):
-  def __init__( self, server_stdin, server_stdout ):
-    super( StandardIOLanguageServerConnection, self ).__init__()
+  def __init__( self, server_stdin,
+                server_stdout,
+                notification_handler = None ):
+    super( StandardIOLanguageServerConnection, self ).__init__(
+      notification_handler )
 
     self.server_stdin = server_stdin
     self.server_stdout = server_stdout
@@ -496,15 +507,12 @@ class LanguageServerCompleter( Completer ):
     self._latest_diagnostics = collections.defaultdict( list )
 
 
+  @abc.abstractmethod
   def GetServer( sefl ):
     """Method that must be implemented by derived classes to return an instance
     of LanguageServerConnection appropriate for the language server in
     question"""
-    # TODO: I feel like abc.abstractmethod could be used here, but I'm not sure
-    # if it is totally python2/3 safe, and TBH it doesn't do a lot more than
-    # this simple raise here, so...
-    raise NameError( "GetServer must be implemented in LanguageServerCompleter "
-                     "subclasses" )
+    pass
 
 
   def ComputeCandidatesInner( self, request_data ):
