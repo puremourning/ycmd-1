@@ -194,7 +194,8 @@ class LanguageServerConnection( object ):
         self._responses.clear()
 
       _logger.debug( 'Connection was closed cleanly' )
-      pass
+
+    self._Close()
 
 
   def _ReadHeaders( self, data ):
@@ -294,6 +295,11 @@ class LanguageServerConnection( object ):
 
 
   @abc.abstractmethod
+  def _Close( self ):
+    pass
+
+
+  @abc.abstractmethod
   def _Write( self, data ):
     pass
 
@@ -318,6 +324,14 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     self._socket.listen( 0 )
 
     self._run_loop()
+
+
+  def _Close( self ):
+    if self._client_socket:
+      self._client_socket.close()
+
+    if self._socket:
+      self._socket.close()
 
 
   def _TryServerConnectionBlocking( self ):
@@ -402,6 +416,20 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
     self._run_loop()
 
 
+  def _Close( self ):
+    if self._client_read_socket:
+      self._client_read_socket.close()
+
+    if self._client_write_socket:
+      self._client_write_socket.close()
+
+    if self._input_socket:
+      self._input_socket.close()
+
+    if self._output_socket:
+      self._output_socket.close()
+
+
   def _TryServerConnectionBlocking( self ):
     ( self._client_read_socket, _ ) = self._input_socket.accept()
 
@@ -477,6 +505,14 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
     self._run_loop()
 
 
+  def _Close( self ):
+    if not self.server_stdin.closed:
+      self.server_stdin.close()
+
+    if not self.server_stdout.closed:
+      self.server_stdout.close()
+
+
   def _TryServerConnectionBlocking( self ):
     # standard in/out don't need to wait for the server to connect to us
     return True
@@ -495,15 +531,11 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
       data = self.server_stdout.readline()
 
     if self.IsStopped():
-      self.server_stdin.close()
-      self.server_stdout.close()
       raise LanguageServerConnectionStopped()
 
     if not data:
       # No data means the connection was severed. Connection severed when (not
       # self.IsStopped()) means the server died unexpectedly.
-      self.server_stdin.close()
-      self.server_stdout.close()
       raise RuntimeError( "Connection to server died" )
 
     return data
