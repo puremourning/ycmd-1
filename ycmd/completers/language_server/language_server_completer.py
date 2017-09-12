@@ -48,6 +48,18 @@ CONNECTION_TIMEOUT         = 5
 MESSAGE_POLL_TIMEOUT       = 10
 
 
+class ResponseTimeoutException( Exception ):
+  pass
+
+
+class ResponseAbortedException( Exception ):
+  pass
+
+
+class ResponseFailedException( Exception ):
+  pass
+
+
 class Response( object ):
   def __init__( self, response_callback=None ):
     self._event = threading.Event()
@@ -62,15 +74,22 @@ class Response( object ):
       self._response_callback( self, message )
 
 
+  def Abort( self ):
+    self.ResponseReceived( None )
+
+
   def AwaitResponse( self, timeout ):
     self._event.wait( timeout )
 
     if not self._event.isSet():
-      raise RuntimeError( 'Response Timeout' )
+      raise ResponseTimeoutException( 'Response Timeout' )
+
+    if self._message is None:
+      raise ResponseAbortedException( 'Response Aborted' )
 
     if 'error' in self._message:
       error = self._message[ 'error' ]
-      raise RuntimeError( 'Request failed: {0}: {1}'.format(
+      raise ResponseFailedException( 'Request failed: {0}: {1}'.format(
         error.get( 'code', 0 ),
         error.get( 'message', 'No message' ) ) )
 
@@ -111,7 +130,6 @@ class LanguageServerConnection( object ):
 
   def stop( self ):
     # Note lowercase stop() to match threading.Thread.start()
-    self._Stop()
     self._stop_event.set()
 
 
@@ -169,6 +187,12 @@ class LanguageServerConnection( object ):
       # Blocking loop which reads whole messages and calls _DespatchMessage
       self._ReadMessages( )
     except LanguageServerConnectionStopped:
+      # Abort any outstanding requests
+      with self._responseMutex:
+        for _, response in iteritems( self._responses ):
+          response.Abort()
+        self._responses.clear()
+
       _logger.debug( 'Connection was closed cleanly' )
       pass
 
@@ -214,7 +238,7 @@ class LanguageServerConnection( object ):
       ( data, read_bytes, headers ) = self._ReadHeaders( data )
 
       if 'Content-Length' not in headers:
-        raise RuntimeError( "Missing 'Content-Length' header" )
+        raise ValueError( "Missing 'Content-Length' header" )
 
       content_length = int( headers[ 'Content-Length' ] )
 
@@ -256,6 +280,7 @@ class LanguageServerConnection( object ):
       with self._responseMutex:
         assert str( message[ 'id' ] ) in self._responses
         self._responses[ str( message[ 'id' ] ) ].ResponseReceived( message )
+        del self._responses[ str( message[ 'id' ] ) ]
     else:
       self._notifications.put( message )
 
@@ -265,11 +290,6 @@ class LanguageServerConnection( object ):
 
   @abc.abstractmethod
   def _TryServerConnectionBlocking( self ):
-    pass
-
-
-  @abc.abstractmethod
-  def _Stop( self ):
     pass
 
 
@@ -309,14 +329,6 @@ class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
     _logger.info( 'language server socket connected' )
 
     return True
-
-
-  def _Stop( self ):
-    if self._client_socket:
-      self._client_socket.close()
-
-    if self._socket:
-      self._socket.close()
 
 
   def _Write( self, data ):
@@ -406,20 +418,6 @@ class TCPMultiStreamServer( LanguageServerConnection, threading.Thread ):
     _logger.info( 'Language server Output socket connected' )
 
 
-  def _Stop( self ):
-    if self._client_read_socket:
-      self._client_read_socket.close()
-
-    if self._client_write_socket:
-      self._client_write_socket.close()
-
-    if self._input_socket:
-      self._input_socket.close()
-
-    if self._output_socket:
-      self._output_socket.close()
-
-
   def _Write( self, data ):
     assert self._client_write_socket
 
@@ -484,10 +482,6 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
     return True
 
 
-  def _Stop( self ):
-    self.server_stdin.close()
-
-
   def _Write( self, data ):
     to_write = data + utils.ToBytes( '\r\n' )
     self.server_stdin.write( to_write )
@@ -501,12 +495,15 @@ class StandardIOLanguageServerConnection( LanguageServerConnection,
       data = self.server_stdout.readline()
 
     if self.IsStopped():
+      self.server_stdin.close()
       self.server_stdout.close()
       raise LanguageServerConnectionStopped()
 
     if not data:
       # No data means the connection was severed. Connection severed when (not
       # self.IsStopped()) means the server died unexpectedly.
+      self.server_stdin.close()
+      self.server_stdout.close()
       raise RuntimeError( "Connection to server died" )
 
     return data
@@ -526,6 +523,30 @@ class LanguageServerCompleter( Completer ):
       self._syncType = 'Full'
       self._initialise_response = None
       self._initialise_event = threading.Event()
+
+
+  def _ShutdownServer( self ):
+    if self.ServerIsReady():
+      request_id = self.GetServer().NextRequestId()
+      msg = lsapi.Shutdown( request_id )
+
+      try:
+        self.GetServer().GetResponse( request_id,
+                                      msg,
+                                      REQUEST_TIMEOUT_INITIALISE )
+      except ResponseAbortedException:
+        # When the language server (heinously) dies handling the shutdown
+        # request, it is aborted. Just return - we're done.
+        return
+      except Exception:
+        # Ignore other exceptions from the server and send the exit request
+        # anyway
+        _logger.exception( 'Shutdown request failed. Ignoring.' )
+
+    # Assuming that worked, send the exit notification
+    if self.ServerIsHealthy():
+      self.GetServer().SendNotification( lsapi.Exit() )
+
 
 
   @abc.abstractmethod
@@ -785,13 +806,15 @@ class LanguageServerCompleter( Completer ):
 
   def _SendInitialiseAsync( self ):
     with self._mutex:
-      if self._initialise_response:
-        raise AssertionError( 'Attempt to send multiple initialise requests' )
+      assert not self._initialise_response
 
       request_id = self.GetServer().NextRequestId()
       msg = lsapi.Initialise( request_id )
 
       def response_handler( response, message ):
+        if message is None:
+          raise ResponseAbortedException( 'Initialise request aborted' )
+
         self._HandleInitialiseInPollThread( message )
 
       self._initialise_response = self.GetServer().GetResponseAsync(
@@ -998,7 +1021,7 @@ class LanguageServerCompleter( Completer ):
       if ( new_range[ 'start' ][ 'line' ] != new_range[ 'end' ][ 'line' ] or
            new_range[ 'start' ][ 'line' ] + 1 != request_data[ 'line_num' ] ):
         # We can't support completions that span lines. The protocol forbids it
-        raise RuntimeError( 'Invalid textEdit supplied. Must be on a single '
+        raise ValueError( 'Invalid textEdit supplied. Must be on a single '
                             'line' )
       elif '\n' in item[ 'textEdit' ][ 'newText' ]:
         # The insertion text contains newlines. This is tricky: most clients
