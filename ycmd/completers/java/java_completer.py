@@ -144,6 +144,12 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
             self._server_stderr,
             os.path.join( self._workspace_path, '.metadata', '.log' )
           ] )
+      ],
+      items = [
+        responses.DebugInfoItem( 'Workspace Path', self._workspace_path ),
+        responses.DebugInfoItem( 'Java Path', PATH_TO_JAVA ),
+        responses.DebugInfoItem( 'jdt.ls Path', _PathToLauncherJar() ),
+        responses.DebugInfoItem( 'Launcher Config.', _LauncherConfiguration() ),
       ] )
 
 
