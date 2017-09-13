@@ -758,12 +758,16 @@ class LanguageServerCompleter( Completer ):
           del self._serverFileState[ file_name ]
 
 
+  def _GetProjectDirectory( self ):
+    return utils.GetCurrentDirectory()
+
+
   def SendInitialise( self ):
     with self._mutex:
       assert not self._initialise_response
 
       request_id = self.GetConnection().NextRequestId()
-      msg = lsapi.Initialise( request_id )
+      msg = lsapi.Initialise( request_id, self._GetProjectDirectory() )
 
       def response_handler( response, message ):
         if message is None:
