@@ -31,7 +31,7 @@ import tempfile
 import threading
 from subprocess import PIPE
 
-from ycmd import ( utils, responses )
+from ycmd import ( utils, responses, extra_conf_store )
 from ycmd.completers.language_server import language_server_completer
 
 _logger = logging.getLogger( __name__ )
@@ -171,20 +171,30 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
     # Used to ensure that starting/stopping of the server is synchronised
     self._server_state_mutex = threading.RLock()
+    self._attempted_server_start = False
+    self._connection = None
+    self._server_handle = None
+    self._server_stderr = None
+    self._workspace_path = None
+    self._Reset()
 
 
-    with self._server_state_mutex:
-      self._connection = None
-      self._server_handle = None
-      self._server_stderr = None
-      self._workspace_path = None
-      self._Reset()
-
+  def OnFileReadyToParse( self, request_data ):
+    if not self._attempted_server_start and not self.ServerIsHealthy():
       try :
-        self._StartServer()
+        self._StartServer( request_data.get( 'working_dir',
+                                             utils.GetCurrentDirectory() ) )
+        self._attempted_server_start = True
+      except extra_conf_store.UnknownExtraConf:
+        # This needs to bubble to the client
+        self._attempted_server_start = False
+        raise
       except:
+        self._attempted_server_start = True
         _logger.exception( "The java language server failed to start." )
         self._StopServer()
+
+    return super( JavaCompleter, self ).OnFileReadyToParse( request_data )
 
 
   def SupportedFiletypes( self ):
@@ -287,10 +297,11 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     return utils.ProcessIsRunning( self._server_handle )
 
 
-  def _RestartServer( self ):
+  def _RestartServer( self, request_data ):
     with self._server_state_mutex:
       self._StopServer()
-      self._StartServer()
+      self._StartServer( request_data.get( 'working_dir',
+                                           utils.GetCurrentDirectory() ) )
 
 
   def _Reset( self ):
@@ -318,11 +329,11 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     self.ServerReset()
 
 
-  def _StartServer( self ):
+  def _StartServer( self, working_directory ):
     with self._server_state_mutex:
       _logger.info( 'Starting JDT Language Server...' )
 
-      self._project_dir = _FindProjectDir( utils.GetCurrentDirectory() )
+      self._project_dir = _FindProjectDir( working_directory )
       self._workspace_path = _WorkspaceDirForProject(
         self._project_dir,
         self._use_clean_workspace )

@@ -31,8 +31,7 @@ import threading
 
 from ycmd.completers.completer import Completer
 from ycmd.completers.completer_utils import GetFileContents
-from ycmd import utils
-from ycmd import responses
+from ycmd import utils, responses, extra_conf_store
 
 from ycmd.completers.language_server import lsapi
 
@@ -768,12 +767,14 @@ class LanguageServerCompleter( Completer ):
 
       request_id = self.GetConnection().NextRequestId()
       msg = lsapi.Initialise( request_id, self._GetProjectDirectory() )
+      user_config = self._GetSettingsFromExtraConf()
+
 
       def response_handler( response, message ):
         if message is None:
           raise ResponseAbortedException( 'Initialise request aborted' )
 
-        self._HandleInitialiseInPollThread( message )
+        self._HandleInitialiseInPollThread( user_config, message )
 
       self._initialise_response = self.GetConnection().GetResponseAsync(
         request_id,
@@ -781,7 +782,7 @@ class LanguageServerCompleter( Completer ):
         response_handler )
 
 
-  def _HandleInitialiseInPollThread( self, response ):
+  def _HandleInitialiseInPollThread( self, user_config, response ):
     with self._mutex:
       self._server_capabilities = response[ 'result' ][ 'capabilities' ]
 
@@ -795,9 +796,30 @@ class LanguageServerCompleter( Completer ):
           response[ 'result' ][ 'capabilities' ][ 'textDocumentSync' ] ]
         _logger.info( 'Language Server requires sync type of {0}'.format(
           self._syncType ) )
-
       self._initialise_response = None
+
+      if user_config:
+        self.GetConnection().SendNotification( lsapi.DidChangeConfiguration(
+          user_config ) )
+
       self._initialise_event.set()
+
+
+  def _GetSettingsFromExtraConf( self ):
+    # TODO: extra_data ?
+    project = self._GetProjectDirectory()
+    server_identifier = type( self ).__name__
+    module = extra_conf_store.ModuleForSourceFile( project )
+    if module:
+      try:
+        return module.LanguageServerSettingsForProject(
+          project,
+          server_identifier = server_identifier)
+      except AttributeError:
+        _logger.exception( 'No settings loaded for project {0}/{1}'.format(
+          server_identifier, project ) )
+
+    return None
 
 
   def GetHoverResponse( self, request_data ):
