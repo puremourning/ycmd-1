@@ -736,12 +736,6 @@ class LanguageServerCompleter( Completer ):
       params = notification[ 'params' ]
       _logger.log( log_level[ int( params[ 'type' ] ) ],
                    SERVER_LOG_PREFIX + params[ 'message' ] )
-    elif notification[ 'method' ] == 'language/actionableNotification':
-      # TODO: YcmCompleter subcommand to action these!
-      # TODO: Severity / warning etc. in the response
-      return responses.BuildDisplayMessageResponse(
-        'Language server reported: {0}'.format(
-          notification[ 'params' ][ 'message' ] ) )
     elif notification[ 'method' ] == 'textDocument/publishDiagnostics':
       params = notification[ 'params' ]
       uri = params[ 'uri' ]

@@ -770,6 +770,9 @@ def Subcommands_FixIt_MultipleDiags_test():
                              'test',
                              'TestFactory.java' )
 
+  # When there are multiple diagnostics on a single line, we just mush them
+  # together into a list of options, rather than trying to pick the one closest
+  # to the cursor or anything like that. Somewhat of a FIXME.
   fixits = has_entries ( {
     'fixits': contains(
       has_entries( {
