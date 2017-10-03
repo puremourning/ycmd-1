@@ -1099,10 +1099,16 @@ def LocationListToGoTo( request_data, response ):
   try:
     if len( response[ 'result' ] ) > 1:
       positions = response[ 'result' ]
+      for position in positions:
+        position[ 'description' ] = utils.SplitLines(
+          GetFileContents( request_data,
+                           lsapi.UriToFilePath( position[ 'uri' ]
+                         ) ) )[ position[ 'range' ][ 'start' ][ 'line' ] ]
       return [
         responses.BuildGoToResponseFromLocation(
           PositionToLocation( request_data,
-                               position ) ) for position in positions
+                               position ),
+          position[ 'description' ] ) for position in positions
       ]
     else:
       position = response[ 'result' ][ 0 ]
