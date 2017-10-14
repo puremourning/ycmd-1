@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from distutils import sysconfig
 from shutil import rmtree
 from tempfile import mkdtemp
+import hashlib
 import errno
 import multiprocessing
 import os
@@ -47,8 +48,11 @@ for folder in os.listdir( DIR_OF_THIRD_PARTY ):
     )
 
 sys.path.insert( 1, p.abspath( p.join( DIR_OF_THIRD_PARTY, 'argparse' ) ) )
+sys.path.insert(
+  1, os.path.abspath( os.path.join( DIR_OF_THIRD_PARTY, 'requests' ) ) )
 
 import argparse
+import requests
 
 NO_DYNAMIC_PYTHON_ERROR = (
   'ERROR: found static Python library ({library}) but a dynamic one is '
@@ -284,6 +288,8 @@ def ParseArguments():
                        help = 'Enable JavaScript semantic completion engine.' ),
   parser.add_argument( '--java-completer', action = 'store_true',
                        help = 'Enable Java semantic completion engine.' ),
+  parser.add_argument( '--php-completer', action = 'store_true',
+                       help = 'Enable PHP semantic completion engine.' ),
   parser.add_argument( '--system-boost', action = 'store_true',
                        help = 'Use the system boost instead of bundled one. '
                        'NOT RECOMMENDED OR SUPPORTED!')
@@ -560,6 +566,52 @@ def EnableJavaCompleter():
   CheckCall( [ mvnw, 'clean', 'package' ] )
 
 
+def Download( url, dest ):
+  response = requests.get( url )
+  response.raise_for_status()
+  with open( dest, 'wb' ) as f:
+    for chunk in response:
+      f.write( chunk )
+  response.close()
+
+
+def EnablePhpCompleter():
+  php = FindExecutableOrDie( 'php', 'ERROR: php is required to set up '
+                                    'the PHP completer.' )
+  composer_setup = os.path.join( DIR_OF_THIS_SCRIPT, 'composer-setup.php' )
+
+  Download( 'https://getcomposer.org/installer', composer_setup )
+  response = requests.get( 'https://composer.github.io/installer.sig' )
+  expected_hash = response.text.rstrip()
+  with open( 'composer-setup.php', 'rb' ) as f:
+    actual_hash = hashlib.sha384( f.read() ).hexdigest()
+  if actual_hash != expected_hash:
+    os.remove( composer_setup )
+    sys.exit( 'ERROR: Invalid Composer installer signature.' )
+
+  try:
+    subprocess.check_call( [ php, composer_setup ] )
+  except subprocess.CalledProcessError as error:
+    os.remove( composer_setup )
+    sys.exit( error.returncode )
+  finally:
+    os.remove( composer_setup )
+
+  composer = os.path.join( DIR_OF_THIS_SCRIPT, 'composer.phar' )
+  try:
+    os.chdir( p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'php_runtime' ) )
+    subprocess.check_call( [ php, composer, 'install', '--prefer-dist' ] )
+    working_dir = os.path.join( 'vendor', 'felixfbecker', 'language-server' )
+    subprocess.check_call( [ php, composer, 'run-script',
+                             '--working-dir={0}'.format( working_dir ),
+                             'parse-stubs' ] )
+  except subprocess.CalledProcessError as error:
+    os.remove( composer )
+    sys.exit( error.returncode )
+  finally:
+    os.remove( composer )
+
+
 def WritePythonUsedDuringBuild():
   path = p.join( DIR_OF_THIS_SCRIPT, 'PYTHON_USED_DURING_BUILDING' )
   with open( path, 'w' ) as f:
@@ -582,6 +634,8 @@ def Main():
     EnableRustCompleter()
   if args.java_completer or args.all_completers:
     EnableJavaCompleter()
+  if args.php_completer or args.all_completers:
+    EnablePhpCompleter()
 
 
 if __name__ == '__main__':

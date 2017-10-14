@@ -1,0 +1,8 @@
+{
+    "name": "ycmd/php_runtime",
+    "description": "ycmd php runtime area",
+    "minimum-stability": "dev",
+    "require": {
+        "felixfbecker/language-server": "4.6.1"
+    }
+}

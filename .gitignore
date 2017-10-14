@@ -67,3 +67,7 @@ coverage.xml
 # The JDT java completer requires a workspace (for no explicable reason other
 # than "eclipse")
 third_party/eclipse.jdt.ls-workspace
+
+# PHP Language Server
+third_party/php_runtime/vendor
+third_party/php_runtime/composer.lock
