@@ -62,6 +62,7 @@ class PhpCompleter( language_server_completer.LanguageServerCompleter ):
     self._server_state_mutex = threading.RLock()
     self._server_handle = None
     self._server_stderr = None
+    self._server_port = None
 
     self._connection = None
     self._StartServer()
@@ -127,7 +128,10 @@ class PhpCompleter( language_server_completer.LanguageServerCompleter ):
           name = 'PHP Language Server',
           handle = self._server_handle,
           executable = PHP_LANGUAGE_SERVER,
+          address = '127.0.0.1',
+          port = self._server_port,
           logfiles = [
+            self._server_stdout,
             self._server_stderr
           ],
           extras = extras
@@ -161,25 +165,29 @@ class PhpCompleter( language_server_completer.LanguageServerCompleter ):
   def _StartServer( self ):
     with self._server_state_mutex:
       _logger.info( 'Starting PHP Language Server..' )
+      self._server_port = utils.GetUnusedLocalhostPort()
 
       command = [
         PHP_EXECUTABLE,
-        PHP_LANGUAGE_SERVER
+        PHP_LANGUAGE_SERVER,
+        '--tcp={0}:{1}'.format( '127.0.0.1', self._server_port )
       ]
 
       _logger.debug( 'Starting PHP Language Server with the following command: '
                      '{0}'.format( ' '.join( command ) ) )
 
-      LOGFILE_FORMAT = 'php_language_server_{pid}_{std}_'
+      LOGFILE_FORMAT = 'php_language_server_{port}_{std}_'
 
+      self._server_stdout = utils.CreateLogfile(
+          LOGFILE_FORMAT.format( port = self._server_port, std = 'stdout' ) )
       self._server_stderr = utils.CreateLogfile(
-          LOGFILE_FORMAT.format( pid = os.getpid(), std = 'stderr' ) )
+          LOGFILE_FORMAT.format( port = self._server_port, std = 'stderr' ) )
 
-      with utils.OpenForStdHandle( self._server_stderr ) as stderr:
-        self._server_handle = utils.SafePopen( command,
-                                               stdin = PIPE,
-                                               stdout = PIPE,
-                                               stderr = stderr )
+      with utils.OpenForStdHandle( self._server_stdout ) as stdout:
+        with utils.OpenForStdHandle( self._server_stderr ) as stderr:
+          self._server_handle = utils.SafePopen( command,
+                                                 stdout = stdout,
+                                                 stderr = stderr )
 
       if not self._ServerIsRunning():
         _logger.error( 'PHP Language Server failed to start' )
@@ -188,9 +196,8 @@ class PhpCompleter( language_server_completer.LanguageServerCompleter ):
       _logger.info( 'PHP Language Server started' )
 
       self._connection = (
-        language_server_completer.StandardIOLanguageServerConnection(
-          self._server_handle.stdin,
-          self._server_handle.stdout,
+        language_server_completer.TCPSingleStreamServer(
+          self._server_port,
           self.GetDefaultNotificationHandler() )
       )
 
@@ -209,6 +216,7 @@ class PhpCompleter( language_server_completer.LanguageServerCompleter ):
 
   def _StopServer( self ):
     with self._server_state_mutex:
+      # TODO:
       pass
 
 

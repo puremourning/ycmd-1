@@ -28,6 +28,7 @@ import collections
 import logging
 import os
 import queue
+import socket
 import threading
 
 from ycmd.completers.completer import Completer
@@ -476,6 +477,67 @@ class StandardIOLanguageServerConnection( LanguageServerConnection ):
     return data
 
 
+class TCPSingleStreamServer( LanguageServerConnection, threading.Thread ):
+  def __init__( self, port, notification_handler = None ):
+    super( TCPSingleStreamServer, self ).__init__(
+      notification_handler )
+
+    self._port = port
+    self._socket = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
+    self._client_socket = None
+
+
+  def run( self ):
+    self._socket.bind( ( '127.0.0.1', self._port ) )
+    self._socket.listen( 0 )
+
+    super( TCPSingleStreamServer, self ).run()
+
+
+  def _TryServerConnectionBlocking( self ):
+    ( self._client_socket, _ ) = self._socket.accept()
+    _logger.info( 'language server socket connected' )
+
+    return True
+
+
+  def _Write( self, data ):
+    assert self._connection_event.isSet()
+    assert self._client_socket
+
+    total_sent = 0
+    while total_sent < len( data ):
+      sent = self._client_socket.send( data[ total_sent: ] )
+      if sent == 0:
+        raise RuntimeError( 'write socket failed' )
+
+      total_sent += sent
+
+
+  def _Read( self, size=-1 ):
+    assert self._connection_event.isSet()
+    assert self._client_socket
+
+    if size < 0:
+      data = self._client_socket.recv( 2048 )
+      if data == '':
+        raise RuntimeError( 'read socket failed' )
+
+      return data
+
+    chunks = []
+    bytes_read = 0
+    while bytes_read < size:
+      chunk = self._client_socket.recv( min( size - bytes_read , 2048 ) )
+      if chunk == '':
+        raise RuntimeError( 'read socket failed' )
+
+      chunks.append( chunk )
+      bytes_read += len( chunk )
+
+    return utils.ToBytes( '' ).join( chunks )
+
+
 class LanguageServerCompleter( Completer ):
   """
   Abstract completer implementation for Language Server Protocol. Concrete
@@ -739,12 +801,15 @@ class LanguageServerCompleter( Completer ):
 
       # Build a ycmd-compatible completion for the text as we received it. Later
       # we might mofify insertion_text should we see a lower start codepoint.
+      documentation = item.get( 'documentation', '' )
+      if documentation is None:
+        documentation = ''
       completions.append( responses.BuildCompletionData(
         insertion_text,
         extra_menu_info = item.get( 'detail', None ),
         detailed_info = ( item[ 'label' ] +
                           '\n\n' +
-                          item.get( 'documentation', '' ) ),
+                          documentation ),
         menu_text = item[ 'label' ],
         kind = ITEM_KIND[ item.get( 'kind', 0 ) ],
         extra_data = fixits ) )
@@ -1301,7 +1366,8 @@ def InsertionTextForItem( request_data, item ):
       # moment anyway. So for now, we just ignore this candidate.
       raise IncompatibleCompletionException( textEdit[ 'newText' ] )
 
-  additional_text_edits.extend( item.get( 'additionalTextEdits', [] ) )
+  if 'additionalTextEdits' in item and item[ 'additionalTextEdits' ]:
+    additional_text_edits.extend( item[ 'additionalTextEdits' ] )
 
   if additional_text_edits:
     chunks = [ responses.FixItChunk( e[ 'newText' ],
