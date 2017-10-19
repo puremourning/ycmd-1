@@ -1089,7 +1089,7 @@ class LanguageServerCompleter( Completer ):
     return LocationListToGoTo( request_data, response )
 
 
-  def CodeAction( self, request_data, args ):
+  def CodeAction( self, request_data ):
     """Performs the codeaction request and returns the result as a FixIt
     response."""
     if not self.ServerIsReady():
@@ -1125,22 +1125,49 @@ class LanguageServerCompleter( Completer ):
                           matched_diagnostics[ 0 ][ 'range' ],
                           matched_diagnostics ),
         REQUEST_TIMEOUT_COMMAND )
-
+    elif 'cursor_range' in request_data:
+      start = request_data[ 'cursor_range' ][ 'start' ]
+      end = request_data[ 'cursor_range' ][ 'end' ]
+      _logger.debug( 'Using supplied range for FixIt: {0}'.format(
+        request_data[ 'cursor_range' ] ) )
+      code_actions = self.GetConnection().GetResponse(
+        request_id,
+        lsapi.CodeAction(
+          request_id,
+          request_data,
+          {
+            'start': {
+              'line': start[ 'line' ] - 1,
+              'character': _ColumCodepoint( request_data,
+                                            request_data[ 'filepath' ],
+                                            start[ 'line' ],
+                                            start[ 'column' ] ) - 1,
+            },
+            'end': {
+              'line': end[ 'line' ] - 1,
+              'character': _ColumCodepoint( request_data,
+                                            request_data[ 'filepath' ],
+                                            end[ 'line' ],
+                                            end[ 'column' ] ) - 1,
+            }
+          },
+          [] ),
+        REQUEST_TIMEOUT_COMMAND )
     else:
       code_actions = self.GetConnection().GetResponse(
         request_id,
         lsapi.CodeAction(
           request_id,
           request_data,
-          # Use the whole line
+          # Use the cursor position
           {
             'start': {
               'line': line_num_ls,
-              'character': 0,
+              'character': request_data[ 'column_codepoint' ] - 1,
             },
             'end': {
               'line': line_num_ls,
-              'character': len( request_data[ 'line_value' ] ) - 1,
+              'character': request_data[ 'column_codepoint' ]
             }
           },
           [] ),
@@ -1442,3 +1469,15 @@ def WorkspaceEditToFixIt( request_data, workspace_edit, text='' ):
                         request_data[ 'filepath' ] ),
     chunks,
     text )
+
+
+def _ColumCodepoint( request_data, filename, line, column ):
+  try:
+    file_contents = utils.SplitLines( GetFileContents( request_data,
+                                                       filename ) )
+    return utils.ByteOffsetToCodepointOffset( file_contents[ line - 1 ],
+                                              column )
+  except IOError:
+    return 1
+  except IndexError:
+    return 1
