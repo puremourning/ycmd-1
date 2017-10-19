@@ -22,11 +22,18 @@ from __future__ import division
 # Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
-from hamcrest import ( assert_that, contains, contains_string, has_entries,
-                       has_entry, has_items, empty, equal_to )
+from hamcrest import ( assert_that,
+                       contains,
+                       contains_inanyorder,
+                       contains_string,
+                       has_entries,
+                       has_entry,
+                       has_items,
+                       empty,
+                       equal_to )
 from pprint import pprint
 
-from ycmd.tests.clang import IsolatedYcmd, PathToTestFile
+from ycmd.tests.clang import SharedYcmd, IsolatedYcmd, PathToTestFile
 from ycmd.tests.test_utils import BuildRequest
 from ycmd.utils import ReadFile
 
@@ -361,3 +368,70 @@ def Diagnostics_LocationExtent_MissingSemicolon_test( app ):
       'fixit_available': False
     } )
   ) )
+
+
+@SharedYcmd
+def Diagnostics_Unity_test( app ):
+  app.post_json( '/load_extra_conf_file',
+                 { 'filepath': PathToTestFile( '.ycm_extra_conf.py' ) } )
+
+  for filename in [ 'unity.cc', 'unity.h', 'unitya.cc' ]:
+    contents = ReadFile( PathToTestFile( filename ) )
+
+    event_data = BuildRequest( filepath = PathToTestFile( filename ),
+                               contents = contents,
+                               event_name = 'FileReadyToParse',
+                               filetype = 'cpp' )
+
+    response = app.post_json( '/event_notification', event_data ).json
+
+    pprint( response )
+
+    assert_that( response, contains_inanyorder(
+      has_entries( {
+        'kind': equal_to( 'ERROR' ),
+        'location': has_entries( {
+          'line_num': 4,
+          'column_num': 3,
+          'filepath': PathToTestFile( 'unity.h' )
+        } ),
+        'location_extent': has_entries( {
+          'start': has_entries( {
+            'line_num': 4,
+            'column_num': 3,
+            'filepath': PathToTestFile( 'unity.h' )
+          } ),
+          'end': has_entries( {
+            'line_num': 4,
+            'column_num': 14,
+            'filepath': PathToTestFile( 'unity.h' )
+          } ),
+        } ),
+        'ranges': empty(),
+        'text': equal_to( "use of undeclared identifier 'fake_method'" ),
+        'fixit_available': False
+      } ),
+      has_entries( {
+        'kind': equal_to( 'ERROR' ),
+        'location': has_entries( {
+          'line_num': 11,
+          'column_num': 18,
+          'filepath': PathToTestFile( 'unitya.cc' )
+        } ),
+        'location_extent': has_entries( {
+          'start': has_entries( {
+            'line_num': 11,
+            'column_num': 18,
+            'filepath': PathToTestFile( 'unitya.cc' )
+          } ),
+          'end': has_entries( {
+            'line_num': 11,
+            'column_num': 18,
+            'filepath': PathToTestFile( 'unitya.cc' )
+          } ),
+        } ),
+        'ranges': empty(),
+        'text': equal_to( "expected ';' after expression" ),
+        'fixit_available': True
+      } ),
+    ) )
