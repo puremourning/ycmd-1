@@ -278,7 +278,9 @@ def GetDefaultFlagsForFile( extension ):
     # OK we really have no clue about this filetype and we can't find any
     # flags, even with outrageous guessing. Return nothing and warn the user
     # that we couldn't find or guess any compiler flags.
-    return None
+    return {
+      'flags': []
+    }
 
 
 def MakeRelativePathsInFlagsAbsolute( flags, working_directory ):
