@@ -326,6 +326,19 @@
                                                                     
                                                                 </div>
                                                             </dd>
+                                                            <dt data-property-name="working_dir">
+                                                                <span class="json-property-name">working_dir:</span>
+                                                                <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/WorkingDirectory">WorkingDirectory</a>
+                                                                </span>
+                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                
+                                                            </dt>
+                                                            <dd>
+                                                                
+                                                                <div class="json-inner-schema">
+                                                                    
+                                                                </div>
+                                                            </dd>
                                                     </dl>
                                                 </section>
                                 </div>
@@ -769,6 +782,19 @@
                                                             <dt data-property-name="completer_target">
                                                                 <span class="json-property-name">completer_target:</span>
                                                                 <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/CompleterTarget">CompleterTarget</a>
+                                                                </span>
+                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                
+                                                            </dt>
+                                                            <dd>
+                                                                
+                                                                <div class="json-inner-schema">
+                                                                    
+                                                                </div>
+                                                            </dd>
+                                                            <dt data-property-name="working_dir">
+                                                                <span class="json-property-name">working_dir:</span>
+                                                                <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/WorkingDirectory">WorkingDirectory</a>
                                                                 </span>
                                                                 <span class="json-property-range" title="Value limits"></span>
                                                                 
@@ -1367,6 +1393,19 @@
                                                             <dt data-property-name="completer_target">
                                                                 <span class="json-property-name">completer_target:</span>
                                                                 <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/CompleterTarget">CompleterTarget</a>
+                                                                </span>
+                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                
+                                                            </dt>
+                                                            <dd>
+                                                                
+                                                                <div class="json-inner-schema">
+                                                                    
+                                                                </div>
+                                                            </dd>
+                                                            <dt data-property-name="working_dir">
+                                                                <span class="json-property-name">working_dir:</span>
+                                                                <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/WorkingDirectory">WorkingDirectory</a>
                                                                 </span>
                                                                 <span class="json-property-range" title="Value limits"></span>
                                                                 
@@ -2011,8 +2050,8 @@
                                                         
                                                     </div>
                                                 </dd>
-                                                <dt data-property-name="fixit_avvailable">
-                                                    <span class="json-property-name">fixit_avvailable:</span>
+                                                <dt data-property-name="fixit_available">
+                                                    <span class="json-property-name">fixit_available:</span>
                                                     <span class="json-property-type">boolean</span>
                                                     <span class="json-property-range" title="Value limits"></span>
                                                     
@@ -2558,8 +2597,40 @@
                                                         
                                                     </div>
                                                 </dd>
+                                                <dt data-property-name="working_dir">
+                                                    <span class="json-property-name">working_dir:</span>
+                                                    <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/WorkingDirectory">WorkingDirectory</a>
+                                                    </span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                </dt>
+                                                <dd>
+                                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
                                         </dl>
                                     </section>
+                    </div>
+                </div>        
+                <div id="definition-WorkingDirectory" class="panel panel-definition">
+                        <div class="panel-heading">
+                                <h3 class="panel-title"><a name="/definitions/WorkingDirectory"></a>WorkingDirectory:
+                                    <span class="json-property-type"><span class="json-property-type">string</span>
+                <span class="json-property-range" title="Value limits"></span>
+                
+                </span>
+                                </h3>
+                        </div>
+                    <div class="panel-body">
+                                <section class="json-schema-description">
+                                    <p>Absolute path to the filesystem working directory of the client. This is
+                            used by completer engines to determine things like the project root
+                            for the file being modified, amongst other things.</p>
+                            
+                                </section>
+                            
                     </div>
                 </div>
 </div>
