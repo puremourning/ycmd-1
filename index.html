@@ -59,8 +59,9 @@
     application and should <em>not</em> be visible to the user:</p>
     <ul>
     <li><code>hmac_secret</code>: The shared secret for HMAC authentication. This should be
-    a random 16 byte of random data with as much entropy as possible,
-    encoded as a base-64 utf-8 string.</li>
+    16 bytes of random data with as much entropy as possible, encoded as a
+    base-64 utf-8 string. Code for generting this in Python can be found
+    in the ycmd example client.</li>
     </ul>
     <h2 id="hmac">HMAC</h2>
     <p>All requests to the server must include an HMAC in the x-ycm-hmac HTTP
