@@ -8,13 +8,13 @@
 <body>
 <div class="container">
     <h1>ycmd</h1>
-    <p class="sw-info">Version: <span class="sw-info-version">0.0.1</span></p>
-    <p><p>ycmd is a code-completion &amp; code-comprehension server</p>
+    <p class="sw-info">Version: <span class="sw-info-version">0.1.0</span></p>
+    <p><p>ycmd is a code-completion &amp; code-comprehension server.</p>
     <p>ycmd presents a JSON/REST interface to clients over HTTP, validated by HMAC.
     An instance of ycmd is started for each client application.</p>
     <h2 id="general-notes">General Notes</h2>
     <p>The REST interface typically uses HTTP POST requests and expects the payload
-    data to be a valid json document. The following general principles are
+    data to be a valid JSON document. The following general principles are
     applied:</p>
     <ul>
     <li>All strings going into and out of the server are UTF-8 encoded.</li>
@@ -29,20 +29,20 @@
     </ul>
     <h2 id="the-example-client">The example client</h2>
     <p>ycmd contains a simple example client in the <code>example</code> directory of the
-    source tree. It is written in pure python with only minimal dependencies.
+    source tree. It is written in pure Python with only minimal dependencies.
     It contains trivial implementations of most endpoints and serves to
     supplement this API documentation.</p>
     <p>Consult <code>example/README.md</code> for instructions on getting it running.</p>
     <h2 id="starting-the-server">Starting the server</h2>
     <p>The ycmd server is typically started by a client in order to provide
     services to it. Briefly, starting the server requires supplying some
-    configuration and initialising and security features (HMAC).</p>
+    configuration and initializing some security features (HMAC).</p>
     <p>The server should be started with a supported version of Python.</p>
     <p>The full list of command line options can be obtained by passing <code>--help</code>
     to ycmd (e.g. <code>python -m ycmd --help</code>). However, the following
     options warrant further discussion:</p>
     <h3 id="-options_file-"><code>--options_file</code></h3>
-    <p>This mandatory option supplied the name of a file containing user options
+    <p>This mandatory option supplies the name of a file containing user options
     data. This option (and thus the file) are mandatory, as they are required
     to set the shared HMAC secret.</p>
     <p>Once the server has read the options, the server deletes the options file.
@@ -54,14 +54,14 @@
     options (with any <code>ycm_</code> prefix removed) and the values are the option
     values.</p>
     <p>The canonical list of supported user options can be found in
-    YouCompleteMe&#39;&#39;s <code>README.md</code>. The option values should have the <code>ycm_</code>
+    YouCompleteMe&#39;s <code>README.md</code>. The option values should have the <code>ycm_</code>
     prefix removed.</p>
     <p>The following additional options are required to be set by the client
     application and should <em>not</em> be visible to the user:</p>
     <ul>
     <li><code>hmac_secret</code>: The shared secret for HMAC authentication. This should be
     16 bytes of random data with as much entropy as possible, encoded as a
-    base-64 utf-8 string. Code for generting this in Python can be found
+    base-64 UTF-8 string. Code for generating this in Python can be found
     in the ycmd example client.</li>
     </ul>
     <h2 id="hmac">HMAC</h2>
@@ -69,11 +69,11 @@
     header. The HMAC is computed from the shared secret passed to the server
     on startup and the request/response body. The digest algorithm is SHA-256.
     The server will also include the HMAC in its responses; you must verify it
-    before using the response. See the example client to see how it&#39;&#39;s done.</p>
+    before using the response. See the example client to see how it&#39;s done.</p>
     <h2 id="filetypes">Filetypes</h2>
     <p>ycmd uses <code>filetypes</code> to identify the &quot;language&quot; of a given buffer. These
     filetype values are strictly the values understood by Vim. Please see the
-    YCM README.md for the list of filetypes recognised by ycmd for semantic
+    YCM README.md for the list of filetypes recognized by ycmd for semantic
     completion.</p>
     </p>
     
@@ -101,7 +101,7 @@
                             <a href="#operation--completions-post">POST</a>
                         </td>
                         <td>
-                            <p>Get completion suggestions for the current file context</p>
+                            <p>Get completion suggestions for the current file context.</p>
         
                         </td>
                     </tr>
@@ -113,7 +113,7 @@
                             <a href="#operation--debug_info-post">POST</a>
                         </td>
                         <td>
-                            <p>Return server and semantic engine debug information</p>
+                            <p>Return server and semantic engine debug information.</p>
         
                         </td>
                     </tr>
@@ -125,7 +125,7 @@
                             <a href="#operation--defined_subcommands-post">POST</a>
                         </td>
                         <td>
-                            <p>Get the list of subcommands which are available for a completer</p>
+                            <p>Get the list of subcommands which are available for a completer.</p>
         
                         </td>
                     </tr>
@@ -137,7 +137,7 @@
                             <a href="#operation--detailed_diagnostic-post">POST</a>
                         </td>
                         <td>
-                            <p>Get additional information about diagnostic under cursor</p>
+                            <p>Get additional information about diagnostic under cursor.</p>
         
                         </td>
                     </tr>
@@ -149,7 +149,7 @@
                             <a href="#operation--event_notification-post">POST</a>
                         </td>
                         <td>
-                            <p>Notify the server of various client events</p>
+                            <p>Notify the server of various client events.</p>
         
                         </td>
                     </tr>
@@ -161,7 +161,19 @@
                             <a href="#operation--filter_and_sort_candidates-post">POST</a>
                         </td>
                         <td>
-                            <p>Filter and sort a set of candidates using ycmd&#39;&#39;s fuzzy matching</p>
+                            <p>Filter and sort a set of candidates using ycmd&#39;s fuzzy matching.</p>
+        
+                        </td>
+                    </tr>
+                    <tr>
+                            <td class="swagger--summary-path" rowspan="1">
+                                <a href="#path--healthy">/healthy</a>
+                            </td>
+                        <td>
+                            <a href="#operation--healthy-get">GET</a>
+                        </td>
+                        <td>
+                            <p>Check if the server is healthy.</p>
         
                         </td>
                     </tr>
@@ -173,7 +185,7 @@
                             <a href="#operation--ignore_extra_conf_file-post">POST</a>
                         </td>
                         <td>
-                            <p>Forcefully ignore the config for the current buffer</p>
+                            <p>Forcefully ignore the config for the current buffer.</p>
         
                         </td>
                     </tr>
@@ -185,7 +197,7 @@
                             <a href="#operation--load_extra_conf_file-post">POST</a>
                         </td>
                         <td>
-                            <p>Forcefully load the config for the current buffer</p>
+                            <p>Forcefully load the config for the current buffer.</p>
         
                         </td>
                     </tr>
@@ -197,7 +209,7 @@
                             <a href="#operation--run_completer_command-post">POST</a>
                         </td>
                         <td>
-                            <p>Run a semantic completer subcommand</p>
+                            <p>Run a semantic completer subcommand.</p>
         
                         </td>
                     </tr>
@@ -209,7 +221,7 @@
                             <a href="#operation--semantic_completer_available-post">POST</a>
                         </td>
                         <td>
-                            <p>Determine if semantic completion is available for current buffer</p>
+                            <p>Determine if semantic completion is available for current buffer.</p>
         
                         </td>
                     </tr>
@@ -224,7 +236,7 @@
         <span id="path--completions"></span>
             <div id="operation--completions-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Get completion suggestions for the current file context</div>
+                    <div class="operation-summary">Get completion suggestions for the current file context.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/completions</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -366,7 +378,7 @@
                                     <dd class="sw-response-200">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>The list of completion suggestions</p>
+                                                    <p>The list of completion suggestions.</p>
                                             
                                                 </div>
                                             </div>
@@ -387,7 +399,7 @@
                                     <dd class="sw-response-500">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>An error occurred</p>
+                                                    <p>An error occurred.</p>
                                             
                                                 </div>
                                             </div>
@@ -408,7 +420,7 @@
         <span id="path--debug_info"></span>
             <div id="operation--debug_info-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Return server and semantic engine debug information</div>
+                    <div class="operation-summary">Return server and semantic engine debug information.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/debug_info</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -449,16 +461,183 @@
                                     <dd class="sw-response-200">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>The debug information to display as plain text</p>
+                                                    <p>A dictionary of debugging information.</p>
                                             
                                                 </div>
                                             </div>
                                             <div class="row">
+                                                    <div class="col-md-6 sw-response-examples">
+                                                        <div class="label label-default">Example for application/json</div>
+                                                        <pre>{<br>    "<span class="hljs-attribute">clang</span>": <span class="hljs-value">{<br>        "<span class="hljs-attribute">has_support</span>": <span class="hljs-value"><span class="hljs-literal">true</span></span>,<br>        "<span class="hljs-attribute">version</span>": <span class="hljs-value"><span class="hljs-string">"clang version"</span><br>    </span>}</span>,<br>    "<span class="hljs-attribute">completer</span>": <span class="hljs-value">{<br>        "<span class="hljs-attribute">items</span>": <span class="hljs-value">[<br>            {<br>                "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"description"</span></span>,<br>                "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"value"</span><br>            </span>}<br>        ]</span>,<br>        "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"completer name"</span></span>,<br>        "<span class="hljs-attribute">servers</span>": <span class="hljs-value">[<br>            {<br>                "<span class="hljs-attribute">address</span>": <span class="hljs-value"><span class="hljs-string">"127.0.0.1"</span></span>,<br>                "<span class="hljs-attribute">executable</span>": <span class="hljs-value"><span class="hljs-string">"/path/to/executable"</span></span>,<br>                "<span class="hljs-attribute">extras</span>": <span class="hljs-value">[<br>                    {<br>                        "<span class="hljs-attribute">description</span>": <span class="hljs-value"><span class="hljs-string">"description"</span><br>                    </span>},<br>                    {<br>                        "<span class="hljs-attribute">value</span>": <span class="hljs-value"><span class="hljs-string">"value"</span><br>                    </span>}<br>                ]</span>,<br>                "<span class="hljs-attribute">is_running</span>": <span class="hljs-value"><span class="hljs-literal">true</span></span>,<br>                "<span class="hljs-attribute">logfiles</span>": <span class="hljs-value">[<br>                    <span class="hljs-string">"/path/to/stdout/logfile"</span>,<br>                    <span class="hljs-string">"/path/to/stderr/logfile"</span><br>                ]</span>,<br>                "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"server name"</span></span>,<br>                "<span class="hljs-attribute">pid</span>": <span class="hljs-value"><span class="hljs-number">12345</span></span>,<br>                "<span class="hljs-attribute">port</span>": <span class="hljs-value"><span class="hljs-number">1234</span><br>            </span>}<br>        ]<br>    </span>}</span>,<br>    "<span class="hljs-attribute">extra_conf</span>": <span class="hljs-value">{<br>        "<span class="hljs-attribute">is_loaded</span>": <span class="hljs-value"><span class="hljs-literal">false</span></span>,<br>        "<span class="hljs-attribute">path</span>": <span class="hljs-value"><span class="hljs-string">"/path/to/extra/conf"</span><br>    </span>}</span>,<br>    "<span class="hljs-attribute">python</span>": <span class="hljs-value">{<br>        "<span class="hljs-attribute">executable</span>": <span class="hljs-value"><span class="hljs-string">"/path/to/python/interpreter"</span></span>,<br>        "<span class="hljs-attribute">version</span>": <span class="hljs-value"><span class="hljs-string">"python version"</span><br>    </span>}<br></span>}</pre>
+                                                    </div>
                                                 
                                                 <div class="col-md-6 sw-response-model">
                                                 <div  class="panel panel-definition">
                                                     <div class="panel-body">
                                                             
+                                                                    <section class="json-schema-properties">
+                                                                        <dl>
+                                                                                <dt data-property-name="python">
+                                                                                    <span class="json-property-name">python:</span>
+                                                                                    
+                                                                                    <span class="json-property-type">object</span>
+                                                                                    <span class="json-property-range" title="Value limits"></span>
+                                                                                    
+                                                                                </dt>
+                                                                                <dd>
+                                                                                    <p>Debugging information on the Python interpreter in which the
+                                                                    server is running.</p>
+                                                                    
+                                                                                    <div class="json-inner-schema">
+                                                                                        
+                                                                                                <section class="json-schema-properties">
+                                                                                                    <dl>
+                                                                                                            <dt data-property-name="executable">
+                                                                                                                <span class="json-property-name">executable:</span>
+                                                                                                                
+                                                                                                                <span class="json-property-type">string</span>
+                                                                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                                                                
+                                                                                                            </dt>
+                                                                                                            <dd>
+                                                                                                                <p>Python interpreter path.</p>
+                                                                                                
+                                                                                                                <div class="json-inner-schema">
+                                                                                                                    
+                                                                                                                </div>
+                                                                                                            </dd>
+                                                                                                            <dt data-property-name="version">
+                                                                                                                <span class="json-property-name">version:</span>
+                                                                                                                
+                                                                                                                <span class="json-property-type">string</span>
+                                                                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                                                                
+                                                                                                            </dt>
+                                                                                                            <dd>
+                                                                                                                <p>Python interpreter version.</p>
+                                                                                                
+                                                                                                                <div class="json-inner-schema">
+                                                                                                                    
+                                                                                                                </div>
+                                                                                                            </dd>
+                                                                                                    </dl>
+                                                                                                </section>
+                                                                                    </div>
+                                                                                </dd>
+                                                                                <dt data-property-name="clang">
+                                                                                    <span class="json-property-name">clang:</span>
+                                                                                    
+                                                                                    <span class="json-property-type">object</span>
+                                                                                    <span class="json-property-range" title="Value limits"></span>
+                                                                                    
+                                                                                </dt>
+                                                                                <dd>
+                                                                                    <p>Debugging information on Clang.</p>
+                                                                    
+                                                                                    <div class="json-inner-schema">
+                                                                                        
+                                                                                                <section class="json-schema-properties">
+                                                                                                    <dl>
+                                                                                                            <dt data-property-name="has_support">
+                                                                                                                <span class="json-property-name">has_support:</span>
+                                                                                                                
+                                                                                                                <span class="json-property-type">boolean</span>
+                                                                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                                                                
+                                                                                                            </dt>
+                                                                                                            <dd>
+                                                                                                                <p><code>true</code> if the ycmd server was built with Clang support,
+                                                                                                <code>false</code> otherwise.</p>
+                                                                                                
+                                                                                                                <div class="json-inner-schema">
+                                                                                                                    
+                                                                                                                </div>
+                                                                                                            </dd>
+                                                                                                            <dt data-property-name="version">
+                                                                                                                <span class="json-property-name">version:</span>
+                                                                                                                
+                                                                                                                <span class="json-property-type">string</span>
+                                                                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                                                                
+                                                                                                            </dt>
+                                                                                                            <dd>
+                                                                                                                <p>if <code>has_support</code> is <code>true</code>, return the version of Clang.
+                                                                                                Otherwise, return <code>null</code>.</p>
+                                                                                                
+                                                                                                                <div class="json-inner-schema">
+                                                                                                                    
+                                                                                                                </div>
+                                                                                                            </dd>
+                                                                                                    </dl>
+                                                                                                </section>
+                                                                                    </div>
+                                                                                </dd>
+                                                                                <dt data-property-name="extra_conf">
+                                                                                    <span class="json-property-name">extra_conf:</span>
+                                                                                    
+                                                                                    <span class="json-property-type">object</span>
+                                                                                    <span class="json-property-range" title="Value limits"></span>
+                                                                                    
+                                                                                </dt>
+                                                                                <dd>
+                                                                                    <p>Debugging information on the extra configuration file for the
+                                                                    current buffer.</p>
+                                                                    
+                                                                                    <div class="json-inner-schema">
+                                                                                        
+                                                                                                <section class="json-schema-properties">
+                                                                                                    <dl>
+                                                                                                            <dt data-property-name="path">
+                                                                                                                <span class="json-property-name">path:</span>
+                                                                                                                
+                                                                                                                <span class="json-property-type">string</span>
+                                                                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                                                                
+                                                                                                            </dt>
+                                                                                                            <dd>
+                                                                                                                <p>Path of the found extra configuration file, loaded or not.</p>
+                                                                                                
+                                                                                                                <div class="json-inner-schema">
+                                                                                                                    
+                                                                                                                </div>
+                                                                                                            </dd>
+                                                                                                            <dt data-property-name="is_loaded">
+                                                                                                                <span class="json-property-name">is_loaded:</span>
+                                                                                                                
+                                                                                                                <span class="json-property-type">boolean</span>
+                                                                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                                                                
+                                                                                                            </dt>
+                                                                                                            <dd>
+                                                                                                                <p><code>true</code> if the extra configuration file is loaded, <code>false</code>
+                                                                                                otherwise.</p>
+                                                                                                
+                                                                                                                <div class="json-inner-schema">
+                                                                                                                    
+                                                                                                                </div>
+                                                                                                            </dd>
+                                                                                                    </dl>
+                                                                                                </section>
+                                                                                    </div>
+                                                                                </dd>
+                                                                                <dt data-property-name="completer">
+                                                                                    <span class="json-property-name">completer:</span>
+                                                                                    
+                                                                                    <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/DebugInfoResponse">DebugInfoResponse</a>
+                                                                                    </span>
+                                                                                    <span class="json-property-range" title="Value limits"></span>
+                                                                                    
+                                                                                </dt>
+                                                                                <dd>
+                                                                                    <p>Contains debugging information on the completer for the given
+                                                                    filetypes. <code>null</code> if no completer is available.</p>
+                                                                    
+                                                                                    <div class="json-inner-schema">
+                                                                                        
+                                                                                    </div>
+                                                                                </dd>
+                                                                        </dl>
+                                                                    </section>
                                                     </div>
                                                 </div></div>
                                             
@@ -470,7 +649,7 @@
                                     <dd class="sw-response-500">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>An error occurred</p>
+                                                    <p>An error occurred.</p>
                                             
                                                 </div>
                                             </div>
@@ -491,12 +670,12 @@
         <span id="path--defined_subcommands"></span>
             <div id="operation--defined_subcommands-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Get the list of subcommands which are available for a completer</div>
+                    <div class="operation-summary">Get the list of subcommands which are available for a completer.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/defined_subcommands</strong></h3>
                 </div>
                 <div class="panel-body">
                     <section class="sw-operation-description">
-                        <p>Returns the list of completer subcommands for a given completer</p>
+                        <p>Returns the list of completer subcommands for a given completer.</p>
             <p>See also: <code>/run_completer_command</code></p>
             
                     </section>
@@ -530,7 +709,7 @@
                                     <dd class="sw-response-200">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>The list of available subcommands</p>
+                                                    <p>The list of available subcommands.</p>
                                             
                                                 </div>
                                             </div>
@@ -580,7 +759,7 @@
         <span id="path--detailed_diagnostic"></span>
             <div id="operation--detailed_diagnostic-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Get additional information about diagnostic under cursor</div>
+                    <div class="operation-summary">Get additional information about diagnostic under cursor.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/detailed_diagnostic</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -681,7 +860,7 @@
         <span id="path--event_notification"></span>
             <div id="operation--event_notification-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Notify the server of various client events</div>
+                    <div class="operation-summary">Notify the server of various client events.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/event_notification</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -699,7 +878,7 @@
             diagnostics.</li>
             <li><code>BufferUnload</code> (optional)
             Call when the user closes a buffer that was previously known to be
-            open. <em>Note</em>: the <code>unloaded_buffer</code> property is required.</li>
+            open.</li>
             <li><code>BufferVisit</code> (optional)
             Call when the user focusses on a buffer that is already known.
             <em>Note</em>: The <code>ultisnips_snippets</code> property is optional when firing
@@ -720,7 +899,7 @@
                                             <div class="col-md-6">
                                                 <p><p>The notification data. The line and column are typically not used,
                         but the <code>filepath</code> and file data properties are used to perform
-                        semantic analysis (e.g. in the <code>FileReadyToParse</code> handler)</p>
+                        semantic analysis (e.g. in the <code>FileReadyToParse</code> handler).</p>
                         </p>
                                             </div>
                                             <div class="col-md-6 sw-request-model">
@@ -786,6 +965,7 @@
                                                                 </span>
                                                                 <span class="json-property-range" title="Value limits"></span>
                                                                 
+                                                                    <span class="json-property-required"></span>
                                                             </dt>
                                                             <dd>
                                                                 
@@ -843,21 +1023,6 @@
                                                             </dt>
                                                             <dd>
                                                                 <p>The event that occurred.</p>
-                                                
-                                                                <div class="json-inner-schema">
-                                                                    
-                                                                </div>
-                                                            </dd>
-                                                            <dt data-property-name="unloaded_buffer">
-                                                                <span class="json-property-name">unloaded_buffer:</span>
-                                                                
-                                                                <span class="json-property-type">string</span>
-                                                                <span class="json-property-range" title="Value limits"></span>
-                                                                
-                                                            </dt>
-                                                            <dd>
-                                                                <p><em>Required when <code>event_name</code> is BufferUnload</em>
-                                                The absolute path of the buffer which was unloaded.</p>
                                                 
                                                                 <div class="json-inner-schema">
                                                                     
@@ -936,7 +1101,7 @@
                                     <dd class="sw-response-200">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>Optional set of diagnostics for the current buffer</p>
+                                                    <p>Optional set of diagnostics for the current buffer.</p>
                                             
                                                 </div>
                                             </div>
@@ -957,7 +1122,7 @@
                                     <dd class="sw-response-500">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>An error occurred</p>
+                                                    <p>An error occurred.</p>
                                             
                                                 </div>
                                             </div>
@@ -978,7 +1143,7 @@
         <span id="path--filter_and_sort_candidates"></span>
             <div id="operation--filter_and_sort_candidates-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Filter and sort a set of candidates using ycmd&apos;&apos;s fuzzy matching</div>
+                    <div class="operation-summary">Filter and sort a set of candidates using ycmd&apos;s fuzzy matching.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/filter_and_sort_candidates</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -1140,15 +1305,80 @@
                         </section>
                 </div>
             </div>    
+        <span id="path--healthy"></span>
+            <div id="operation--healthy-get" class="swagger--panel-operation-get panel">
+                <div class="panel-heading">
+                    <div class="operation-summary">Check if the server is healthy.</div>
+                    <h3 class="panel-title"><span class="operation-name">GET</span> <strong>/healthy</strong></h3>
+                </div>
+                <div class="panel-body">
+                    <section class="sw-operation-description">
+                        <p>Return <code>true</code> if the server is healthy, <code>false</code> otherwise. The client
+            should use this endpoint to keep the server alive.</p>
+            
+                    </section>
+                    
+                    
+                        <section class="sw-responses">
+                                <p><span class="label label-default">application/json</span> 
+                    </p>
+                    
+                            <dl>
+                                    <dt class="sw-response-200">
+                                        200 OK
+                                    
+                                    </dt>
+                                    <dd class="sw-response-200">
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <p>Server is healthy.</p>
+                                            
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                
+                                                <div class="col-md-6 sw-response-model">
+                                                <div  class="panel panel-definition">
+                                                    <div class="panel-body">
+                                                                <a class="json-schema-ref" href="#/definitions/AlwaysYes">AlwaysYes</a>
+                                                    </div>
+                                                </div></div>
+                                            
+                                            </div>                </dd>
+                                    <dt class="sw-response-500">
+                                        500 Internal Server Error
+                                    
+                                    </dt>
+                                    <dd class="sw-response-500">
+                                            <div class="row">
+                                                <div class="col-md-12">
+                                                    <p>An error occurred.</p>
+                                            
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                
+                                                <div class="col-md-6 sw-response-model">
+                                                <div  class="panel panel-definition">
+                                                    <div class="panel-body">
+                                                                <a class="json-schema-ref" href="#/definitions/ExceptionResponse">ExceptionResponse</a>
+                                                    </div>
+                                                </div></div>
+                                            
+                                            </div>                </dd>
+                            </dl>
+                        </section>
+                </div>
+            </div>    
         <span id="path--ignore_extra_conf_file"></span>
             <div id="operation--ignore_extra_conf_file-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Forcefully ignore the config for the current buffer</div>
+                    <div class="operation-summary">Forcefully ignore the config for the current buffer.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/ignore_extra_conf_file</strong></h3>
                 </div>
                 <div class="panel-body">
                     <section class="sw-operation-description">
-                        <p>As opposed to <code>/load_extra_conf_file</code>, this API end point must be called
+                        <p>As opposed to <code>/load_extra_conf_file</code>, this API endpoint must be called
             when the user declines to load the associated <code>.ycm_extra_conf.py</code> file.</p>
             
                     </section>
@@ -1182,7 +1412,7 @@
                                     <dd class="sw-response-200">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>OK. Returned value is always true.</p>
+                                                    <p>Configuration file ignored.</p>
                                             
                                                 </div>
                                             </div>
@@ -1203,7 +1433,7 @@
                                     <dd class="sw-response-500">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>An error occurred</p>
+                                                    <p>An error occurred ignoring the configuration file.</p>
                                             
                                                 </div>
                                             </div>
@@ -1224,7 +1454,7 @@
         <span id="path--load_extra_conf_file"></span>
             <div id="operation--load_extra_conf_file-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Forcefully load the config for the current buffer</div>
+                    <div class="operation-summary">Forcefully load the config for the current buffer.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/load_extra_conf_file</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -1267,7 +1497,7 @@
                                     <dd class="sw-response-200">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>OK. Returned value is always true.</p>
+                                                    <p>Configuration file loaded.</p>
                                             
                                                 </div>
                                             </div>
@@ -1288,7 +1518,7 @@
                                     <dd class="sw-response-500">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>An error occurred loading the config</p>
+                                                    <p>An error occurred loading the configuration file.</p>
                                             
                                                 </div>
                                             </div>
@@ -1309,7 +1539,7 @@
         <span id="path--run_completer_command"></span>
             <div id="operation--run_completer_command-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Run a semantic completer subcommand</div>
+                    <div class="operation-summary">Run a semantic completer subcommand.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/run_completer_command</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -1467,7 +1697,7 @@
                                                             <dd>
                                                                 <p>The command line to execute as a list of arguments. The first
                                                 such argument is the subcommand to execute (for example:
-                                                <code>GoTo</code>)</p>
+                                                <code>GoTo</code>).</p>
                                                 
                                                                 <div class="json-inner-schema">
                                                                     
@@ -1506,7 +1736,7 @@
                                             <p><em>NOTE</em>: If the type of the response is a list, then the response is
                                                     a GoTo list (e.g. quick-fix list or equivalent) and the
                                                     items in the list are of type <code>GoToLocations</code>
-                                                    (see definitions)</p>
+                                                    (see definitions).</p>
                                             
                                                 </div>
                                             </div>
@@ -1587,7 +1817,7 @@
                                                                                 <dd>
                                                                                     <p>If present, this is a single <em>GoTo response</em> and this value
                                                                     contains the absolute path of the buffer containing the
-                                                                    target location (identified in <code>line_num</code> and <code>column_num</code>)</p>
+                                                                    target location (identified in <code>line_num</code> and <code>column_num</code>).</p>
                                                                     
                                                                                     <div class="json-inner-schema">
                                                                                         
@@ -1634,7 +1864,7 @@
                                     <dd class="sw-response-500">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>An error occurred</p>
+                                                    <p>An error occurred.</p>
                                             
                                                 </div>
                                             </div>
@@ -1655,7 +1885,7 @@
         <span id="path--semantic_completer_available"></span>
             <div id="operation--semantic_completer_available-post" class="swagger--panel-operation-post panel">
                 <div class="panel-heading">
-                    <div class="operation-summary">Determine if semantic completion is available for current buffer</div>
+                    <div class="operation-summary">Determine if semantic completion is available for current buffer.</div>
                     <h3 class="panel-title"><span class="operation-name">POST</span> <strong>/semantic_completer_available</strong></h3>
                 </div>
                 <div class="panel-body">
@@ -1692,7 +1922,7 @@
                                     <dd class="sw-response-200">
                                             <div class="row">
                                                 <div class="col-md-12">
-                                                    <p>Whether or not semantic completion is available</p>
+                                                    <p>Whether or not semantic completion is available.</p>
                                             
                                                 </div>
                                             </div>
@@ -1778,7 +2008,7 @@
                                                 </dt>
                                                 <dd>
                                                     <p>The word to insert when selecting the completion.</p>
-                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>word</code></p>
+                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>word</code>.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -1794,7 +2024,7 @@
                                                 <dd>
                                                     <p>The word to display as the suggestion to the user. If not
                                     supplied, <code>insertion_text</code> is displayed to the user.</p>
-                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>abbr</code></p>
+                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>abbr</code>.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -1814,7 +2044,7 @@
                                     additional free-text qualifiers (such as <code>[File]</code> etc.). These
                                     are a single line and typically short. For more detailed
                                     information, such as usage and docs, see <code>detailed_info</code>.</p>
-                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>menu</code></p>
+                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>menu</code>.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -1831,7 +2061,7 @@
                                                     <p>Additional information, such as the full signature and method
                                     documentation, suitable for display in a preview window or
                                     tooltip.</p>
-                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>info</code></p>
+                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>info</code>.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -1847,7 +2077,7 @@
                                                 <dd>
                                                     <p>An indicator of the type of suggestion. Only the first character
                                     of <code>kind</code> should be displayed.</p>
-                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>kind</code></p>
+                                    <p>Equivalent of the Vim <code>complete-items</code> entry: <code>kind</code>.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -1902,7 +2132,7 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <p>1-based column byte offset within the line</p>
+                                    <p>1-based column byte offset within the line.</p>
                             
                                 </section>
                             
@@ -1928,9 +2158,9 @@
                             Use the semantic completer associated with the filetype of the current
                             buffer. This is the default when a target is not supplied.</li>
                             <li><code>identifier</code>
-                            Use the identifier completer</li>
+                            Use the identifier completer.</li>
                             <li>Any filetype
-                            Use the completer associated with the supplied filetype</li>
+                            Use the completer associated with the supplied filetype.</li>
                             </ul>
                             
                                 </section>
@@ -1960,7 +2190,7 @@
                                                         <span class="json-property-required"></span>
                                                 </dt>
                                                 <dd>
-                                                    <p>List of completion suggestions</p>
+                                                    <p>List of completion suggestions.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -2019,6 +2249,87 @@
                                     </section>
                     </div>
                 </div>        
+                <div id="definition-DebugInfoResponse" class="panel panel-definition">
+                        <div class="panel-heading">
+                                <h3 class="panel-title"><a name="/definitions/DebugInfoResponse"></a>DebugInfoResponse:
+                                    <span class="json-property-type">
+                <span class="json-property-type">object</span>
+                <span class="json-property-range" title="Value limits"></span>
+                
+                </span>
+                                </h3>
+                        </div>
+                    <div class="panel-body">
+                            
+                                    <section class="json-schema-properties">
+                                        <dl>
+                                                <dt data-property-name="name">
+                                                    <span class="json-property-name">name:</span>
+                                                    
+                                                    <span class="json-property-type">string</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>The completer name.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="servers">
+                                                    <span class="json-property-name">servers:</span>
+                                                    
+                                                    <span class="json-property-type">object[]</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>A list of servers used by the completer.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                                        <section class="json-schema-array-items">
+                                                                            
+                                                                            <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/ServerData">ServerData</a>
+                                                                            </span>
+                                                                            <span class="json-property-range" title="Value limits"></span>
+                                                                            
+                                                                            <div class="json-inner-schema">
+                                                                                
+                                                                            </div>
+                                                                        </section>                </div>
+                                                </dd>
+                                                <dt data-property-name="items">
+                                                    <span class="json-property-name">items:</span>
+                                                    
+                                                    <span class="json-property-type">object[]</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>Additional debugging information.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                                        <section class="json-schema-array-items">
+                                                                            
+                                                                            <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/ItemData">ItemData</a>
+                                                                            </span>
+                                                                            <span class="json-property-range" title="Value limits"></span>
+                                                                            
+                                                                            <div class="json-inner-schema">
+                                                                                
+                                                                            </div>
+                                                                        </section>                </div>
+                                                </dd>
+                                        </dl>
+                                    </section>
+                    </div>
+                </div>        
                 <div id="definition-DiagnosticData" class="panel panel-definition">
                         <div class="panel-heading">
                                 <h3 class="panel-title"><a name="/definitions/DiagnosticData"></a>DiagnosticData:
@@ -2031,8 +2342,7 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <h2 id="-location-and-location_extent-"><code>location</code> and <code>location_extent</code></h2>
-                            <ul>
+                                    <ul>
                             <li><code>location</code>
                             The source location where the diagnostic applies. This is typically
                             (but not always) the start of <code>location_extent</code>.</li>
@@ -2058,7 +2368,7 @@
                                                 <dd>
                                                     <p>List of ranges to which this diagnostic applies. These ranges
                                     typically identify the source locations which should be
-                                    &#39;&#39;highlighted&#39;&#39; as incorrect.</p>
+                                    &quot;highlighted&quot; as incorrect.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
@@ -2466,7 +2776,7 @@
                                                                                                             <span class="json-property-required"></span>
                                                                                                     </dt>
                                                                                                     <dd>
-                                                                                                        <p>The text with which to replace the range identiferd by <code>range</code></p>
+                                                                                                        <p>The text with which to replace the range identified by <code>range</code>.</p>
                                                                                         
                                                                                                         <div class="json-inner-schema">
                                                                                                             
@@ -2496,6 +2806,52 @@
                                     </section>
                     </div>
                 </div>        
+                <div id="definition-ItemData" class="panel panel-definition">
+                        <div class="panel-heading">
+                                <h3 class="panel-title"><a name="/definitions/ItemData"></a>ItemData:
+                                    <span class="json-property-type">
+                <span class="json-property-type">object</span>
+                <span class="json-property-range" title="Value limits"></span>
+                
+                </span>
+                                </h3>
+                        </div>
+                    <div class="panel-body">
+                            
+                                    <section class="json-schema-properties">
+                                        <dl>
+                                                <dt data-property-name="key">
+                                                    <span class="json-property-name">key:</span>
+                                                    
+                                                    <span class="json-property-type">string</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="value">
+                                                    <span class="json-property-name">value:</span>
+                                                    
+                                                    <span class="json-property-type">string</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                        </dl>
+                                    </section>
+                    </div>
+                </div>        
                 <div id="definition-LineNumber" class="panel panel-definition">
                         <div class="panel-heading">
                                 <h3 class="panel-title"><a name="/definitions/LineNumber"></a>LineNumber:
@@ -2508,7 +2864,7 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <p>1-based line number</p>
+                                    <p>1-based line number.</p>
                             
                                 </section>
                             
@@ -2596,7 +2952,7 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <p>A contiguous range of bytes in a source buffer</p>
+                                    <p>A contiguous range of bytes in a source buffer.</p>
                             
                                 </section>
                             
@@ -2631,6 +2987,166 @@
                                                     <div class="json-inner-schema">
                                                         
                                                     </div>
+                                                </dd>
+                                        </dl>
+                                    </section>
+                    </div>
+                </div>        
+                <div id="definition-ServerData" class="panel panel-definition">
+                        <div class="panel-heading">
+                                <h3 class="panel-title"><a name="/definitions/ServerData"></a>ServerData:
+                                    <span class="json-property-type">
+                <span class="json-property-type">object</span>
+                <span class="json-property-range" title="Value limits"></span>
+                
+                </span>
+                                </h3>
+                        </div>
+                    <div class="panel-body">
+                            
+                                    <section class="json-schema-properties">
+                                        <dl>
+                                                <dt data-property-name="name">
+                                                    <span class="json-property-name">name:</span>
+                                                    
+                                                    <span class="json-property-type">string</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>The server name.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="is_running">
+                                                    <span class="json-property-name">is_running:</span>
+                                                    
+                                                    <span class="json-property-type">boolean</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p><code>true</code> if the server is running, <code>false</code> otherwise.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="executable">
+                                                    <span class="json-property-name">executable:</span>
+                                                    
+                                                    <span class="json-property-type">string</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>The executable path used to start the server.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="address">
+                                                    <span class="json-property-name">address:</span>
+                                                    
+                                                    <span class="json-property-type">string</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>The address on which the server is listening. <code>null</code> if not
+                                    applicable.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="port">
+                                                    <span class="json-property-name">port:</span>
+                                                    
+                                                    <span class="json-property-type">integer</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>The port on which the server is listening. <code>null</code> if not applicable.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="pid">
+                                                    <span class="json-property-name">pid:</span>
+                                                    
+                                                    <span class="json-property-type">integer</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>The process identifier of the server. <code>null</code> if the server is not
+                                    running.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                    </div>
+                                                </dd>
+                                                <dt data-property-name="logfiles">
+                                                    <span class="json-property-name">logfiles:</span>
+                                                    
+                                                    <span class="json-property-type">string[]</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    <p>A list of logging files used by the server.</p>
+                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                                        <section class="json-schema-array-items">
+                                                                            
+                                                                            <span class="json-property-type">string</span>
+                                                                            <span class="json-property-range" title="Value limits"></span>
+                                                                            
+                                                                            <div class="json-inner-schema">
+                                                                                    <section class="json-schema-description">
+                                                                                        <p>A logging file path.</p>
+                                                                                
+                                                                                    </section>
+                                                                                
+                                                                            </div>
+                                                                        </section>                </div>
+                                                </dd>
+                                                <dt data-property-name="extras">
+                                                    <span class="json-property-name">extras:</span>
+                                                    
+                                                    <span class="json-property-type">object[]</span>
+                                                    <span class="json-property-range" title="Value limits"></span>
+                                                    
+                                                        <span class="json-property-required"></span>
+                                                </dt>
+                                                <dd>
+                                                    
+                                                    <div class="json-inner-schema">
+                                                        
+                                                                        <section class="json-schema-array-items">
+                                                                            
+                                                                            <span class="json-property-type">    <a class="json-schema-ref" href="#/definitions/ItemData">ItemData</a>
+                                                                            </span>
+                                                                            <span class="json-property-range" title="Value limits"></span>
+                                                                            
+                                                                            <div class="json-inner-schema">
+                                                                                
+                                                                            </div>
+                                                                        </section>                </div>
                                                 </dd>
                                         </dl>
                                     </section>
@@ -2774,7 +3290,7 @@
                         </div>
                     <div class="panel-body">
                                 <section class="json-schema-description">
-                                    <p>Result of the query; <code>true</code> if yes, <code>false</code> otherwise</p>
+                                    <p>Result of the query: <code>true</code> if yes, <code>false</code> otherwise.</p>
                             
                                 </section>
                             
