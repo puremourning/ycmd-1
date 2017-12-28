@@ -1166,11 +1166,7 @@
                                                 <div class="col-md-6 sw-response-model">
                                                 <div  class="panel panel-definition">
                                                     <div class="panel-body">
-                                                                <section class="json-schema-description">
-                                                                    <p><code>true</code> is returned on success</p>
-                                                            
-                                                                </section>
-                                                            
+                                                                <a class="json-schema-ref" href="#/definitions/AlwaysYes">AlwaysYes</a>
                                                     </div>
                                                 </div></div>
                                             
@@ -1255,11 +1251,7 @@
                                                 <div class="col-md-6 sw-response-model">
                                                 <div  class="panel panel-definition">
                                                     <div class="panel-body">
-                                                                <section class="json-schema-description">
-                                                                    <p><code>true</code> is returned on success</p>
-                                                            
-                                                                </section>
-                                                            
+                                                                <a class="json-schema-ref" href="#/definitions/AlwaysYes">AlwaysYes</a>
                                                     </div>
                                                 </div></div>
                                             
@@ -1669,11 +1661,7 @@
                                                 <div class="col-md-6 sw-response-model">
                                                 <div  class="panel panel-definition">
                                                     <div class="panel-body">
-                                                                <section class="json-schema-description">
-                                                                    <p><code>true</code> if semantic completion available, else <code>false</code></p>
-                                                            
-                                                                </section>
-                                                            
+                                                                <a class="json-schema-ref" href="#/definitions/YesNo">YesNo</a>
                                                     </div>
                                                 </div></div>
                                             
@@ -1709,6 +1697,23 @@
         <h2>Schema definitions</h2>
     
             
+                <div id="definition-AlwaysYes" class="panel panel-definition">
+                        <div class="panel-heading">
+                                <h3 class="panel-title"><a name="/definitions/AlwaysYes"></a>AlwaysYes:
+                                    <span class="json-property-type"><span class="json-property-type">boolean</span>
+                <span class="json-property-range" title="Value limits"></span>
+                
+                </span>
+                                </h3>
+                        </div>
+                    <div class="panel-body">
+                                <section class="json-schema-description">
+                                    <p><code>true</code> is always returned, unless there is an error.</p>
+                            
+                                </section>
+                            
+                    </div>
+                </div>        
                 <div id="definition-Candidate" class="panel panel-definition">
                         <div class="panel-heading">
                                 <h3 class="panel-title"><a name="/definitions/Candidate"></a>Candidate:
@@ -2649,6 +2654,23 @@
                                     <p>Absolute path to the filesystem working directory of the client. This is
                             used by completer engines to determine things like the project root
                             for the file being modified, amongst other things.</p>
+                            
+                                </section>
+                            
+                    </div>
+                </div>        
+                <div id="definition-YesNo" class="panel panel-definition">
+                        <div class="panel-heading">
+                                <h3 class="panel-title"><a name="/definitions/YesNo"></a>YesNo:
+                                    <span class="json-property-type"><span class="json-property-type">boolean</span>
+                <span class="json-property-range" title="Value limits"></span>
+                
+                </span>
+                                </h3>
+                        </div>
+                    <div class="panel-body">
+                                <section class="json-schema-description">
+                                    <p>Result of the query; <code>true</code> if yes, <code>false</code> otherwise</p>
                             
                                 </section>
                             
