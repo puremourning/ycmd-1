@@ -1560,14 +1560,15 @@
             used by clients in a &quot;long poll&quot; style, and does not return until
             either:</p>
             <ul>
-            <li>A message (or messages) become available, in which case an object
-            is returned, or</li>
+            <li>A message (or messages) become available, in which case a list of
+            messages is returned, or</li>
             <li>a timeout occurs (after 60s), in which case <code>true</code> is returned and
             the client should re-send this request, or</li>
-            <li>for some reason the client should stop sending <code>receive_messages</code>
-            requests, in which case <code>false</code> is returned, and the client should
-            only send the request again when something substantial changes such
-            as a new file type is opened, or the completer server is manually<br>restarted.</li>
+            <li>for some reason the server determined that the client should stop
+            sending <code>receive_messages</code> requests, in which case <code>false</code> is
+            returned, and the client should only send the request again when
+            something substantial changes such as a new file type is opened, or
+            the completer server is manually restarted.</li>
             </ul>
             <p>The following types of event are delivered asynchrounously for cerain
             languages:</p>
@@ -1592,7 +1593,7 @@
                                             <div class="col-md-6 sw-request-model">
                             <div  class="panel panel-definition">
                                 <div class="panel-body">
-                                            <a class="json-schema-ref" href="#/definition/SimpleRequest">#/definition/SimpleRequest</a>
+                                            <a class="json-schema-ref" href="#/definitions/SimpleRequest">SimpleRequest</a>
                                 </div>
                             </div></div>
                                         </div>
@@ -1611,7 +1612,7 @@
                                             <div class="row">
                                                 <div class="col-md-12">
                                                     <p>Messages are ready, the request timed out, or the request
-                                            is not supported and should not be retried. </p>
+                                            is not supported and should not be retried.</p>
                                             <p>The response may be <strong>one of</strong> <code>MessagePollResponse</code> or
                                             <code>MessagesList</code>.</p>
                                             
@@ -2565,6 +2566,10 @@
                                                                     <span class="json-property-enum-item">WARNING</span>
                                                                 ,
                                                                     <span class="json-property-enum-item">ERROR</span>
+                                                                ,
+                                                                    <span class="json-property-enum-item">INFORMATION</span>
+                                                                ,
+                                                                    <span class="json-property-enum-item">HINT</span>
                                                                 
                                                             }
                                                             </span>
@@ -2574,7 +2579,9 @@
                                                 </dt>
                                                 <dd>
                                                     <p>The type of diagnostic being reported. Typically semantic engines will
-                                    differentiate between warnings and fatal errors.</p>
+                                    differentiate between warnings and fatal errors. Informational and
+                                    hint messages should be treated as warnings where the client does not
+                                    differentiate.</p>
                                     
                                                     <div class="json-inner-schema">
                                                         
