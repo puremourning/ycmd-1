@@ -12,6 +12,7 @@ import os
 import subprocess
 import os.path as p
 import sys
+import pipes
 
 DIR_OF_THIS_SCRIPT = p.dirname( p.abspath( __file__ ) )
 DIR_OF_THIRD_PARTY = p.join( DIR_OF_THIS_SCRIPT, 'third_party' )
@@ -128,6 +129,11 @@ def ParseArguments():
   parser.add_argument( '--dump-path', action = 'store_true',
                        help = 'Dump the PYTHONPATH required to run tests '
                               'manually, then exit.' )
+  parser.add_argument( '--dump-cmd', action = 'store_true',
+                       help = 'Dump the full command required to run tests '
+                              'manually, then exit.' )
+  parser.add_argument( '--valgrind', action = 'store_true',
+                       help = 'run with valgrind' )
 
   parsed_args, nosetests_args = parser.parse_known_args()
 
@@ -135,6 +141,10 @@ def ParseArguments():
 
   if 'COVERAGE' in os.environ:
     parsed_args.coverage = ( os.environ[ 'COVERAGE' ] == 'true' )
+
+  if parsed_args.dump_cmd:
+    parsed_args.skip_build = True
+    parsed_args.no_flake8 = True
 
   return parsed_args, nosetests_args
 
@@ -187,6 +197,9 @@ def BuildYcmdLibs( args ):
       # to generate the c++ coverage information.
       build_cmd.extend( [ '--enable-coverage', '--build-dir', '.build' ] )
 
+    if args.valgrind:
+      build_cmd.append( '--enable-debug' )
+
     subprocess.check_call( build_cmd )
 
 
@@ -217,9 +230,24 @@ def NoseTests( parsed_args, extra_nosetests_args ):
   else:
     nosetests_args.append( p.join( DIR_OF_THIS_SCRIPT, 'ycmd' ) )
 
-  subprocess.check_call( [ sys.executable,
-                           # __main__ is required on Python 2.6.
-                           '-m', 'nose.__main__' ] + nosetests_args )
+  full_args = [ sys.executable,
+                # __main__ is required on Python 2.6.
+                '-m', 'nose.__main__' ] + nosetests_args
+
+  if parsed_args.valgrind:
+    os.environ[ 'PYTHONMALLOC' ] = 'malloc'
+    full_args = [
+      'valgrind',
+      '--tool=memcheck',
+      '--trace-children=yes',
+      '--leak-check=full',
+      '--suppressions=third_party/valgrind-python.supp'
+    ] + full_args
+
+  if parsed_args.dump_cmd:
+    print( ' '.join( [ pipes.quote(x) for x in full_args ] ) )
+  else:
+    subprocess.check_call( full_args )
 
 
 def Main():
@@ -227,11 +255,13 @@ def Main():
   if parsed_args.dump_path:
     print( os.environ[ 'PYTHONPATH' ] )
     sys.exit()
-  print( 'Running tests on Python', platform.python_version() )
+  if not parsed_args.dump_cmd:
+    print( 'Running tests on Python', platform.python_version() )
   if not parsed_args.no_flake8:
     RunFlake8()
   BuildYcmdLibs( parsed_args )
   NoseTests( parsed_args, nosetests_args )
+
 
 if __name__ == "__main__":
   Main()
