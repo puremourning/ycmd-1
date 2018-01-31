@@ -21,6 +21,7 @@ from __future__ import division
 from __future__ import absolute_import
 # Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
+from future.utils import iteritems
 
 import glob
 import hashlib
@@ -29,6 +30,7 @@ import os
 import shutil
 import tempfile
 import threading
+import shlex
 
 from ycmd import responses, utils
 from ycmd.completers.language_server import language_server_protocol as lsp
@@ -489,6 +491,26 @@ class JavaCompleter( simple_language_server_completer.SimpleLSPCompleter ):
         '-configuration', self._launcher_config,
         '-data', self._workspace_path,
       ]
+
+      if 'JDT_LS_OPTS' in os.environ:
+        self._command.extend( shlex.split( os.environ[ 'JDT_LS_OPTS' ] ) )
+
+      LOGGER.debug( 'Starting java-server with the following command: %s',
+                    self._command )
+
+      # Append proxy options after logging because passwords
+      proxy_options = {
+        'http_proxy_address':  [ 'http.proxyHost',     'https.proxyHost' ],
+        'http_proxy_port':     [ 'http.proxyPort',     'https.proxyPort' ],
+        'http_proxy_user':     [ 'http.proxyUser',     'https.proxyUser' ],
+        'http_proxy_password': [ 'http.proxyPassword', 'https.proxyPassword' ],
+      }
+
+      for env_var, options in iteritems( proxy_options ):
+        if env_var in os.environ:
+          for option in options:
+            self._command.append( '-D{0}={1}'.format( option,
+                                                      os.environ[ env_var ] ) )
 
     return super( JavaCompleter, self ).StartServer( request_data )
 

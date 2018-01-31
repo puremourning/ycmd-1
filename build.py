@@ -970,10 +970,12 @@ def EnableJavaCompleter( switches ):
   REPOSITORY = p.join( TARGET, 'repository' )
   CACHE = p.join( TARGET, 'cache' )
 
-  JDTLS_SERVER_URL_FORMAT = ( 'http://download.eclipse.org/jdtls/snapshots/'
-                              '{jdtls_package_name}' )
+  JDTLS_SERVER_URL_FORMAT = ( 'http://www.mirrorservice.org/sites/'
+                              'download.eclipse.org/eclipseMirror/jdtls/'
+                              'snapshots/{jdtls_package_name}' )
   JDTLS_PACKAGE_NAME_FORMAT = ( 'jdt-language-server-{jdtls_milestone}-'
-                                '{jdtls_build_stamp}.tar.gz' )
+                              '{jdtls_build_stamp}.tar.gz' )
+
 
   package_name = JDTLS_PACKAGE_NAME_FORMAT.format(
       jdtls_milestone = JDTLS_MILESTONE,
