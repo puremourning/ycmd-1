@@ -27,7 +27,7 @@ namespace YouCompleteMe {
 
 class PythonSupportFixture : public benchmark::Fixture {
 public:
-  void SetUp( const benchmark::State& state ) {
+  void SetUp( const benchmark::State& /*state*/ ) {
     CandidateRepository::Instance().ClearCandidates();
   }
 };
