@@ -152,6 +152,8 @@ def ParseArguments():
                               'manually, then exit.' )
   parser.add_argument( '--no-retry', action = 'store_true',
                        help = 'Disable retry of flaky tests' )
+  parser.add_argument( '--benchmark', action = 'store_true',
+                       help = 'Run the ycm core benchmarks' )
 
   parsed_args, nosetests_args = parser.parse_known_args()
 
@@ -189,6 +191,9 @@ def BuildYcmdLibs( args ):
       os.environ[ 'EXTRA_CMAKE_ARGS' ] += ' -DUSE_DEV_FLAGS=ON'
     else:
       os.environ[ 'EXTRA_CMAKE_ARGS' ] = '-DUSE_DEV_FLAGS=ON'
+
+    if args.benchmark:
+      os.environ[ 'YCM_BENCHMARK' ] = '1'
 
     build_cmd = [
       sys.executable,
