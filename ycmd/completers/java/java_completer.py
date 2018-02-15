@@ -136,14 +136,32 @@ def _LauncherConfiguration():
 
 def _MakeProjectFilesForPath( path ):
   for tail in PROJECT_FILE_TAILS:
-    yield os.path.join( path, tail )
+    yield os.path.join( path, tail ), tail
 
 
 def _FindProjectDir( starting_dir ):
+  project_path = None
+  tail = None
   for path in utils.PathsToAllParentFolders( starting_dir ):
-    for project_file in _MakeProjectFilesForPath( path ):
+    for project_file, tail in _MakeProjectFilesForPath( path ):
       if os.path.isfile( project_file ):
-        return path
+        project_path = path
+        _logger.debug( 'Searching {0} style project in {1}...'.format(
+          tail,
+          project_path ) )
+
+        for hier_path in utils.PathsToAllParentFolders( project_path ):
+          _logger.debug( '  Checking {0}'.format( hier_path ) )
+
+          if os.path.isfile( os.path.join( hier_path, tail ) ):
+            _logger.debug( '  Continuing' )
+            project_path = hier_path
+          else:
+            _logger.debug( '  Done {0}!'.format( project_path ) )
+            return project_path
+
+        _logger.debug( '  End {0}!'.format( project_path ) )
+        return project_path
 
   return starting_dir
 
