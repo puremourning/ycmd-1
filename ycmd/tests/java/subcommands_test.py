@@ -133,23 +133,32 @@ def RunTest( app, test, contents = None ):
 
   # We also ignore errors here, but then we check the response code
   # ourself. This is to allow testing of requests returning errors.
-  response = app.post_json(
-    '/run_completer_command',
-    CombineRequest( test[ 'request' ], {
-      'completer_target': 'filetype_default',
-      'contents': contents,
-      'filetype': 'java',
-      'command_arguments': ( [ test[ 'request' ][ 'command' ] ]
-                             + test[ 'request' ].get( 'arguments', [] ) )
-    } ),
-    expect_errors = True
-  )
+  expiry = time.time() + 10
+  while True:
+    try:
+      response = app.post_json(
+        '/run_completer_command',
+        CombineRequest( test[ 'request' ], {
+          'completer_target': 'filetype_default',
+          'contents': contents,
+          'filetype': 'java',
+          'command_arguments': ( [ test[ 'request' ][ 'command' ] ]
+                                 + test[ 'request' ].get( 'arguments', [] ) )
+        } ),
+        expect_errors = True
+      )
 
-  print( 'completer response: {0}'.format( pformat( response.json ) ) )
+      print( 'completer response: {0}'.format( pformat( response.json ) ) )
 
-  eq_( response.status_code, test[ 'expect' ][ 'response' ] )
+      eq_( response.status_code, test[ 'expect' ][ 'response' ] )
 
-  assert_that( response.json, test[ 'expect' ][ 'data' ] )
+      assert_that( response.json, test[ 'expect' ][ 'data' ] )
+      break
+    except AssertionError:
+      if time.time() > expiry:
+        raise
+
+      time.sleep( 0.25 )
 
 
 @IsolatedYcmd
