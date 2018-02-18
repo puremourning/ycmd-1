@@ -345,6 +345,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         '-Declipse.application=org.eclipse.jdt.ls.core.id1',
         '-Dosgi.bundles.defaultStartLevel=4',
         '-Declipse.product=org.eclipse.jdt.ls.core.product',
+        '-Djava.lsp.joinOnCompletion=true',
         '-Dlog.level=ALL',
         '-jar', self._launcher_path,
         '-configuration', self._launcher_config,
