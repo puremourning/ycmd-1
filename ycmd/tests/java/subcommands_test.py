@@ -913,7 +913,7 @@ def Subcommands_FixIt_MultipleDiags_test():
                              'TestFactory.java' )
 
   fixits = has_entries( {
-    'fixits': contains(
+    'fixits': contains_inanyorder(
       has_entries( {
         'text': "Change type of 'test' to 'boolean'",
         'chunks': contains(
