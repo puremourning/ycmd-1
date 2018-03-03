@@ -634,6 +634,10 @@ class LanguageServerCompleter( Completer ):
     pass # pragma: no cover
 
 
+  def Customize( self, message, request_data ):
+    return message
+
+
   def __init__( self, user_options):
     super( LanguageServerCompleter, self ).__init__( user_options )
 
@@ -1082,9 +1086,11 @@ class LanguageServerCompleter( Completer ):
         file_name, file_state.state, action ) )
 
       if action == lsp.ServerFileState.OPEN_FILE:
-        msg = lsp.DidOpenTextDocument( file_state,
-                                       file_data[ 'filetypes' ],
-                                       file_data[ 'contents' ] )
+        msg = lsp.DidOpenTextDocument(
+          file_state,
+          file_data[ 'filetypes' ],
+          file_data[ 'contents' ],
+          lambda m: self.Customize( m, request_data ) )
 
         self.GetConnection().SendNotification( msg )
       elif action == lsp.ServerFileState.CHANGE_FILE:

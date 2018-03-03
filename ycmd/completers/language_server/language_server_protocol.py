@@ -167,23 +167,23 @@ class ServerFileState( object ):
     return hashlib.sha1( ToBytes( contents ) )
 
 
-def BuildRequest( request_id, method, parameters ):
+def BuildRequest( request_id, method, parameters, customizer = lambda m: m ):
   """Builds a JSON RPC request message with the supplied ID, method and method
   parameters"""
   return _BuildMessageData( {
     'id': request_id,
     'method': method,
     'params': parameters,
-  } )
+  }, customizer )
 
 
-def BuildNotification( method, parameters ):
+def BuildNotification( method, parameters, customizer = lambda m: m ):
   """Builds a JSON RPC notification message with the supplied method and
   method parameters"""
   return _BuildMessageData( {
     'method': method,
     'params': parameters,
-  } )
+  }, customizer )
 
 
 def Initialize( request_id, project_directory ):
@@ -221,7 +221,10 @@ def DidChangeConfiguration( config ):
   } )
 
 
-def DidOpenTextDocument( file_state, file_types, file_contents ):
+def DidOpenTextDocument( file_state,
+                         file_types,
+                         file_contents,
+                         customizer = lambda m: m ):
   return BuildNotification( 'textDocument/didOpen', {
     'textDocument': {
       'uri': FilePathToUri( file_state.filename ),
@@ -229,7 +232,7 @@ def DidOpenTextDocument( file_state, file_types, file_contents ):
       'version': file_state.version,
       'text': file_contents
     }
-  } )
+  }, customizer )
 
 
 def DidChangeTextDocument( file_state, file_contents ):
@@ -397,8 +400,11 @@ def UriToFilePath( uri ):
   return os.path.abspath( url2pathname( uri[ 5 : ] ) )
 
 
-def _BuildMessageData( message ):
+def _BuildMessageData( message, customizer ):
   message[ 'jsonrpc' ] = '2.0'
+
+  message = customizer( message )
+
   # NOTE: sort_keys=True is needed to workaround a 'limitation' of clangd where
   # it requires keys to be in a specific order, due to a somewhat naive
   # JSON/YAML parser.

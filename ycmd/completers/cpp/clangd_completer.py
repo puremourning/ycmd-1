@@ -28,6 +28,7 @@ from ycmd.completers.language_server.language_server_completer import (
   LanguageServerConnectionTimeout )
 from ycmd import utils, responses
 from ycmd.completers.cpp.flags import Flags, NoCompilationDatabase
+from ycmd.completers.cpp.clang_completer import FlagsForRequest
 
 import threading
 import logging
@@ -251,8 +252,19 @@ class ClangdCopleter( LanguageServerCompleter ):
     self.ServerReset()
 
 
-
   def _RestartServer( self, request_data ):
     with self._server_state_mutex:
       self._StopServer()
       self._StartServer()
+
+
+  def Customize( self, message, request_data ):
+    if message[ 'method' ] == 'textDocument/didOpen':
+      py_flags = [
+        flag for flag in FlagsForRequest( self._flags, request_data )
+      ]
+      message[ 'params' ][ 'metadata' ] = {
+        'extraFlags': py_flags
+      }
+
+    return message
