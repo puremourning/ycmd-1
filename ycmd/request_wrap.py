@@ -86,8 +86,16 @@ class RequestWrap( object ):
       'filetypes': ( self._Filetypes, None ),
 
       'first_filetype': ( self._FirstFiletype, None ),
+
+      'forced_semantic_completion': ( None, self._SetForcedSemanticCompletion ),
     }
-    self._cached_computed = {}
+    self._cached_computed = {
+      'forced_semantic_completion': False,
+    }
+
+
+  def _SetForcedSemanticCompletion( self, value ):
+    self._cached_computed[ 'forced_semantic_completion' ] = value
 
 
   def __getitem__( self, key ):

@@ -93,6 +93,8 @@ def GetCompletions():
                     _server_state.ShouldUseFiletypeCompleter( request_data ) )
   _logger.debug( 'Using filetype completion: %s', do_filetype_completion )
 
+  request_data[ 'forced_semantic_completion' ] = forced_filetype_completion
+
   errors = None
   completions = None
 
