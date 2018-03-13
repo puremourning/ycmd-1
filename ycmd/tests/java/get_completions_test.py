@@ -637,6 +637,7 @@ def GetCompletions_ForceAtTopLevel_WithImport_test( app ):
           CompletionEntryMatcher( 'InputStreamReader', None, {
             'kind': 'Class',
             'menu_text': 'InputStreamReader - java.io',
+            'extra_menu_info': '*',
             'extra_data': has_entries( {
               'fixits': contains( has_entries( {
                 'chunks': contains(
