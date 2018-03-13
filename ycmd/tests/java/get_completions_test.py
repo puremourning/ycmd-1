@@ -328,7 +328,7 @@ def GetCompletions_WithFixIt_test( app ):
       'data': has_entries( {
         'completion_start_column': 22,
         'completions': contains_inanyorder(
-          CompletionEntryMatcher( 'CUTHBERT', 'com.test.wobble.Wibble',
+          CompletionEntryMatcher( 'CUTHBERT', 'com.test.wobble.Wibble*',
           {
             'kind': 'Field',
             'extra_data': has_entries( {

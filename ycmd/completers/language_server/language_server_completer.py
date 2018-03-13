@@ -1471,13 +1471,23 @@ class LanguageServerCompleter( Completer ):
 
 
 def _CompletionItemToCompletionData( insertion_text, item, fixits ):
+
+  # When there is a FixIt associated with the insertion, add a little * to the
+  # extra_menu_info.
+  extra_menu_info = item.get( 'detail', None )
+  if fixits:
+    if extra_menu_info is not None:
+      extra_menu_info = extra_menu_info + '*'
+    else:
+      extra_menu_info = '*'
+
   return responses.BuildCompletionData(
     insertion_text,
-    extra_menu_info = item.get( 'detail', None ),
     detailed_info = ( item[ 'label' ] +
                       '\n\n' +
                       item.get( 'documentation', '' ) ),
     menu_text = item[ 'label' ],
+    extra_menu_info = extra_menu_info,
     kind = lsp.ITEM_KIND[ item.get( 'kind', 0 ) ],
     extra_data = fixits )
 
