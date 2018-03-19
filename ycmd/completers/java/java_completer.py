@@ -57,7 +57,7 @@ PROJECT_FILE_TAILS = [
   'build.gradle'
 ]
 
-WORKSPACE_ROOT_PATH = os.path.abspath( os.path.join(
+DEFAULT_WORKSPACE_ROOT_PATH = os.path.abspath( os.path.join(
   os.path.dirname( __file__ ),
   '..',
   '..',
@@ -87,6 +87,12 @@ WORKSPACE_ROOT_PATH = os.path.abspath( os.path.join(
 #  - An option is available to re-use workspaces
 CLEAN_WORKSPACE_OPTION = 'java_jdtls_use_clean_workspace'
 
+# jdt.ls workspace areas are mutable and written by the server. Putting them
+# underneath the ycmd installation, even in their own directory makes it
+# impossible to use a shared installation of ycmd. In order to allow that, we
+# expose another (hidden) option which moves the workspace root dirdectory
+# somewhere else, such as the user's home directory.
+WORKSPACE_ROOT_PATH_OPTION = 'java_jdtls_workspace_root_path'
 
 def ShouldEnableJavaCompleter():
   _logger.info( 'Looking for jdt.ls' )
@@ -123,7 +129,7 @@ def _PathToLauncherJar():
   return launcher_jars[ 0 ]
 
 
-def _LauncherConfiguration():
+def _LauncherConfiguration( workspace_root, wipe_config ):
   if utils.OnMac():
     config = 'config_mac'
   elif utils.OnWindows():
@@ -131,7 +137,23 @@ def _LauncherConfiguration():
   else:
     config = 'config_linux'
 
-  return os.path.abspath( os.path.join( LANGUAGE_SERVER_HOME, config ) )
+  # The config directory is a bit of a misnomer. It is really a server-specific
+  # working area, that's different from the workspace directory.  Importantly,
+  # the server writes to this directory, which means that in order to allow
+  # shared installations of ycmd, we have to make it somehow unique per user.
+  #
+  # To allow this, we let the client specify the workspace root and we always
+  # put the (mutable) config directory under the workspace root path.
+  working_config = os.path.abspath( os.path.join( workspace_root, config ) )
+  base_config = os.path.abspath( os.path.join( LANGUAGE_SERVER_HOME, config ) )
+
+  if not os.path.isdir( working_config ):
+    shutil.copytree( base_config, working_config )
+  elif wipe_config:
+    shutil.rmtree( working_config )
+    shutil.copytree( base_config, working_config )
+
+  return working_config
 
 
 def _MakeProjectFilesForPath( path ):
@@ -166,9 +188,11 @@ def _FindProjectDir( starting_dir ):
   return starting_dir
 
 
-def _WorkspaceDirForProject( project_dir, use_clean_workspace ):
+def _WorkspaceDirForProject( workspace_root_path,
+                             project_dir,
+                             use_clean_workspace ):
   if use_clean_workspace:
-    temp_path = os.path.join( WORKSPACE_ROOT_PATH, 'temp' )
+    temp_path = os.path.join( workspace_root_path, 'temp' )
 
     try:
       os.makedirs( temp_path )
@@ -178,7 +202,7 @@ def _WorkspaceDirForProject( project_dir, use_clean_workspace ):
     return tempfile.mkdtemp( dir=temp_path )
 
   project_dir_hash = hashlib.sha256( utils.ToBytes( project_dir ) )
-  return os.path.join( WORKSPACE_ROOT_PATH,
+  return os.path.join( workspace_root_path,
                        utils.ToUnicode( project_dir_hash.hexdigest() ) )
 
 
@@ -188,6 +212,10 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
     self._server_keep_logfiles = user_options[ 'server_keep_logfiles' ]
     self._use_clean_workspace = user_options[ CLEAN_WORKSPACE_OPTION ]
+    self._workspace_root_path = user_options[ WORKSPACE_ROOT_PATH_OPTION ]
+
+    if not self._workspace_root_path:
+      self._workspace_root_path = DEFAULT_WORKSPACE_ROOT_PATH
 
     # Used to ensure that starting/stopping of the server is synchronized
     self._server_state_mutex = threading.RLock()
@@ -237,6 +265,11 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       'StopServer': (
         lambda self, request_data, args: self._StopServer()
       ),
+      'WipeWorkspace': (
+        lambda self, request_data, args: self._WipeWorkspace( request_data,
+                                                              args )
+      ),
+
       'GetDoc': (
         lambda self, request_data, args: self.GetDoc( request_data )
       ),
@@ -263,8 +296,11 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     items = [
       responses.DebugInfoItem( 'Startup Status', self._server_init_status ),
       responses.DebugInfoItem( 'Java Path', PATH_TO_JAVA ),
-      responses.DebugInfoItem( 'Launcher Config.', self._launcher_config ),
     ]
+
+    if self._launcher_config:
+      items.append( responses.DebugInfoItem( 'Launcher Config.',
+                                             self._launcher_config ) )
 
     if self._project_dir:
       items.append( responses.DebugInfoItem( 'Project Directory',
@@ -313,6 +349,18 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     return utils.ProcessIsRunning( self._server_handle )
 
 
+  def _WipeWorkspace( self, request_data, args ):
+    with_config = False
+    if len( args ) > 0 and '--with-config' in args:
+      with_config = True
+
+    with self._server_state_mutex:
+      self._StopServer()
+      self._StartServer( request_data,
+                         wipe_workspace = True,
+                         wipe_config = with_config )
+
+
   def _RestartServer( self, request_data ):
     with self._server_state_mutex:
       self._StopServer()
@@ -333,7 +381,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
           self._workspace_path ) )
 
     self._launcher_path = _PathToLauncherJar()
-    self._launcher_config = _LauncherConfiguration()
+    self._launcher_config = None
     self._workspace_path = None
     self._project_dir = None
     self._received_ready_message = threading.Event()
@@ -346,7 +394,10 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     self.ServerReset()
 
 
-  def _StartServer( self, request_data ):
+  def _StartServer( self,
+                    request_data,
+                    wipe_workspace = False,
+                    wipe_config = False ):
     with self._server_state_mutex:
       if self._server_started:
         return
@@ -358,8 +409,18 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       self._project_dir = _FindProjectDir(
         os.path.dirname( request_data[ 'filepath' ] ) )
       self._workspace_path = _WorkspaceDirForProject(
+        self._workspace_root_path,
         self._project_dir,
         self._use_clean_workspace )
+
+      if not self._use_clean_workspace and wipe_workspace:
+        if os.path.isdir( self._workspace_path ):
+          _logger.info( 'Wiping out workspace {0}'.format(
+            self._workspace_path ) )
+          shutil.rmtree( self._workspace_path )
+
+      self._launcher_config = _LauncherConfiguration( self._workspace_root_path,
+                                                      wipe_config )
 
       command = [
         PATH_TO_JAVA,
