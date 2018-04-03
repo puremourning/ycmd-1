@@ -138,22 +138,40 @@ def _LauncherConfiguration( workspace_root, wipe_config ):
   else:
     config = 'config_linux'
 
-  # The config directory is a bit of a misnomer. It is really a server-specific
-  # working area, that's different from the workspace directory.  Importantly,
-  # the server writes to this directory, which means that in order to allow
-  # shared installations of ycmd, we have to make it somehow unique per user.
+  CONFIG_FILENAME = 'config.ini'
+
+  # The 'config' directory is a bit of a misnomer. It is really a working area
+  # for eclipse to store things that eclipse feels entitled to store,
+  # that are not specific to a particular project or workspace.
+  # Importantly, the server writes to this directory, which means that in order
+  # to allow installations of ycmd on readonly filesystems (or shared
+  # installations of ycmd), we have to make it somehow unique at least per user,
+  # and possibly per ycmd instance.
   #
   # To allow this, we let the client specify the workspace root and we always
-  # put the (mutable) config directory under the workspace root path.
-  working_config = os.path.abspath( os.path.join( workspace_root, config ) )
-  base_config = os.path.abspath( os.path.join( LANGUAGE_SERVER_HOME, config ) )
+  # put the (mutable) config directory under the workspace root path. The config
+  # directory is simply a writable directory with the config.ini in it.
+  #
+  # Note that we must re-copy the config when it changes. Otherwise, eclipse
+  # just won't start. As the file is generated part of the jdt.ls build, we just
+  # always copy and overwrite it.
+  working_config = os.path.abspath( os.path.join( workspace_root,
+                                                  config ) )
+  working_config_file = os.path.join( working_config, CONFIG_FILENAME )
+  base_config_file = os.path.abspath( os.path.join( LANGUAGE_SERVER_HOME,
+                                                    config,
+                                                    CONFIG_FILENAME ) )
 
-  if not os.path.isdir( working_config ):
-    shutil.copytree( base_config, working_config )
-  elif wipe_config:
-    shutil.rmtree( working_config )
-    shutil.copytree( base_config, working_config )
+  if os.path.isdir( working_config ):
+    if wipe_config:
+      shutil.rmtree( working_config )
+      os.makedirs( working_config )
+    elif os.path.isfile( working_config_file ):
+      os.remove( working_config_file )
+  else:
+    os.makedirs( working_config )
 
+  shutil.copy2( base_config_file, working_config_file )
   return working_config
 
 
