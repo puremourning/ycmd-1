@@ -51,7 +51,7 @@ def FiletypeTriggerDictFromSpec_Works_test():
          'qux': { cu._PrepareTrigger( 'q' ).pattern }
        } ),
        _ExtractPatternsFromFiletypeTriggerDict(
-         cu._FiletypeTriggerDictFromSpec( {
+         cu.FiletypeTriggerDictFromSpec( {
            'foo': [ 'zoo', 'bar' ],
            'goo,moo': [ 'moo' ],
            'qux': [ 'q' ]

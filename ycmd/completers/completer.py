@@ -247,11 +247,7 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
       flags = raw_completions[ 1 ]
       raw_completions = raw_completions[ 0 ]
 
-    self._completions_cache.Update(
-        request_data[ 'line_num' ],
-        request_data[ 'start_column' ],
-        self.CompletionType( request_data ),
-        raw_completions )
+    self._completions_cache.Update( request_data, raw_completions )
     return ( raw_completions, flags )
 
 
