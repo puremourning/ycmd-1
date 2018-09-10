@@ -22,9 +22,10 @@
 #include "CompletionData.h"
 #include "UnsavedFile.h"
 
-#include <vector>
 #include <clang-c/Index.h>
+#include <limits>
 #include <memory>
+#include <vector>
 
 namespace YouCompleteMe {
 

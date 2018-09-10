@@ -124,7 +124,7 @@ ClangCompleter::SignatureHintsForLocationInFile(
   int column,
   const std::vector< UnsavedFile > &unsaved_files,
   const std::vector< std::string > &flags ) {
-  ReleaseGil unlock;
+  pybind11::gil_scoped_release unlock;
   shared_ptr< TranslationUnit > unit =
     translation_unit_store_.GetOrCreate( translation_unit,
                                          unsaved_files,
@@ -133,11 +133,12 @@ ClangCompleter::SignatureHintsForLocationInFile(
   if ( !unit )
     return std::vector< CompletionData >();
 
-  return unit->CandidatesForLocation( filename,
-                                      line,
-                                      column,
-                                      unsaved_files,
-                                      YouCompleteMe::CompletionKind::OVERLOAD );
+  return unit->CandidatesForLocation(
+    filename,
+    line,
+    column,
+    unsaved_files,
+    static_cast< unsigned int >( CompletionKind::OVERLOAD ) );
 }
 
 

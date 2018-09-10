@@ -73,7 +73,7 @@ CompletionKind CursorKindToCompletionKind( CXCursorKind kind ) {
       return CompletionKind::NAMESPACE;
 
     case CXCursor_OverloadCandidate:
-      return OVERLOAD;
+      return CompletionKind::OVERLOAD;
 
     default:
       return CompletionKind::UNKNOWN;
