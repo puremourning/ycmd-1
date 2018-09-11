@@ -231,7 +231,10 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
     ( candidates, flags ) = self._GetCandidatesFromSubclass( request_data )
     candidates = self.FilterAndSortCandidates( candidates,
                                                request_data[ 'query' ] )
-    return ( candidates, flags )
+    if flags:
+      return ( candidates, flags )
+    else:
+      return candidates
 
 
   def _GetCandidatesFromSubclass( self, request_data ):
