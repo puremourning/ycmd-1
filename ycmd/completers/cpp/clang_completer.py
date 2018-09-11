@@ -118,16 +118,12 @@ class ClangCompleter( Completer ):
 
 
   def ComputeSignatureHints( self, request_data ):
-    filename = request_data[ 'filepath' ]
-    if not filename:
-      return
+    flags, filename = self._FlagsForRequest( request_data )
+    if not flags:
+      return []
 
     if self._completer.UpdatingTranslationUnit(
         ToCppStringCompatible( filename ) ):
-      return []
-
-    flags = self._FlagsForRequest( request_data )
-    if not flags:
       return []
 
     files = self.GetUnsavedFilesVector( request_data )
@@ -136,6 +132,7 @@ class ClangCompleter( Completer ):
     with self._files_being_compiled.GetExclusive( filename ):
       results = self._completer.SignatureHintsForLocationInFile(
           ToCppStringCompatible( filename ),
+          ToCppStringCompatible( request_data[ 'filepath' ] ),
           line,
           column,
           files,
