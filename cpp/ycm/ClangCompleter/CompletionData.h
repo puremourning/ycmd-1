@@ -34,8 +34,8 @@ enum class CompletionKind {
   MACRO      = 0x1u << 7,
   PARAMETER  = 0x1u << 8,
   NAMESPACE  = 0x1u << 9,
-  OVERLOAD   = 0x1u << 9,
-  UNKNOWN    = 0x1u << 10
+  OVERLOAD   = 0x1u << 10,
+  UNKNOWN    = 0x1u << 11
 };
 
 // This class holds pieces of information about a single completion coming from
