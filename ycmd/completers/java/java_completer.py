@@ -146,7 +146,7 @@ def _PathToLauncherJar():
 
 
 def _CollectExtensionBundles( extension_path ):
-  extension_bundles = list()
+  extension_bundles = []
 
   for extension_dir in extension_path:
     if not os.path.isdir( extension_dir ):
