@@ -119,21 +119,21 @@ SOURCE_EXTENSIONS = [ '.cpp', '.cxx', '.cc', '.c', '.m', '.mm' ]
 # Caches for heuristically guessing flags {{{
 
 # We cache the database for any given source directory
-compilation_database_dir_map = dict()
+compilation_database_dir_map = {}
 
 # Sometimes we don't actually know what the flags to use are. Rather than
 # returning no flags, if we've previously found flags for a file in a particular
 # directory, return them. The will probably work in a high percentage of cases
 # and allow new files (which are not yet in the compilation database) to receive
 # at least some flags
-file_directory_heuristic_map = dict()
+file_directory_heuristic_map = {}
 
 # Assuming we can't find anything in the database, and we haven't previously
 # seen any compilation information for the directory of the file in question, we
 # simply return the last set of flags we successfully retrieved for any file
 # sharing the file extension. This might work for some percentage of files,
 # which is better than the 0% otherwise.
-last_compilation_info_ext_map = dict()
+last_compilation_info_ext_map = {}
 
 # As a last gambit, we just return some generic flags. This won't work for
 # any large or complex project, but it might work for trivial/toy projects,
