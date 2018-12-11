@@ -171,17 +171,17 @@ class Flags:
       except IgnoreExtraConf:
         pass
 
-    # Load the flags from the compilation database if any.
-    database = self.LoadCompilationDatabase( filename )
-    if database:
-      return self._GetFlagsFromCompilationDatabase( database, filename )
-
     # Load the flags from the global extra conf if set.
     if module:
       try:
         return _CallExtraConfFlagsForFile( module, filename, client_data )
       except IgnoreExtraConf:
         pass
+
+    # Load the flags from the compilation database if any.
+    database = self.LoadCompilationDatabase( filename )
+    if database:
+      return self._GetFlagsFromCompilationDatabase( database, filename )
 
     # No compilation database and no extra conf found. Warn the user if not
     # already warned.
