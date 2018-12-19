@@ -321,10 +321,10 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     self._CleanUp()
 
 
-  def _GetSettings( self, module, client_data ):
-    settings = super( JavaCompleter, self )._GetSettings( module, client_data )
-    settings[ 'bundles' ] = self._bundles
-    return settings
+  def DefaultSettings( self, request_data ):
+    return {
+      'bundles': self._bundles
+    }
 
 
   def SupportedFiletypes( self ):
@@ -405,6 +405,12 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     if self._workspace_path:
       items.append( responses.DebugInfoItem( 'Workspace Path',
                                              self._workspace_path ) )
+
+    items.append( responses.DebugInfoItem( 'Extension Path',
+                                           self._extension_path ) )
+
+    items.append( responses.DebugInfoItem( 'Settings',
+                                           self._settings ) )
 
     return responses.BuildDebugInfoResponse(
       name = "Java",
@@ -589,10 +595,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
     LOGGER.info( 'jdt.ls Language Server started' )
 
-    self.SendInitialize( request_data, settings = {
-      'bundles': ( _CollectExtensionBundles( self._extension_path )
-                   if self._extension_path else [] )
-    } )
+    self.SendInitialize( request_data )
 
 
   def _StopServer( self ):

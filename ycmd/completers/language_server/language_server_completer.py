@@ -927,6 +927,10 @@ class LanguageServerCompleter( Completer ):
     return completions
 
 
+  def DefaultSettings( self, request_data ):
+    return {}
+
+
   def _GetSettings( self, module, client_data ):
     if hasattr( module, 'Settings' ):
       settings = module.Settings( language = self.Language(),
@@ -940,10 +944,12 @@ class LanguageServerCompleter( Completer ):
 
 
   def _GetSettingsFromExtraConf( self, request_data ):
+    self._settings = self.DefaultSettings( request_data )
+
     module = extra_conf_store.ModuleForSourceFile( request_data[ 'filepath' ] )
     if module:
       settings = self._GetSettings( module, request_data[ 'extra_conf_data' ] )
-      self._settings = settings.get( 'ls', {} )
+      self._settings.update( settings.get( 'ls', {} ) )
 
 
   def OnFileReadyToParse( self, request_data ):
