@@ -30,6 +30,7 @@ import logging
 import os
 import queue
 import threading
+import json
 
 from ycmd import extra_conf_store, responses, utils
 from ycmd.completers.completer import Completer, CompletionsCache
@@ -1798,6 +1799,14 @@ class LanguageServerCompleter( Completer ):
                           request_data[ 'column_num' ],
                           request_data[ 'filepath' ] ),
       chunks ) ] )
+
+
+  def ExecuteCommand( self, request_data, args ):
+    return responses.BuildDetailedInfoResponse(
+      json.dumps( self.GetCommandResponse( request_data,
+                                           args[ 0 ],
+                                           args[ 1: ] ),
+                  indent=2 ) )
 
 
   def GetCommandResponse( self, request_data, command, arguments ):
