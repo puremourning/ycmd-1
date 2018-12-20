@@ -333,6 +333,10 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
   def GetCustomSubcommands( self ):
     return {
+      'ExecuteCommand': (
+        lambda self, request_data, args: self.ExecuteCommand( request_data,
+                                                              args )
+      ),
       'FixIt': (
         lambda self, request_data, args: self.GetCodeActions( request_data,
                                                               args )
@@ -755,3 +759,9 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         text = command[ 'title' ] )
 
     return None
+
+
+  def ExecuteWorkspaceCommand( self, request_data, args ):
+    self.GetCommandResponse( request_data,
+                             'java.execute.workspaceCommand',
+                             args )
