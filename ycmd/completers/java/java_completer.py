@@ -357,6 +357,10 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
       'Format': (
         lambda self, request_data, args: self.Format( request_data )
       ),
+      'ExecuteCommand': (
+        lambda self, request_data, args: self.ExecuteCommand( request_data,
+                                                              args )
+      ),
 
       # Handled by us
       'RestartServer': (
@@ -786,3 +790,9 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         text = command[ 'title' ] )
 
     return None
+
+
+  def ExecuteWorkspaceCommand( self, request_data, args ):
+    self.GetCommandResponse( request_data,
+                             'java.execute.workspaceCommand',
+                             args )
