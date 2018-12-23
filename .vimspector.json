@@ -1,0 +1,38 @@
+{
+  "adapters": {
+    "python": {
+      "name": "python",
+      "command": [
+        "node",
+        "$HOME/.vscode/extensions/ms-python.python-2018.12.1/out/client/debugger/debugAdapter/main.js"
+      ]
+    }
+  },
+  "configurations": {
+    "python - launch nosetests": {
+      "adapter": "python",
+      "configuration": {
+        "name": "Python: Current File",
+        "type": "python",
+        "request": "launch",
+
+        "cwd": "${workspaceRoot}",
+        "stopOnEntry": true,
+        "console": "integratedTerminal",
+
+        "debugOptions": [],
+
+        "program": "$VIRTUAL_ENV/bin/nosetests",
+        "args": [
+          "-v",
+          "--with-id",
+          "--ignore-files=(^\\.|^setup\\.py$)",
+          "ycmd/tests/java/get_completions_test.py"
+        ],
+        "env": {
+          "PYTHONPATH": "${workspaceRoot}/third_party/bottle:${workspaceRoot}/third_party/cregex/regex_2:${workspaceRoot}/third_party/frozendict:${workspaceRoot}/third_party/jedi_deps/jedi:${workspaceRoot}/third_party/jedi_deps/parso:${workspaceRoot}/third_party/requests_deps/certifi:${workspaceRoot}/third_party/requests_deps/chardet:${workspaceRoot}/third_party/requests_deps/idna:${workspaceRoot}/third_party/requests_deps/requests:${workspaceRoot}/third_party/requests_deps/urllib3/src:${workspaceRoot}/third_party/ycmd/third_party/waitress"
+        }
+      }
+    }
+  }
+}
