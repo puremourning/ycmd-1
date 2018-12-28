@@ -39,6 +39,10 @@ from ycmd.completers.language_server import language_server_protocol as lsp
 
 NO_HOVER_INFORMATION = 'No hover information.'
 
+RequestError = collections.namedtuple( 'RequestError', [ 'code', 'reason' ] )
+
+ERR_UNSUPPORTED_MESSAGE = RequestError( 1, 'Unsupported message' )
+
 # All timeout values are in seconds
 REQUEST_TIMEOUT_COMPLETION = 5
 REQUEST_TIMEOUT_INITIALISE = 30
@@ -514,12 +518,21 @@ class LanguageServerConnection( threading.Thread ):
     them in a Queue which is polled by the long-polling mechanism in
     LanguageServerCompleter."""
     if 'id' in message:
-      with self._response_mutex:
-        message_id = str( message[ 'id' ] )
-        assert message_id in self._responses
-        self._responses[ message_id ].ResponseReceived( message )
-        del self._responses[ message_id ]
+      if 'method' in message:
+        # This is a server->client request, which requires a response.
+        # We don't support any such messages right now.
+        message = lsp.Reject( message,
+                              ERR_UNSUPPORTED_MESSAGE.code,
+                              ERR_UNSUPPORTED_MESSAGE.reason )
+      else:
+        # This is a response to the message with id message[ 'id' ]
+        with self._response_mutex:
+          message_id = str( message[ 'id' ] )
+          assert message_id in self._responses
+          self._responses[ message_id ].ResponseReceived( message )
+          del self._responses[ message_id ]
     else:
+      # This is a notification
       self._AddNotificationToQueue( message )
 
       # If there is an immediate (in-message-pump-thread) handler configured,

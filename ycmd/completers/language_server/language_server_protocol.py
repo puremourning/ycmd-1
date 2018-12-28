@@ -194,6 +194,17 @@ def BuildNotification( method, parameters ):
   } )
 
 
+def BuildResponse( request, parameters ):
+  """Builds a JSON RPC response message to respond to the supplied |request|
+  message. |parameters| should contain either 'error' or 'result'"""
+  message = {
+    'id': request[ 'id' ],
+    'method': request[ 'method' ],
+  }
+  message.update( parameters )
+  return _BuildMessageData( message )
+
+
 def Initialize( request_id, project_directory, settings ):
   """Build the Language Server initialize request"""
 
@@ -225,6 +236,16 @@ def Shutdown( request_id ):
 
 def Exit():
   return BuildNotification( 'exit', None )
+
+
+def Reject( request, code, reason, data = None ):
+  return BuildResponse( request, {
+    'error': {
+      'code': code,
+      'reason': reason,
+      'data': data
+    }
+  } )
 
 
 def DidChangeConfiguration( config ):
