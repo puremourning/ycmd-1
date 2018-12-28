@@ -401,6 +401,8 @@ def ParseArguments():
                               'completion engine.' )
   parser.add_argument( '--yaml-completer', action = 'store_true',
                        help = 'Enable YAML semantic completion' )
+  parser.add_argument( '--ruby-completer', action = 'store_true',
+                       help = 'Enable ruby semantic completion' )
   parser.add_argument( '--system-boost', action = 'store_true',
                        help = 'Use the system boost instead of bundled one. '
                        'NOT RECOMMENDED OR SUPPORTED!' )
@@ -993,26 +995,41 @@ def EnableYamlCompleter( args ):
              status_message = 'Setting up YAML Language Server' )
 
 
+def EnableRubyCompleter( args ):
+  bundle = FindExecutableOrDie( 'bundle',
+                                'bundler is required for ruby completer' )
+  os.chdir( p.join( DIR_OF_THIS_SCRIPT,
+                    'third_party',
+                    'solargraph-runtime' ) )
+
+  CheckCall( [ bundle, 'install', '--path=vendor/bundle', '--binstubs' ],
+             quiet = args.quiet,
+             status_message = 'Installing solargraph for ruby completion' )
+
+
 def Main():
   args = ParseArguments()
 
   if not args.skip_build or not args.no_regex:
     DoCmakeBuilds( args )
-  if args.cs_completer or args.omnisharp_completer or args.all_completers:
-    EnableCsCompleter( args )
-  if args.go_completer or args.gocode_completer or args.all_completers:
-    EnableGoCompleter( args )
-  if args.js_completer or args.tern_completer or args.all_completers:
-    EnableJavaScriptCompleter( args )
-  if args.rust_completer or args.racer_completer or args.all_completers:
-    EnableRustCompleter( args )
-  if args.java_completer or args.all_completers:
-    EnableJavaCompleter( args )
-  if args.ts_completer or args.all_completers:
-    EnableTypeScriptCompleter( args )
-  if args.yaml_completer or args.all_completers:
-    EnableYamlCompleter( args )
 
+  all_completer_installers = [
+    ( EnableCsCompleter, lambda a: a.cs_completer or a.omnisharp_completer ),
+    ( EnableGoCompleter, lambda a: a.go_completer or a.gocode_completer ),
+    ( EnableJavaScriptCompleter, lambda a: a.js_completer or a.tern_completer ),
+    ( EnableRubyCompleter, lambda a: a.rust_completer or a.racer_completer ),
+    ( EnableJavaCompleter, lambda a: a.java_completer ),
+    ( EnableTypeScriptCompleter, lambda a: a.ts_completer ),
+    ( EnableYamlCompleter, lambda a: a.yaml_completer ),
+    ( EnableRubyCompleter, lambda a: a.ruby_completer ),
+  ]
+
+  for f, l in all_completer_installers:
+    if args.all_completers or l( args ):
+      f( args )
+
+  # clangd is not in --all-completers because it duplicates functionality from
+  # --clang-completer
   if args.clangd_completer:
     EnableClangdCompleter( args )
 
