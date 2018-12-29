@@ -403,6 +403,8 @@ def ParseArguments():
                        help = 'Enable YAML semantic completion' )
   parser.add_argument( '--ruby-completer', action = 'store_true',
                        help = 'Enable ruby semantic completion' )
+  parser.add_argument( '--php-completer', action = 'store_true',
+                       help = 'Enable PHP semantic completion' )
   parser.add_argument( '--system-boost', action = 'store_true',
                        help = 'Use the system boost instead of bundled one. '
                        'NOT RECOMMENDED OR SUPPORTED!' )
@@ -1007,6 +1009,28 @@ def EnableRubyCompleter( args ):
              status_message = 'Installing solargraph for ruby completion' )
 
 
+def EnablePHPCompleter( args ):
+  composer = FindExecutableOrDie( 'composer',
+                                  'composer is required for PHP completer' )
+
+  os.chdir( p.join( DIR_OF_THIS_SCRIPT,
+                    'third_party',
+                    'php-language-server-runtime' ) )
+
+  CheckCall( [ composer, 'install' ],
+             quiet = args.quiet,
+             status_message = 'Installing php-language-server for PHP '
+                              'completion' )
+
+  # Not sure what this does, but it is apparently needed
+  CheckCall( [ composer,
+               'run-script',
+               '--working-dir=vendor/felixfbecker/language-server',
+               'parse-stubs' ],
+             quiet = args.quiet,
+             status_message = 'Pre-parsing PHP standard library stubs' )
+
+
 def Main():
   args = ParseArguments()
 
@@ -1022,6 +1046,7 @@ def Main():
     ( EnableTypeScriptCompleter, lambda a: a.ts_completer ),
     ( EnableYamlCompleter, lambda a: a.yaml_completer ),
     ( EnableRubyCompleter, lambda a: a.ruby_completer ),
+    ( EnablePHPCompleter, lambda a: a.php_completer ),
   ]
 
   for f, l in all_completer_installers:

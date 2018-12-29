@@ -76,6 +76,7 @@ def RunFlake8():
 SIMPLE_COMPLETERS = [
   'clangd',
   'go',
+  'php',
   'ruby',
   'rust',
   'yaml',
