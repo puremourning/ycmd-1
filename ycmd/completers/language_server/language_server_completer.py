@@ -1771,8 +1771,12 @@ def _InsertionTextForItem( request_data, item ):
   # We do not support completion types of "Snippet". This is implicit in that we
   # don't say it is a "capability" in the initialize request.
   # Abort this request if the server is buggy and ignores us.
-  assert lsp.INSERT_TEXT_FORMAT[
-    item.get( 'insertTextFormat' ) or 1 ] == 'PlainText'
+  insert_type = lsp.INSERT_TEXT_FORMAT[ item.get( 'insertTextFormat' ) or 1 ]
+
+  if insert_type != "PlainText":
+    raise IncompatibleCompletionException( 'Unsupported insertion type '
+                                           'supplied: {}'.format(
+                                             insert_type ) )
 
   fixits = None
 
