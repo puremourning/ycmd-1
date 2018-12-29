@@ -380,10 +380,12 @@ def ParseArguments():
   parser.add_argument( '--rust-completer', action = 'store_true',
                        help = 'Enable Rust semantic completion engine.' )
   parser.add_argument( '--java-completer', action = 'store_true',
-                       help = 'Enable Java semantic completion engine.' ),
+                       help = 'Enable Java semantic completion engine.' )
   parser.add_argument( '--ts-completer', action = 'store_true',
                        help = 'Enable JavaScript and TypeScript semantic '
-                              'completion engine.' ),
+                              'completion engine.' )
+  parser.add_argument( '--yaml-completer', action = 'store_true',
+                       help = 'Enable YAML semantic completion' )
   parser.add_argument( '--system-boost', action = 'store_true',
                        help = 'Use the system boost instead of bundled one. '
                        'NOT RECOMMENDED OR SUPPORTED!' )
@@ -894,6 +896,17 @@ def DoCmakeBuilds( args ):
     BuildRegexModule( cmake, cmake_common_args, args )
 
 
+def EnableYamlCompleter( args ):
+  npm = FindExecutableOrDie( 'npm', 'npm is required to set up yaml.' )
+
+  os.chdir( p.join( DIR_OF_THIS_SCRIPT,
+                    'third_party',
+                    'yaml-language-server-runtime' ) )
+  CheckCall( [ npm, 'install', '--production' ],
+             quiet = args.quiet,
+             status_message = 'Setting up YAML Language Server' )
+
+
 def Main():
   args = ParseArguments()
 
@@ -911,6 +924,9 @@ def Main():
     EnableJavaCompleter( args )
   if args.ts_completer or args.all_completers:
     EnableTypeScriptCompleter( args )
+  if args.yaml_completer or args.all_completers:
+    EnableYamlCompleter( args )
+
   if args.clangd_completer:
     EnableClangdCompleter( args )
 
