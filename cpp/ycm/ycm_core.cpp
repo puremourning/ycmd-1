@@ -201,7 +201,8 @@ PYBIND11_MODULE( ycm_core, mod )
     .def_readonly( "text", &FixIt::text )
     .def_property_readonly( "kind", [](const py::handle) {
       return py::none();
-    });
+    })
+    .def_readonly( "is_completion", &FixIt::is_completion );
 
   py::bind_vector< std::vector< FixIt > >( mod, "FixItVector" );
 
