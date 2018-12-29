@@ -52,6 +52,8 @@ struct FixIt {
   /// multiple diagnostics offering different fixit options. The text is
   /// displayed to the user, allowing them choose which diagnostic to apply.
   std::string text;
+
+  bool is_completion{ false };
 };
 
 } // namespace YouCompleteMe
