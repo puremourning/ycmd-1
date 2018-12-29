@@ -77,6 +77,7 @@ SIMPLE_COMPLETERS = [
   'clangd',
   'rust',
   'go',
+  'yaml',
 ]
 
 # More complex or legacy cases can specify all of:
