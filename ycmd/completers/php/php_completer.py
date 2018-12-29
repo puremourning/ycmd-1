@@ -24,7 +24,7 @@ from builtins import *  # noqa
 
 from ycmd.completers.language_server import (
   simple_language_server_completer as slsc )
-from ycmd import utils
+from ycmd import responses, utils
 from ycmd.utils import LOGGER
 
 import os
@@ -73,3 +73,18 @@ class PHPCompleter( slsc.SimpleLSPCompleter ):
 
   def SupportedFiletypes( self ):
     return [ 'php' ]
+
+
+  def ConvertNotificationToMessage( self, request_data, notification ):
+    # Do the normal
+    message = super( PHPCompleter, self ).ConvertNotificationToMessage(
+      request_data,
+      notification )
+
+    if message is not None:
+      return message
+
+    # The server returns parsing status as messages, so let's show the user.
+    if notification[ 'method' ] == 'window/logMessage':
+      return responses.BuildDisplayMessageResponse(
+        notification[ 'params' ][ 'message' ] )
