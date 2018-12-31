@@ -104,7 +104,8 @@ def BuildCompletionData( insertion_text,
                          detailed_info = None,
                          menu_text = None,
                          kind = None,
-                         extra_data = None ):
+                         extra_data = None,
+                         snippet = None ):
   completion_data = {
     'insertion_text': insertion_text
   }
@@ -119,6 +120,8 @@ def BuildCompletionData( insertion_text,
     completion_data[ 'kind' ] = kind
   if extra_data:
     completion_data[ 'extra_data' ] = extra_data
+  if snippet:
+    completion_data[ 'snippet' ] = snippet
   return completion_data
 
 
@@ -175,11 +178,12 @@ class FixIt( object ):
   must be byte offsets into the UTF-8 encoded version of the appropriate
   buffer.
   """
-  def __init__( self, location, chunks, text = '' ):
+  def __init__( self, location, chunks, text = '', is_completion = False ):
     """location of type Location, chunks of type list<FixItChunk>"""
     self.location = location
     self.chunks = chunks
     self.text = text
+    self.is_completion = is_completion
 
 
 class FixItChunk( object ):
@@ -271,6 +275,7 @@ def BuildFixItResponse( fixits ):
       'location': BuildLocationData( fixit.location ),
       'chunks' : [ BuildFixitChunkData( x ) for x in fixit.chunks ],
       'text': fixit.text,
+      'is_completion': fixit.is_completion,
     }
 
   return {

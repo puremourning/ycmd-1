@@ -998,7 +998,7 @@ class LanguageServerCompleter( Completer ):
         item[ '_resolved' ] = True
 
       try:
-        insertion_text, extra_data, start_codepoint = (
+        insertion_text, snippet, extra_data, start_codepoint = (
           _InsertionTextForItem( request_data, item ) )
       except IncompatibleCompletionException:
         LOGGER.exception( 'Ignoring incompatible completion suggestion %s',
@@ -1017,6 +1017,7 @@ class LanguageServerCompleter( Completer ):
       # we might modify insertion_text should we see a lower start codepoint.
       completions.append( _CompletionItemToCompletionData(
         insertion_text,
+        snippet,
         item,
         extra_data ) )
       start_codepoints.append( start_codepoint )
@@ -1856,7 +1857,7 @@ class LanguageServerCompleter( Completer ):
                                                   indent = 2 ) ) ]
 
 
-def _CompletionItemToCompletionData( insertion_text, item, fixits ):
+def _CompletionItemToCompletionData( insertion_text, snippet, item, fixits ):
   # Since we send completionItemKind capabilities, we guarantee to handle
   # values outside our value set and fall back to a default.
   try:
@@ -1874,7 +1875,8 @@ def _CompletionItemToCompletionData( insertion_text, item, fixits ):
     detailed_info = item[ 'label' ] + '\n\n' + documentation,
     menu_text = item[ 'label' ],
     kind = kind,
-    extra_data = fixits )
+    extra_data = fixits,
+    snippet = snippet )
 
 
 def _FixUpCompletionPrefixes( completions,
@@ -1912,36 +1914,32 @@ def _InsertionTextForItem( request_data, item ):
 
   Returns a tuple (
      - insertion_text   = the text to insert
+     - snippet          = optional snippet text
      - fixits           = ycmd fixit which needs to be applied additionally when
                           selecting this completion
      - start_codepoint  = the start column at which the text should be inserted
   )"""
-  # We do not support completion types of "Snippet". This is implicit in that we
-  # don't say it is a "capability" in the initialize request.
-  # Abort this request if the server is buggy and ignores us.
-  insert_type = lsp.INSERT_TEXT_FORMAT[ item.get( 'insertTextFormat' ) or 1 ]
-
-  if insert_type != "PlainText":
-    raise IncompatibleCompletionException( 'Unsupported insertion type '
-                                           'supplied: {}'.format(
-                                             insert_type ) )
-
-  fixits = None
-
   start_codepoint = request_data[ 'start_codepoint' ]
+  label = item[ 'label' ]
+  insertion_text_is_snippet = False
   # We will always have one of insertText or label
   if 'insertText' in item and item[ 'insertText' ]:
+    # 1 = PlainText
+    # 2 = Snippet
+    if lsp.INSERT_TEXT_FORMAT[ item.get( 'insertTextFormat', 1 ) ] == 'Snippet':
+      insertion_text_is_snippet = True
+
     insertion_text = item[ 'insertText' ]
   else:
     insertion_text = item[ 'label' ]
 
-  additional_text_edits = []
+  fixits = []
+  filepath = request_data[ 'filepath' ]
+  contents = None
 
-  # Per the protocol, textEdit takes precedence over insertText, and must be
-  # on the same line (and containing) the originally requested position. These
-  # are a pain, and require fixing up later in some cases, as most of our
-  # clients won't be able to apply arbitrary edits (only 'completion', as
-  # opposed to 'content assist').
+  # Per the protocol, textEdit takes precedence over insertText, and the initial
+  # range of the edit must be on the same line (and containing) the originally
+  # requested position.
   if 'textEdit' in item and item[ 'textEdit' ]:
     text_edit = item[ 'textEdit' ]
     start_codepoint = _GetCompletionItemStartCodepointOrReject( text_edit,
@@ -1949,26 +1947,75 @@ def _InsertionTextForItem( request_data, item ):
 
     insertion_text = text_edit[ 'newText' ]
 
-    if '\n' in insertion_text:
-      # jdt.ls can return completions which generate code, such as
-      # getters/setters and entire anonymous classes.
+    if '\n' in insertion_text and not insertion_text_is_snippet:
+      # FIXME: If this logic actually worked, then we should do it for
+      # everything and not just hte multi-line completions ? Would that allow us
+      # to avoid the _GetCompletionItemStartCodepointOrReject logic ? Possibly,
+      # but it would look strange in the UI cycling through items. In any case,
+      # doing both should be complete.
+
+      # servers can return completions which generate code, such as
+      # getters/setters and entire anonymous classes. These contain newlines in
+      # the generated textEdit. This is irksome because ycmd's clients don't
+      # necessarily support that. Certainly, Vim doesn't.
       #
-      # In order to support this we would need to do something like:
-      #  - invent some insertion_text based on label/insertText (or perhaps
-      #    '<snippet>'
-      #   - insert a textEdit in additionalTextEdits which deletes this
-      #     insertion
-      #   - or perhaps just modify this textEdit to undo that change?
-      #   - or perhaps somehow support insertion_text of '' (this doesn't work
-      #     because of filtering/sorting, etc.).
-      #  - insert this textEdit in additionalTextEdits
+      # However, we do have 'fixits' in completion responses which we can lean
+      # on.
       #
-      # These textEdits would need a lot of fixing up and is currently out of
-      # scope.
+      # In order to support this we:
+      #  - use the item's label as the intial insertion text with the start
+      #    codepoint set to the query codepoint
+      #  - insert a textEdit in additionalTextEdits which deletes this
+      #    insertion
+      #  - insert another textEdit in additionalTextEdits which applies this
+      #    textedit
       #
-      # These sorts of completions aren't really in the spirit of ycmd at the
-      # moment anyway. So for now, we just ignore this candidate.
-      raise IncompatibleCompletionException( insertion_text )
+      # On the other hand, if the insertion text is a snippet, then the snippet
+      # system will handle the expansion.
+      insertion_text = item[ 'label' ]
+      start_codepoint = request_data[ 'start_codepoint' ]
+
+      # Add a fixit which removes the inserted label
+      #
+      # TODO: Perhaps we should actually supply a completion with an empty
+      # insertion_text, than have the _client_ deal with this. One key advantage
+      # to that is that the client can then decide where to put the cursor.
+      # Currently, the Vim client puts the cursor in the wrong place (i.e.
+      # before the text, rather than after it).
+      completion_fixit_chunks = [
+        responses.FixItChunk(
+          '',
+          responses.Range(
+            responses.Location( request_data[ 'line_num' ],
+                                start_codepoint,
+                                filepath ),
+            responses.Location( request_data[ 'line_num' ],
+                                start_codepoint + len( insertion_text ),
+                                filepath ),
+          )
+        )
+      ]
+      # FIXME: The problem with this is that it _might_ break the offsets in any
+      # additionalTextEdits
+      fixits.append(
+        responses.FixIt( completion_fixit_chunks[ 0 ].range.start_,
+                         completion_fixit_chunks,
+                         item[ 'label' ] )
+      )
+      # Add a fixit which applies this textEdit
+      contents = GetFileLines( request_data, filepath )
+      completion_fixit_chunks = [
+        responses.FixItChunk(
+          text_edit[ 'newText' ],
+          _BuildRange( contents, filepath, text_edit[ 'range' ] )
+        )
+      ]
+      fixits.append(
+        responses.FixIt( completion_fixit_chunks[ 0 ].range.start_,
+                         completion_fixit_chunks,
+                         item[ 'label' ],
+                         is_completion = True )
+      )
   else:
     # Calculate the start codepoint based on the overlapping text in the
     # insertion text and the existing text. This is the behavior of Visual
@@ -1977,21 +2024,27 @@ def _InsertionTextForItem( request_data, item ):
     start_codepoint -= FindOverlapLength( request_data[ 'prefix' ],
                                           insertion_text )
 
-  additional_text_edits.extend( item.get( 'additionalTextEdits' ) or [] )
-
+  additional_text_edits = item.get( 'additionalTextEdits' ) or []
   if additional_text_edits:
-    filepath = request_data[ 'filepath' ]
-    contents = GetFileLines( request_data, filepath )
+
+    # We might have already extracted the contents
+    if contents is None:
+      contents = GetFileLines( request_data, filepath )
+
     chunks = [ responses.FixItChunk( e[ 'newText' ],
                                      _BuildRange( contents,
                                                   filepath,
                                                   e[ 'range' ] ) )
                for e in additional_text_edits ]
 
-    fixits = responses.BuildFixItResponse(
-      [ responses.FixIt( chunks[ 0 ].range.start_, chunks ) ] )
+    fixits.append( responses.FixIt( chunks[ 0 ].range.start_, chunks ) )
 
-  return insertion_text, fixits, start_codepoint
+  extra_data = responses.BuildFixItResponse( fixits ) if fixits else None
+
+  if insertion_text_is_snippet:
+    return label, insertion_text, extra_data, start_codepoint
+
+  return insertion_text, None, extra_data, start_codepoint
 
 
 def FindOverlapLength( line_value, insertion_text ):
