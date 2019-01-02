@@ -48,3 +48,6 @@
 [submodule "third_party/idna"]
 	path = third_party/requests_deps/idna
 	url = https://github.com/kjd/idna
+[submodule "third_party/pythonfutures"]
+	path = third_party/pythonfutures
+	url = https://github.com/agronholm/pythonfutures

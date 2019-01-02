@@ -45,6 +45,9 @@ python_path = [
   p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'urllib3', 'src' ),
   p.join( DIR_OF_THIRD_PARTY, 'waitress' ),
 ]
+# The concurrent.futures module is part of the standard library on Python 3.
+if sys.version_info[ 0 ] == 2:
+  python_path.append( p.join( DIR_OF_THIRD_PARTY, 'pythonfutures' ) )
 if os.environ.get( 'PYTHONPATH' ) is not None:
   python_path.append( os.environ[ 'PYTHONPATH' ] )
 os.environ[ 'PYTHONPATH' ] = os.pathsep.join( python_path )

@@ -62,19 +62,26 @@ def SetUpPythonPath():
   # modules but not by installed packages.
   sys.path.insert( GetStandardLibraryIndexInSysPath() + 1,
                    p.join( DIR_OF_THIRD_PARTY, 'python-future', 'src' ) )
-  sys.path[ 0:0 ] = [ p.join( ROOT_DIR ),
-                      p.join( DIR_OF_THIRD_PARTY, 'bottle' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'cregex',
-                              'regex_{}'.format( sys.version_info[ 0 ] ) ),
-                      p.join( DIR_OF_THIRD_PARTY, 'frozendict' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'jedi_deps', 'jedi' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'jedi_deps', 'parso' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'requests' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'chardet' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'certifi' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'idna' ),
-                      p.join( DIR_OF_THIRD_PARTY,
-                              'requests_deps',
-                              'urllib3',
-                              'src' ),
-                      p.join( DIR_OF_THIRD_PARTY, 'waitress' ) ]
+
+  dependencies = [ p.join( ROOT_DIR ),
+                   p.join( DIR_OF_THIRD_PARTY, 'bottle' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'cregex',
+                           'regex_{}'.format( sys.version_info[ 0 ] ) ),
+                   p.join( DIR_OF_THIRD_PARTY, 'frozendict' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'jedi_deps', 'jedi' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'jedi_deps', 'parso' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'requests' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'chardet' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'certifi' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'requests_deps', 'idna' ),
+                   p.join( DIR_OF_THIRD_PARTY,
+                           'requests_deps',
+                           'urllib3',
+                           'src' ),
+                   p.join( DIR_OF_THIRD_PARTY, 'waitress' ) ]
+
+  # The concurrent.futures module is part of the standard library on Python 3.
+  if sys.version_info[ 0 ] == 2:
+    dependencies.append( p.join( DIR_OF_THIRD_PARTY, 'pythonfutures' ) )
+
+  sys.path[ 0:0 ] = dependencies
