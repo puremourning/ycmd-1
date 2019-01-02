@@ -893,13 +893,10 @@ def EnableYamlCompleter( args ):
 
   os.chdir( p.join( DIR_OF_THIS_SCRIPT,
                     'third_party',
-                    'yaml-language-server' ) )
-  CheckCall( [ npm, 'install' ],
+                    'yaml-language-server-runtime' ) )
+  CheckCall( [ npm, 'install', '--production' ],
              quiet = args.quiet,
              status_message = 'Setting up YAML Language Server' )
-  CheckCall( [ npm, 'run', 'compile' ],
-             quiet = args.quiet,
-             status_message = 'Compiling YAML Language Server' )
 
 
 def EnableRubyCompleter( args ):

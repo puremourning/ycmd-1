@@ -36,11 +36,10 @@ PATH_TO_SERVER = os.path.abspath(
     '..',
     '..',
     'third_party',
-    'yaml-Language-server',
-    'out',
-    'server',
-    'src',
-    'server.js' ) )
+    'yaml-Language-server-runtime',
+    'node_modules',
+    '.bin',
+    'yaml-language-server' ) )
 
 PATH_TO_NODE = utils.FindExecutable( 'node' )
 
