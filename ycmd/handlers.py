@@ -22,6 +22,8 @@ from __future__ import division
 # Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
+from future.utils import iterkeys
+from concurrent import futures
 import bottle
 import json
 import platform
@@ -252,15 +254,44 @@ def ReceiveMessages():
   # The client makes the request with a long timeout (1 hour).
   # When we have data to send, we send it and close the socket.
   # The client then sends a new request.
-  request_data = RequestWrap( request.json )
-  try:
-    completer = _GetCompleterForRequestData( request_data )
-  except Exception:
-    # No semantic completer for this filetype, don't requery. This is not an
-    # error.
-    return _JsonResponse( False )
 
-  return _JsonResponse( completer.PollForMessages( request_data ) )
+  # FIXME: Refactor the timeout to just do it at this point rather than within
+  # the individual completers?
+  request_data = RequestWrap( request.json )
+  with futures.ThreadPoolExecutor(
+    max_workers = len( _server_state.GetLoadedFiletypeCompleters() ) ) as pool:
+
+    future_to_completer = {
+      pool.submit( completer.PollForMessages, request_data ): completer
+      for completer in _server_state.GetLoadedFiletypeCompleters()
+    }
+
+    done, not_done = futures.wait( set( iterkeys( future_to_completer ) ),
+                                   timeout = 30,
+                                   return_when = futures.FIRST_COMPLETED )
+
+    for f in not_done:
+      completer = future_to_completer[ f ]
+      completer.AbortMessagePoll( request_data )
+
+    # If we have multiple results sets (for whatever reason) we must merge them
+    messages = []
+    any_completer_ok = False
+    for d in done:
+      result = d.result()
+
+      if isinstance( result, list ):
+        any_completer_ok = True
+        messages.extend( result )
+        continue
+
+      if result:
+        any_completer_ok = True
+
+    if not any_completer_ok:
+      return _JsonResponse( False )
+
+    return _JsonResponse( messages if messages else True )
 
 
 # The type of the param is Bottle.HTTPError

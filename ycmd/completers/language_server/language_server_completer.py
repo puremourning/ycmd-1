@@ -1126,6 +1126,10 @@ class LanguageServerCompleter( Completer ):
           return False
 
         notification = self.GetConnection()._notifications.get_nowait()
+        if notification is None:
+          # Abort
+          break
+
         message = self.ConvertNotificationToMessage( request_data,
                                                      notification )
 
@@ -1165,12 +1169,22 @@ class LanguageServerCompleter( Completer ):
 
         notification = self.GetConnection()._notifications.get(
           timeout = timeout )
+
+        if notification is None:
+          # Abort
+          return True
+
         message = self.ConvertNotificationToMessage( request_data,
                                                      notification )
         if message:
           return [ message ]
     except queue.Empty:
       return True
+
+
+  def AbortMessagePoll( self, request_data ):
+    if self.GetConnection():
+      self.GetConnection()._AddNotificationToQueue( None )
 
 
   def GetDefaultNotificationHandler( self ):

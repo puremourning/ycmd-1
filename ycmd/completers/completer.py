@@ -152,15 +152,23 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
   custom cleanup logic on server shutdown.
 
   If the completer server provides unsolicited messages, such as used in
-  Language Server Protocol, then you can override the PollForMessagesInner
-  method. This method is called by the client in the "long poll" fashion to
-  receive unsolicited messages. The method should block until a message is
-  available and return a message response when one becomes available, or True if
-  no message becomes available before the timeout. The return value must be one
-  of the following:
+  Language Server Protocol, then you can override the PollForMessagesInner and
+  AbortMessagePoll methods.
+
+  The PollForMessagesInner method is called by the client in the "long poll"
+  fashion to receive unsolicited messages. The method should block until a
+  message is available and return a message response when one becomes available,
+  or True if no message becomes available before the timeout. The return value
+  must be one of the following:
    - a list of messages to send to the client
    - True if a timeout occurred, and the poll should be restarted
-   - False if an error occurred, and no further polling should be attempted
+   - False if an error occurred, and no further polling should be attempted for
+     this completer
+
+  The AbortMessagePoll method is called (in a different thread) to inform the
+  completer that the PollForMessagesInner method should return immediately. This
+  is required to ensure that messages from multiple completers can be returned
+  from a single long-polling request.
 
   If your completer uses an external server process, then it can be useful to
   implement the ServerIsHealthy member function to handle the /healthy request.
@@ -405,6 +413,10 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
     # Protocol. As such, the default implementation just returns False, meaning
     # that unsolicited messages are not supported for this filetype.
     return False
+
+
+  def AbortMessagePoll( self, request_data ):
+    pass
 
 
 class CompletionsCache( object ):

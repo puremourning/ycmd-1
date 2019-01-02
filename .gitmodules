@@ -51,3 +51,6 @@
 [submodule "third_party/yaml-language-server"]
 	path = third_party/yaml-language-server
 	url = https://github.com/redhat-developer/yaml-language-server
+[submodule "third_party/pythonfutures"]
+	path = third_party/pythonfutures
+	url = https://github.com/agronholm/pythonfutures
