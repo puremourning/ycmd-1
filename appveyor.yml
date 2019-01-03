@@ -39,3 +39,4 @@ cache:
   - '%APPVEYOR_BUILD_FOLDER%\third_party\eclipse.jdt.ls\target\cache'
   - '%APPVEYOR_BUILD_FOLDER%\third_party\clangd\cache'
   - '%APPVEYOR_BUILD_FOLDER%\third_party\tern-runtime\node_modules'
+  - '%APPVEYOR_BUILD_FOLDER%\third_party\yaml-language-server-runtime\node_modules'

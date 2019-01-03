@@ -35,6 +35,7 @@ aliases:
         - third_party/eclipse.jdt.ls/target/cache
         - third_party/clangd/cache
         - third_party/tern-runtime/node_modules
+        - third_party/yaml-language-server-runtime/node_modules
   restore-cache: &restore-cache
     restore_cache:
       key: v6-ycmd-{{ .Environment.CIRCLE_JOB }}
