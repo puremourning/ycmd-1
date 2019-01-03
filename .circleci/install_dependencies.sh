@@ -23,6 +23,8 @@ REQUIREMENTS="cmake
               autoconf
               pkg-config
               openssl
+              php
+              composer
               gnupg2"
 
 # Install CMake, Node, Go, pyenv and dependencies.
@@ -141,5 +143,11 @@ gem install bundler
 
 ruby --version
 bundler --version
+
+#################
+# PHP Setup
+#################
+php -i
+composer --version
 
 set +e

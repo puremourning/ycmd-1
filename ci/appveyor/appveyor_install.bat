@@ -68,3 +68,19 @@ java -version
 ::
 set PATH=C:\Ruby25-x64\bin;%PATH%
 ruby --version
+
+::
+:: PHP Configuration.
+::
+set PHP_VERSION_ZIP=php-%PHP_VERSION%-Win32-VC15-x86.zip
+python download_file.py --url https://windows.php.net/downloads/releases/%PHP_VERSION_ZIP% --dest %PHP_VERSION_ZIP%
+7z x %PHP_VERSION_ZIP% -oC:\PHP
+set PATH=C:\PHP;%PATH%
+
+appveyor DownloadFile https://getcomposer.org/Composer-Setup.exe
+Composer-Setup.exe /silent /norestart
+set PATH=C:\ProgramData\ComposerSetup\bin;%PATH%;%USERPROFILE%\AppData\Roaming\Composer\vendor\bin
+
+:: Print PHP Info
+php -i
+composer --version
