@@ -62,3 +62,9 @@ if %arch% == 32 (
 
 set PATH=%JAVA_HOME%\bin;%PATH%
 java -version
+
+::
+:: Ruby Configuration
+::
+set PATH=C:\Ruby25-x64\bin;%PATH%
+ruby --version

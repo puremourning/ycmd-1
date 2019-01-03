@@ -22,7 +22,8 @@ REQUIREMENTS="cmake
               readline
               autoconf
               pkg-config
-              openssl"
+              openssl
+              gnupg2"
 
 # Install CMake, Node, Go, pyenv and dependencies.
 for pkg in $REQUIREMENTS; do
@@ -122,5 +123,23 @@ if [[ "$JAVA_VERSION" < "1.8" ]]; then
   echo "Java version $JAVA_VERSION is too old" 1>&2
   exit 1
 fi
+
+#################
+# Ruby Setup
+#################
+gpg --keyserver hkp://keys.gnupg.net \
+    --recv-keys \
+    409B6B1796C275462A1703113804BB82D39DC0E3 \
+    7D2BAF1CF37B13E2069D6956105BD0E739499BDB
+curl -sSL https://get.rvm.io | bash -s -- stable
+source $HOME/.rvm/scripts/rvm
+rvm install 2.5
+
+rvm use --default 2.5
+gem update --system
+gem install bundler
+
+ruby --version
+bundler --version
 
 set +e

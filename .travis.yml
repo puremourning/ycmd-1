@@ -69,3 +69,5 @@ cache:
     - $TRAVIS_BUILD_DIR/third_party/clangd/cache
     - $TRAVIS_BUILD_DIR/third_party/tern-runtime/node_modules
     - $TRAVIS_BUILD_DIR/third_party/yaml-language-server-runtime/node_modules
+    - $TRAVIS_BUILD_DIR/third_party/solargraph-runtime/vendor
+    - $TRAVIS_BUILD_DIR/third_party/solargraph-runtime/bin
