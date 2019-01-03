@@ -116,5 +116,15 @@ if [[ "$JAVA_VERSION" < "1.8" ]]; then
   exit 1
 fi
 
+###############
+# Ruby
+###############
+rvm install 2.4
+rvm use --default 2.4
+gem update --system
+gem install bundler
+ruby --version
+bundler --version
+
 # Done. Undo settings which break travis scripts.
 set +e
