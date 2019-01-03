@@ -38,6 +38,7 @@ aliases:
         - third_party/yaml-language-server-runtime/node_modules
         - third_party/solargraph-runtime/vendor
         - third_party/solargraph-runtime/bin
+        - third_party/php-language-server-runtime/vendor
   restore-cache: &restore-cache
     restore_cache:
       key: v6-ycmd-{{ .Environment.CIRCLE_JOB }}

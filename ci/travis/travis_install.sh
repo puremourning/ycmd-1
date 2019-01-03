@@ -126,5 +126,15 @@ gem install bundler
 ruby --version
 bundler --version
 
+###############
+# PHP 7
+###############
+phpenv global 7.1
+php --version
+curl -sS https://getcomposer.org/installer | \
+  php -- --install-dir $HOME/bin --filename composer
+export PATH=$HOME/bin:$PATH
+composer --version
+
 # Done. Undo settings which break travis scripts.
 set +e
