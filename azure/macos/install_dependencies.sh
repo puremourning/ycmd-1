@@ -33,4 +33,12 @@ if [ "${YCM_PYTHON_VERSION}" == "2.7.2" ]; then
   curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain none
 fi
 
+#
+# PHP setup
+#
+brew install php composer
+
+php -i
+composer --version
+
 set +e

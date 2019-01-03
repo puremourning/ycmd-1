@@ -24,3 +24,20 @@ C:\Python\python -c "with open('C:\Python\Lib\site-packages\sitecustomize.py', '
 
 curl https://dl.google.com/go/go1.12.4.windows-amd64.msi -o C:\go-installer.msi
 msiexec /i C:\go-installer.msi TARGETDIR=C:\Go /qn
+
+::
+:: PHP Configuration.
+::
+set PHP_VERSION=7.3.0
+set PHP_VERSION_ZIP=php-%PHP_VERSION%-Win32-VC15-x86.zip
+curl https://windows.php.net/downloads/releases/%PHP_VERSION_ZIP% -o C:\%PHP_VERSION_ZIP%
+7z x C:\%PHP_VERSION_ZIP% -oC:\PHP
+set PATH=C:\PHP;%PATH%
+
+curl https://getcomposer.org/Composer-Setup.exe -o C:\Composer-Setup.exe
+C:\Composer-Setup.exe /silent /norestart
+set PATH=C:\ProgramData\ComposerSetup\bin;%PATH%;%USERPROFILE%\AppData\Roaming\Composer\vendor\bin
+
+:: Print PHP Info
+php -i
+composer --version
