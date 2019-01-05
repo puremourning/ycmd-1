@@ -34,6 +34,7 @@ from bottle import request
 
 import ycm_core
 from ycmd import extra_conf_store, hmac_plugin, server_state, user_options_store
+from ycmd import completers
 from ycmd.responses import ( BuildExceptionResponse, BuildCompletionResponse,
                              UnknownExtraConf )
 from ycmd.request_wrap import RequestWrap
@@ -266,9 +267,10 @@ def ReceiveMessages():
       for completer in _server_state.GetLoadedFiletypeCompleters()
     }
 
-    done, not_done = futures.wait( set( iterkeys( future_to_completer ) ),
-                                   timeout = 30,
-                                   return_when = futures.FIRST_COMPLETED )
+    done, not_done = futures.wait(
+      set( iterkeys( future_to_completer ) ),
+      timeout = completers.completer.MESSAGE_POLL_TIMEOUT,
+      return_when = futures.FIRST_COMPLETED )
 
     for f in not_done:
       completer = future_to_completer[ f ]
