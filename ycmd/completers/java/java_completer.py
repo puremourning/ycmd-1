@@ -34,6 +34,7 @@ from ycmd import responses, utils
 from ycmd.completers.language_server import language_server_completer
 from ycmd.completers.language_server import language_server_protocol as lsp
 from ycmd.utils import LOGGER
+from ycmd import extra_conf_store
 
 NO_DOCUMENTATION_MESSAGE = 'No documentation available for current context'
 
@@ -372,6 +373,15 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     return 'java'
 
 
+  def _GetJVMArguments( self, request_data ):
+    module = extra_conf_store.ModuleForSourceFile( request_data[ 'filepath' ] )
+    if module:
+      settings = self._GetSettings( module, request_data[ 'extra_conf_data' ] )
+      return ( settings.get( 'jvm' ) or {} ).get( 'args' ) or []
+
+    return []
+
+
   def StartServer( self, request_data, project_directory = None ):
     with self._server_state_mutex:
       if self._server_started:
@@ -391,8 +401,7 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
         self._project_dir,
         self._use_clean_workspace )
 
-      command = [
-        PATH_TO_JAVA,
+      command = [ PATH_TO_JAVA ] + self._GetJVMArguments( request_data ) + [
         '-Dfile.encoding=UTF-8',
         '-Declipse.application=org.eclipse.jdt.ls.core.id1',
         '-Dosgi.bundles.defaultStartLevel=4',
