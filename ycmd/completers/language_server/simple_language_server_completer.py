@@ -73,12 +73,12 @@ class SimpleLSPCompleter( lsc.LanguageServerCompleter ):
 
   def DebugInfo( self, request_data ):
     with self._server_state_mutex:
-      server = responses.DebugInfoServer(
-        name = self.GetServerName(),
-        handle = self._server_handle,
-        executable = self.GetCommandLine(),
-        logfiles = [ self._stderr_file ]
-      )
+      server = responses.DebugInfoServer( name = self.GetServerName(),
+                                          handle = self._server_handle,
+                                          executable = self.GetCommandLine(),
+                                          logfiles = [ self._stderr_file ],
+                                          extras = self.CommonDebugItems() )
+
     return responses.BuildDebugInfoResponse( name = self.GetServerName(),
                                              servers = [ server ] )
 
