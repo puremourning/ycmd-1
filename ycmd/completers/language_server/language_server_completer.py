@@ -526,11 +526,11 @@ class LanguageServerConnection( threading.Thread ):
                               ERR_UNSUPPORTED_MESSAGE.reason )
       else:
         # This is a response to the message with id message[ 'id' ]
+        message_id = str( message[ 'id' ] )
+        assert message_id in self._responses
         with self._response_mutex:
-          message_id = str( message[ 'id' ] )
-          assert message_id in self._responses
-          self._responses[ message_id ].ResponseReceived( message )
-          del self._responses[ message_id ]
+          request = self._responses.pop( message_id )
+        request.ResponseReceived( message )
     else:
       # This is a notification
       self._AddNotificationToQueue( message )
