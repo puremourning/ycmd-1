@@ -24,11 +24,11 @@ from builtins import *  # noqa
 
 import subprocess
 import os
-import threading
 import re
 
 from ycmd import responses, utils
 from ycmd.completers.completer_utils import GetFileLines
+from ycmd.completers.language_server import simple_language_server_completer
 from ycmd.completers.language_server import language_server_completer
 from ycmd.completers.language_server import language_server_protocol as lsp
 from ycmd.utils import LOGGER
@@ -178,7 +178,7 @@ def ShouldEnableClangdCompleter( user_options ):
   return True
 
 
-class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
+class ClangdCompleter( simple_language_server_completer.SimpleLSPCompleter ):
   """A LSP-based completer for C-family languages, powered by clangd.
 
   Supported features:
@@ -190,46 +190,16 @@ class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
   def __init__( self, user_options ):
     super( ClangdCompleter, self ).__init__( user_options )
 
-    # Used to ensure that starting/stopping of the server is synchronized.
-    # Guards _connection and _server_handle.
-    self._server_state_mutex = threading.RLock()
     self._clangd_command = GetClangdCommand( user_options, Get3rdPartyClangd() )
-    self._stderr_file = None
-
-    self._Reset()
-    self._auto_trigger = user_options[ 'auto_trigger' ]
     self._use_ycmd_caching = user_options[ 'clangd_uses_ycmd_caching' ]
 
 
-  def _Reset( self ):
-    with self._server_state_mutex:
-      self.ServerReset() # Cleanup subclass internal states.
-      self._connection = None
-      self._server_handle = None
-      if self._stderr_file is not None:
-        utils.RemoveIfExists( self._stderr_file )
-        self._stderr_file = None
-
-
-  def GetConnection( self ):
-    with self._server_state_mutex:
-      return self._connection
-
-
-  def DebugInfo( self, request_data ):
-    with self._server_state_mutex:
-      clangd = responses.DebugInfoServer( name = 'clangd',
-                                          handle = self._server_handle,
-                                          executable = self._clangd_command,
-                                          logfiles = [ self._stderr_file ],
-                                          extras = self.CommonDebugItems() )
-
-      return responses.BuildDebugInfoResponse( name = 'clangd',
-                                               servers = [ clangd ] )
-
-
-  def Language( self ):
+  def GetServerName( self ):
     return 'clangd'
+
+
+  def GetCommandLine( self ):
+    return self._clangd_command
 
 
   def SupportedFiletypes( self ):
@@ -318,91 +288,6 @@ class ClangdCompleter( language_server_completer.LanguageServerCompleter ):
     if self._use_ycmd_caching:
       return super( ClangdCompleter, self ).ComputeCandidates( request_data )
     return super( ClangdCompleter, self ).ComputeCandidatesInner( request_data )
-
-
-  def ServerIsHealthy( self ):
-    with self._server_state_mutex:
-      return utils.ProcessIsRunning( self._server_handle )
-
-
-  def StartServer( self, request_data ):
-    with self._server_state_mutex:
-      if self.ServerIsHealthy():
-        return
-
-      # Ensure we cleanup all states.
-      self._Reset()
-
-      LOGGER.info( 'Starting clangd: %s', self._clangd_command )
-      self._stderr_file = utils.CreateLogfile( 'clangd_stderr' )
-      with utils.OpenForStdHandle( self._stderr_file ) as stderr:
-        self._server_handle = utils.SafePopen( self._clangd_command,
-                                               stdin = subprocess.PIPE,
-                                               stdout = subprocess.PIPE,
-                                               stderr = stderr )
-
-      self._connection = (
-        language_server_completer.StandardIOLanguageServerConnection(
-          self._server_handle.stdin,
-          self._server_handle.stdout,
-          self.GetDefaultNotificationHandler() )
-      )
-
-      self._connection.Start()
-
-      try:
-        self._connection.AwaitServerConnection()
-      except language_server_completer.LanguageServerConnectionTimeout:
-        LOGGER.error( 'clangd failed to start, or did not connect '
-                      'successfully' )
-        self.Shutdown()
-        return
-
-    LOGGER.info( 'clangd started' )
-
-    self.SendInitialize( request_data )
-
-
-  def Shutdown( self ):
-    with self._server_state_mutex:
-      LOGGER.info( 'Shutting down clangd...' )
-
-      # Tell the connection to expect the server to disconnect
-      if self._connection:
-        self._connection.Stop()
-
-      if not self.ServerIsHealthy():
-        LOGGER.info( 'clangd is not running' )
-        self._Reset()
-        return
-
-      LOGGER.info( 'Stopping clangd with PID %s', self._server_handle.pid )
-
-      try:
-        self.ShutdownServer()
-
-        # By this point, the server should have shut down and terminated. To
-        # ensure that isn't blocked, we close all of our connections and wait
-        # for the process to exit.
-        #
-        # If, after a small delay, the server has not shut down we do NOT kill
-        # it; we expect that it will shut itself down eventually. This is
-        # predominantly due to strange process behaviour on Windows.
-        if self._connection:
-          self._connection.Close()
-
-        utils.WaitUntilProcessIsTerminated( self._server_handle,
-                                            timeout = 15 )
-
-        LOGGER.info( 'clangd stopped' )
-      except Exception:
-        LOGGER.exception( 'Error while stopping clangd server' )
-        # We leave the process running. Hopefully it will eventually die of its
-        # own accord.
-
-      # Tidy up our internal state, even if the completer server didn't close
-      # down cleanly.
-      self._Reset()
 
 
   def GetDetailedDiagnostic( self, request_data ):
