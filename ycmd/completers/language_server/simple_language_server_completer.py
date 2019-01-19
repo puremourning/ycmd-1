@@ -87,19 +87,6 @@ class SimpleLSPCompleter( lsc.LanguageServerCompleter ):
     return self.GetServerName()
 
 
-  def GetSubcommandsMap( self ):
-    commands = {}
-    commands.update( lsc.DEFAULT_SUBCOMMANDS_MAP )
-    commands.update( {
-      'StopServer': (
-        lambda self, request_data, args: self.Shutdown()
-      ),
-    } )
-    commands.update( self.GetCustomSubcommands() )
-
-    return self._DiscoverSubcommandSupport( commands )
-
-
   def ServerIsHealthy( self ):
     with self._server_state_mutex:
       return utils.ProcessIsRunning( self._server_handle )
