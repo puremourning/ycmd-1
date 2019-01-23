@@ -202,11 +202,12 @@ class FixIt( object ):
   must be byte offsets into the UTF-8 encoded version of the appropriate
   buffer.
   """
-  def __init__( self, location, chunks, text = '' ):
+  def __init__( self, location, chunks, text = '', is_completion = False ):
     """location of type Location, chunks of type list<FixItChunk>"""
     self.location = location
     self.chunks = chunks
     self.text = text
+    self.is_completion = is_completion
 
 
 class FixItChunk( object ):
@@ -298,14 +299,16 @@ def BuildFixItResponse( fixits ):
       return {
         'command': fixit.command,
         'text': fixit.text,
-        'resolve': fixit.resolve
+        'resolve': fixit.resolve,
+        'is_completion': fixit.is_completion
       }
     else:
       return {
         'location': BuildLocationData( fixit.location ),
         'chunks' : [ BuildFixitChunkData( x ) for x in fixit.chunks ],
         'text': fixit.text,
-        'resolve': False
+        'resolve': False,
+        'is_completion': fixit.is_completion,
       }
 
   return {

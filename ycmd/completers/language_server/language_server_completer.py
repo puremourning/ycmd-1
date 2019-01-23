@@ -2294,9 +2294,6 @@ def _InsertionTextForItem( request_data, item ):
   # Per the protocol, textEdit takes precedence over insertText, and the initial
   # range of the edit must be on the same line (and containing) the originally
   # requested position.
-  #
-  # These are a pain, and require fixing up later in some cases, and simply
-  # don't work in others.
   if 'textEdit' in item and item[ 'textEdit' ]:
     text_edit = item[ 'textEdit' ]
     start_codepoint = _GetCompletionItemStartCodepointOrReject( text_edit,
@@ -2305,6 +2302,12 @@ def _InsertionTextForItem( request_data, item ):
     insertion_text = text_edit[ 'newText' ]
 
     if '\n' in insertion_text:
+      # FIXME: If this logic actually worked, then we should do it for
+      # everything and not just hte multi-line completions ? Would that allow us
+      # to avoid the _GetCompletionItemStartCodepointOrReject logic ? Possibly,
+      # but it would look strange in the UI cycling through items. In any case,
+      # doing both should be complete.
+
       # servers can return completions which generate code, such as
       # getters/setters and entire anonymous classes. These contain newlines in
       # the generated textEdit. This is irksome because ycmd's clients don't
@@ -2320,16 +2323,16 @@ def _InsertionTextForItem( request_data, item ):
       #    insertion
       #  - insert another textEdit in additionalTextEdits which applies this
       #    textedit
-      #
-      # These textEdits would need a lot of fixing up and is currently out of
-      # scope.
-      #
-      # These sorts of completions aren't really in the spirit of ycmd at the
-      # moment anyway. So for now, we just ignore this candidate.
       insertion_text = item[ 'label' ]
       start_codepoint = request_data[ 'start_codepoint' ]
 
       # Add a fixit which removes the inserted label
+      #
+      # TODO: Perhaps we should actually supply a completion with an empty
+      # insertion_text, than have the _client_ deal with this. One key advantage
+      # to that is that the client can then decide where to put the cursor.
+      # Currently, the Vim client puts the cursor in the wrong place (i.e.
+      # before the text, rather than after it).
       completion_fixit_chunks = [
         responses.FixItChunk(
           '',
@@ -2343,6 +2346,8 @@ def _InsertionTextForItem( request_data, item ):
           )
         )
       ]
+      # FIXME: The problem with this is that it _might_ break the offsets in any
+      # additionalTextEdits
       fixits.append(
         responses.FixIt( completion_fixit_chunks[ 0 ].range.start_,
                          completion_fixit_chunks,
@@ -2359,7 +2364,8 @@ def _InsertionTextForItem( request_data, item ):
       fixits.append(
         responses.FixIt( completion_fixit_chunks[ 0 ].range.start_,
                          completion_fixit_chunks,
-                         item[ 'label' ] )
+                         item[ 'label' ],
+                         is_completion = True )
       )
   else:
     # Calculate the start codepoint based on the overlapping text in the
