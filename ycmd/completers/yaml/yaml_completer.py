@@ -36,7 +36,7 @@ PATH_TO_SERVER = os.path.abspath(
     '..',
     '..',
     'third_party',
-    'yaml-Language-server-runtime',
+    'yaml-language-server-runtime',
     'node_modules',
     '.bin',
     'yaml-language-server' ) )
