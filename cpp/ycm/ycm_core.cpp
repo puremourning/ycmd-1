@@ -197,7 +197,8 @@ PYBIND11_MODULE( ycm_core, mod )
     .def( py::init<>() )
     .def_readonly( "chunks", &FixIt::chunks )
     .def_readonly( "location", &FixIt::location )
-    .def_readonly( "text", &FixIt::text );
+    .def_readonly( "text", &FixIt::text )
+    .def_readonly( "is_completion", &FixIt::is_completion );
 
   py::bind_vector< std::vector< FixIt > >( mod, "FixItVector" );
 
