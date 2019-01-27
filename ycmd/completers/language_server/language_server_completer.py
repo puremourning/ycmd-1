@@ -1057,7 +1057,7 @@ class LanguageServerCompleter( Completer ):
         item[ '_resolved' ] = True
 
       try:
-        insertion_text, extra_data, start_codepoint = (
+        insertion_text, snippet, extra_data, start_codepoint = (
           _InsertionTextForItem( request_data, item ) )
       except IncompatibleCompletionException:
         LOGGER.exception( 'Ignoring incompatible completion suggestion %s',
@@ -1076,6 +1076,7 @@ class LanguageServerCompleter( Completer ):
       # we might modify insertion_text should we see a lower start codepoint.
       completions.append( _CompletionItemToCompletionData(
         insertion_text,
+        snippet,
         item,
         extra_data ) )
       start_codepoints.append( start_codepoint )
@@ -2220,7 +2221,7 @@ def _DistanceOfPointToRange( point, range ):
   return 0
 
 
-def _CompletionItemToCompletionData( insertion_text, item, fixits ):
+def _CompletionItemToCompletionData( insertion_text, snippet, item, fixits ):
   # Since we send completionItemKind capabilities, we guarantee to handle
   # values outside our value set and fall back to a default.
   try:
@@ -2238,7 +2239,8 @@ def _CompletionItemToCompletionData( insertion_text, item, fixits ):
     detailed_info = item[ 'label' ] + '\n\n' + documentation,
     menu_text = item[ 'label' ],
     kind = kind,
-    extra_data = fixits )
+    extra_data = fixits,
+    snippet = snippet )
 
 
 def _FixUpCompletionPrefixes( completions,
@@ -2276,13 +2278,21 @@ def _InsertionTextForItem( request_data, item ):
 
   Returns a tuple (
      - insertion_text   = the text to insert
+     - snippet          = optional snippet text
      - fixits           = ycmd fixit which needs to be applied additionally when
                           selecting this completion
      - start_codepoint  = the start column at which the text should be inserted
   )"""
   start_codepoint = request_data[ 'start_codepoint' ]
+  label = item[ 'label' ]
+  insertion_text_is_snippet = False
   # We will always have one of insertText or label
   if 'insertText' in item and item[ 'insertText' ]:
+    # 1 = PlainText
+    # 2 = Snippet
+    if lsp.INSERT_TEXT_FORMAT[ item.get( 'insertTextFormat', 1 ) ] == 'Snippet':
+      insertion_text_is_snippet = True
+
     insertion_text = item[ 'insertText' ]
   else:
     insertion_text = item[ 'label' ]
@@ -2301,7 +2311,7 @@ def _InsertionTextForItem( request_data, item ):
 
     insertion_text = text_edit[ 'newText' ]
 
-    if '\n' in insertion_text:
+    if '\n' in insertion_text and not insertion_text_is_snippet:
       # FIXME: If this logic actually worked, then we should do it for
       # everything and not just hte multi-line completions ? Would that allow us
       # to avoid the _GetCompletionItemStartCodepointOrReject logic ? Possibly,
@@ -2323,6 +2333,9 @@ def _InsertionTextForItem( request_data, item ):
       #    insertion
       #  - insert another textEdit in additionalTextEdits which applies this
       #    textedit
+      #
+      # On the other hand, if the insertion text is a snippet, then the snippet
+      # system will handle the expansion.
       insertion_text = item[ 'label' ]
       start_codepoint = request_data[ 'start_codepoint' ]
 
@@ -2391,7 +2404,11 @@ def _InsertionTextForItem( request_data, item ):
     fixits.append( responses.FixIt( chunks[ 0 ].range.start_, chunks ) )
 
   extra_data = responses.BuildFixItResponse( fixits ) if fixits else None
-  return insertion_text, extra_data, start_codepoint
+
+  if insertion_text_is_snippet:
+    return label, insertion_text, extra_data, start_codepoint
+
+  return insertion_text, None, extra_data, start_codepoint
 
 
 def FindOverlapLength( line_value, insertion_text ):
