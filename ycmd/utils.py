@@ -25,6 +25,7 @@ import sys
 import tempfile
 import time
 import threading
+import collections.abc as collections_abc
 
 LOGGER = logging.getLogger( 'ycmd' )
 ROOT_DIR = os.path.normpath( os.path.join( os.path.dirname( __file__ ), '..' ) )
