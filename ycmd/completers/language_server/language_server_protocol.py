@@ -251,6 +251,9 @@ def Initialize( request_id, project_directory, settings ):
             # ITEM_KIND list is 1-based.
             'valueSet': list( range( 1, len( ITEM_KIND ) ) ),
           },
+          'completionItem': {
+            'snippetSupport': True,
+          },
           'documentationFormat': [
             'plaintext',
             'markdown'
@@ -261,8 +264,8 @@ def Initialize( request_id, project_directory, settings ):
             'plaintext',
             'markdown'
           ]
-        }
-      }
+        },
+      },
     },
   } )
 
