@@ -1454,7 +1454,7 @@ class LanguageServerCompleter( Completer ):
         this_tem_is_resolved = True
 
       try:
-        insertion_text, extra_data, start_codepoint = (
+        insertion_text, snippet, extra_data, start_codepoint = (
           _InsertionTextForItem( request_data, item ) )
       except IncompatibleCompletionException:
         LOGGER.exception( 'Ignoring incompatible completion suggestion %s',
@@ -1471,6 +1471,13 @@ class LanguageServerCompleter( Completer ):
         # Store the actual item in the extra_data area of the completion item.
         # We'll use this later to do the resolve.
         extra_data[ 'item' ] = item
+
+      if snippet:
+        extra_data = {} if extra_data is None else extra_data
+        extra_data[ 'snippet' ] = {
+          'snippet': snippet,
+          'trigger_string': insertion_text
+        }
 
       min_start_codepoint = min( min_start_codepoint, start_codepoint )
 
@@ -2389,9 +2396,12 @@ class LanguageServerCompleter( Completer ):
       self._server_workspace_dirs.update( self._settings.get(
                                           'additional_workspace_dirs',
                                           [] ) )
+      extra_capabilities = self._settings.get( 'capabilities' , {} )
+      extra_capabilities.update( self.ExtraCapabilities() )
+
       msg = lsp.Initialize( request_id,
                             self._project_directory,
-                            self.ExtraCapabilities(),
+                            extra_capabilities,
                             self._settings.get( 'ls', {} ),
                             self._server_workspace_dirs )
 
@@ -3168,13 +3178,21 @@ def _InsertionTextForItem( request_data, item ):
 
   Returns a tuple (
      - insertion_text   = the text to insert
+     - snippet          = optional snippet text
      - fixits           = ycmd fixit which needs to be applied additionally when
                           selecting this completion
      - start_codepoint  = the start column at which the text should be inserted
   )"""
   start_codepoint = request_data[ 'start_codepoint' ]
+  label = item[ 'label' ]
+  insertion_text_is_snippet = False
   # We will always have one of insertText or label
   if 'insertText' in item and item[ 'insertText' ]:
+    # 1 = PlainText
+    # 2 = Snippet
+    if lsp.INSERT_TEXT_FORMAT[ item.get( 'insertTextFormat', 1 ) ] == 'Snippet':
+      insertion_text_is_snippet = True
+
     insertion_text = item[ 'insertText' ]
   else:
     insertion_text = item[ 'label' ]
@@ -3193,7 +3211,7 @@ def _InsertionTextForItem( request_data, item ):
 
     insertion_text = text_edit[ 'newText' ]
 
-    if '\n' in insertion_text:
+    if '\n' in insertion_text and not insertion_text_is_snippet:
       # FIXME: If this logic actually worked, then we should do it for
       # everything and not just hte multi-line completions ? Would that allow us
       # to avoid the _GetCompletionItemStartCodepointOrReject logic ? Possibly,
@@ -3215,8 +3233,16 @@ def _InsertionTextForItem( request_data, item ):
       #    insertion
       #  - insert another textEdit in additionalTextEdits which applies this
       #    textedit
+      #
+      # On the other hand, if the insertion text is a snippet, then the snippet
+      # system will handle the expansion.
       insertion_text = item[ 'label' ]
       start_codepoint = request_data[ 'start_codepoint' ]
+
+      # FIXME:
+      # So forced-completion breaks here, as the textEdit is formulated to
+      # remove the existing "prefix". E.g. typing getT<ctrl-space>, the edit
+      # attempts to replace getT with the new code.
 
       # Add a fixit which removes the inserted label
       #
@@ -3249,7 +3275,7 @@ def _InsertionTextForItem( request_data, item ):
       contents = GetFileLines( request_data, filepath )
       completion_fixit_chunks = [
         responses.FixItChunk(
-          text_edit[ 'newText' ],
+          text_edit[ 'newText' ], # FIXME: This could also be a Snippet
           _BuildRange( contents, filepath, text_edit[ 'range' ] )
         )
       ]
@@ -3283,7 +3309,11 @@ def _InsertionTextForItem( request_data, item ):
     fixits.append( responses.FixIt( chunks[ 0 ].range.start_, chunks ) )
 
   extra_data = responses.BuildFixItResponse( fixits ) if fixits else None
-  return insertion_text, extra_data, start_codepoint
+
+  if insertion_text_is_snippet:
+    return label, insertion_text, extra_data, start_codepoint
+
+  return insertion_text, None, extra_data, start_codepoint
 
 
 def FindOverlapLength( line_value, insertion_text ):
