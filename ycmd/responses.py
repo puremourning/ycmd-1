@@ -326,7 +326,6 @@ def BuildFixItResponse( fixits ):
         'text': fixit.text,
         'kind': fixit.kind,
         'resolve': fixit.resolve,
-        'is_completion': fixit.is_completion
       }
     else:
       result = {
