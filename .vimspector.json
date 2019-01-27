@@ -26,8 +26,8 @@
         "args": [
           "-v",
           "--with-id",
-          "--ignore-files=(^\\.|^setup\\.py$)",
-          "ycmd/tests/java/diagnostics_test.py:Poll_Diagnostics_ProjectWide_Eclipse_test"
+          "--ignore-files=(^\\.|^setup\\.py${dollar})",
+          "${Test}"
         ],
         "env": {
           "PYTHONPATH": "${workspaceRoot}/third_party/bottle:${workspaceRoot}/third_party/cregex/regex_2:${workspaceRoot}/third_party/frozendict:${workspaceRoot}/third_party/jedi_deps/jedi:${workspaceRoot}/third_party/jedi_deps/parso:${workspaceRoot}/third_party/requests_deps/certifi:${workspaceRoot}/third_party/requests_deps/chardet:${workspaceRoot}/third_party/requests_deps/idna:${workspaceRoot}/third_party/requests_deps/requests:${workspaceRoot}/third_party/requests_deps/urllib3/src:${workspaceRoot}/third_party/waitress:${workspaceRoot}/third_party/pythonfutures"
