@@ -68,8 +68,10 @@ def Subcommands_DefinedSubcommands_test( app ):
 
   eq_( sorted( [ 'FixIt',
                  'Format',
-                 'GoToDeclaration',
                  'GoToDefinition',
+                 'GoToImprecise',
+                 'GoToImplementation',
+                 'GoToType',
                  'GoTo',
                  'GetDoc',
                  'GetType',
@@ -114,8 +116,10 @@ def Subcommands_ServerNotReady_test():
     } )
 
   yield Test, 'GoTo', []
-  yield Test, 'GoToDeclaration', []
   yield Test, 'GoToDefinition', []
+  yield Test, 'GoToImprecise', []
+  yield Test, 'GoToType', []
+  yield Test, 'GoToImplementation', []
   yield Test, 'GoToReferences', []
   yield Test, 'GetType', []
   yield Test, 'GetDoc', []
@@ -1490,7 +1494,7 @@ def Subcommands_GoTo_test():
       'description': 'GoTo works for unicode identifiers' }
   ]
 
-  for command in [ 'GoTo', 'GoToDefinition', 'GoToDeclaration' ]:
+  for command in [ 'GoTo', 'GoToDefinition', 'GoToImprecise' ]:
     for test in tests:
       yield ( RunGoToTest,
               test[ 'description' ],
