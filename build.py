@@ -390,6 +390,8 @@ def ParseArguments():
                        help = 'Enable ruby semantic completion' )
   parser.add_argument( '--php-completer', action = 'store_true',
                        help = 'Enable PHP semantic completion' )
+  parser.add_argument( '--json-completer', action = 'store_true',
+                       help = 'Enable JSON semantic completion' )
   parser.add_argument( '--system-boost', action = 'store_true',
                        help = 'Use the system boost instead of bundled one. '
                        'NOT RECOMMENDED OR SUPPORTED!' )
@@ -911,6 +913,17 @@ def EnableYamlCompleter( args ):
              status_message = 'Setting up YAML Language Server' )
 
 
+def EnableJsonCompleter( args ):
+  npm = FindExecutableOrDie( 'npm', 'npm is required to set up json.' )
+
+  os.chdir( p.join( DIR_OF_THIS_SCRIPT,
+                    'third_party',
+                    'json-language-server-runtime' ) )
+  CheckCall( [ npm, 'install', '--production' ],
+             quiet = args.quiet,
+             status_message = 'Setting up JSON Language Server' )
+
+
 def EnableRubyCompleter( args ):
   bundle = FindExecutableOrDie( 'bundle',
                                 'bundler is required for ruby completer' )
@@ -961,6 +974,7 @@ def Main():
     ( EnableYamlCompleter, lambda a: a.yaml_completer ),
     ( EnableRubyCompleter, lambda a: a.ruby_completer ),
     ( EnablePHPCompleter, lambda a: a.php_completer ),
+    ( EnableJsonCompleter, lambda a: a.json_completer ),
   ]
 
   for f, l in all_completer_installers:
