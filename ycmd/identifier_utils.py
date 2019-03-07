@@ -93,7 +93,13 @@ FILETYPE_TO_COMMENT_AND_STRING_REGEX = {
                                   DOUBLE_QUOTE_STRING ] ), re.MULTILINE )
 }
 
-for filetype in [ 'c', 'cuda', 'objc', 'objcpp', 'javascript', 'typescript' ]:
+for filetype in [ 'c',
+                  'cuda',
+                  'objc',
+                  'objcpp',
+                  'javascript',
+                  'typescript',
+                  'json' ]:
   FILETYPE_TO_COMMENT_AND_STRING_REGEX[ filetype ] = (
     FILETYPE_TO_COMMENT_AND_STRING_REGEX[ 'cpp' ] )
 
@@ -159,6 +165,8 @@ FILETYPE_TO_IDENTIFIER_REGEX = {
 }
 
 FILETYPE_TO_IDENTIFIER_REGEX[ 'typescript' ] = (
+  FILETYPE_TO_IDENTIFIER_REGEX[ 'javascript' ] )
+FILETYPE_TO_IDENTIFIER_REGEX[ 'json' ] = (
   FILETYPE_TO_IDENTIFIER_REGEX[ 'javascript' ] )
 FILETYPE_TO_IDENTIFIER_REGEX[ 'scss' ] = FILETYPE_TO_IDENTIFIER_REGEX[ 'css' ]
 FILETYPE_TO_IDENTIFIER_REGEX[ 'sass' ] = FILETYPE_TO_IDENTIFIER_REGEX[ 'css' ]
