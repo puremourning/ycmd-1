@@ -134,9 +134,9 @@ def JoinLinesAsUnicode( lines ):
     return str()
 
   if isinstance( first, str ):
-    return ToUnicode( '\n'.join( lines ) )
+    return '\n'.join( lines )
   if isinstance( first, bytes ):
-    return ToUnicode( b'\n'.join( lines ) )
+    return str( b'\n'.join( lines ), 'utf8' )
   raise ValueError( 'lines must contain either strings or bytes.' )
 
 
