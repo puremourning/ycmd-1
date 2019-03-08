@@ -50,7 +50,7 @@ cpp/BoostParts/libs/*/test
 doc/tags
 
 # Exclude tern installation area
-third_party/tern_runtime/node_modules
+node_modules
 third_party/tern_runtime/package-lock.json
 
 # Exclude vagrant directory
