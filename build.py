@@ -925,6 +925,7 @@ def EnableJsonCompleter( args ):
              quiet = args.quiet,
              status_message = 'Setting up JSON Language Server' )
 
+
 def EnableVueCompleter( args ):
   npm = FindExecutableOrDie( 'npm', 'npm is required to set up vue.' )
 
