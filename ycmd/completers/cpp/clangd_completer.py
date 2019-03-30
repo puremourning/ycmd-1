@@ -201,13 +201,7 @@ def ShouldEnableClangdCompleter( user_options ):
 
 
 class ClangdCompleter( simple_language_server_completer.SimpleLSPCompleter ):
-  """A LSP-based completer for C-family languages, powered by Clangd.
-
-  Supported features:
-    * Code completion
-    * Diagnostics and apply FixIts
-    * Go to definition
-  """
+  """A LSP-based completer for C-family languages, powered by Clangd."""
 
   def __init__( self, user_options ):
     super( ClangdCompleter, self ).__init__( user_options )
