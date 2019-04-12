@@ -28,6 +28,8 @@ from hamcrest import ( assert_that,
                        has_entries,
                        instance_of )
 
+from mock import patch
+from ycmd import handlers
 from ycmd.tests.java import ( DEFAULT_PROJECT_DIR,
                               IsolatedYcmd,
                               PathToTestFile,
@@ -36,6 +38,30 @@ from ycmd.tests.java import ( DEFAULT_PROJECT_DIR,
 from ycmd.tests.test_utils import BuildRequest
 
 import json
+
+
+@IsolatedYcmd()
+def DebugInfo_HandleNotificationInPollThread_Throw_test( app ):
+  filepath = PathToTestFile( DEFAULT_PROJECT_DIR,
+                             'src',
+                             'com',
+                             'youcompleteme',
+                             'Test.java' )
+  StartJavaCompleterServerInDirectory( app, filepath )
+  completer = handlers._server_state.GetFiletypeCompleter( [ 'java' ] )
+  event_data = BuildRequest( event_name = 'FileReadyToParse',
+                             contents = "",
+                             filepath = filepath,
+                             filetype = 'java' )
+  request_data = BuildRequest( filetype = 'java' )
+  with patch.object( completer,
+                     'HandleNotificationInPollThread',
+                     side_effect = RuntimeError ):
+    app.post_json( '/event_notification', event_data ).json
+    assert_that(
+        app.post_json( '/debug_info', request_data ).json,
+        has_entry( 'completer', has_entry(
+          'servers', contains( has_entry( 'is_running', True ) ) ) ) )
 
 
 @SharedYcmd
