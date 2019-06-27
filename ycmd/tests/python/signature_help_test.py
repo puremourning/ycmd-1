@@ -35,7 +35,8 @@ from ycmd.utils import ReadFile
 from ycmd.tests.python import PathToTestFile, SharedYcmd
 from ycmd.tests.test_utils import ( CombineRequest,
                                     ParameterMatcher,
-                                    SignatureMatcher )
+                                    SignatureMatcher,
+                                    WithRetry )
 
 
 def RunTest( app, test ):
@@ -183,6 +184,7 @@ def SignatureHelp_Constructor_test( app ):
   } )
 
 
+@WithRetry
 @SharedYcmd
 def SignatureHelp_MultipleDefinitions_test( app ):
   RunTest( app, {
@@ -225,6 +227,7 @@ def SignatureHelp_MultipleDefinitions_test( app ):
   } )
 
 
+@WithRetry
 @SharedYcmd
 def SignatureHelp_MultipleDefinitions_OneActive_test( app ):
   RunTest( app, {
