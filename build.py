@@ -10,6 +10,7 @@ from __future__ import absolute_import
 from tempfile import mkdtemp
 import argparse
 import errno
+import glob
 import hashlib
 import multiprocessing
 import os
@@ -1100,6 +1101,28 @@ def WritePythonUsedDuringBuild():
     f.write( sys.executable )
 
 
+def CompileWatchdog( script_args ):
+  try:
+    os.chdir( p.join( DIR_OF_THIRD_PARTY, 'watchdog' ) )
+    path_to_watchdog = glob.glob( os.path.join(
+      DIR_OF_THIRD_PARTY, 'watchdog', 'build' ) )
+    for path in path_to_watchdog:
+      shutil.rmtree( path )
+    CheckCall( [ sys.executable, 'setup.py', 'build' ],
+               exit_message = 'Failed to build watchdog module.',
+               quiet = script_args.quiet,
+               status_message = 'Building watchdog module' )
+    path_to_watchdog = glob.glob( os.path.join(
+      DIR_OF_THIRD_PARTY, 'watchdog', 'build', 'lib*' ) )
+    path_to_watchdog = path_to_watchdog[ 0 ]
+    destination = os.path.join( DIR_OF_THIRD_PARTY, 'watchdog', 'build', 'lib' )
+    if path_to_watchdog != destination:
+      shutil.move( path_to_watchdog, destination )
+
+  finally:
+    os.chdir( DIR_OF_THIS_SCRIPT )
+
+
 def DoCmakeBuilds( args ):
   cmake = FindCmake()
   cmake_common_args = GetCmakeCommonArgs( args )
@@ -1111,6 +1134,8 @@ def DoCmakeBuilds( args ):
 
   if not args.no_regex:
     BuildRegexModule( cmake, cmake_common_args, args )
+
+  CompileWatchdog( args )
 
 
 def Main():

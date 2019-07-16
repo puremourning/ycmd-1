@@ -221,6 +221,8 @@ def PythonSysPath( **kwargs ):
                                                   'certifi' ),
                       p.join( DIR_OF_THIRD_PARTY, 'requests_deps',
                                                   'idna' ),
+                      p.join( DIR_OF_THIRD_PARTY, 'watchdog', 'build', 'lib' ),
+                      p.join( DIR_OF_THIRD_PARTY, 'watchdog_deps', 'pathtools' ),
                       p.join( DIR_OF_THIRD_PARTY, 'waitress' ) ]
 
   return sys_path

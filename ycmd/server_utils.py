@@ -78,4 +78,8 @@ def SetUpPythonPath():
                               'requests_deps',
                               'urllib3',
                               'src' ),
+                      p.join( DIR_OF_THIRD_PARTY, 'watchdog', 'build', 'lib' ),
+                      p.join( DIR_OF_THIRD_PARTY,
+                              'watchdog_deps',
+                              'pathtools' ),
                       p.join( DIR_OF_THIRD_PARTY, 'waitress' ) ]
