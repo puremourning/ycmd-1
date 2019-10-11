@@ -115,16 +115,16 @@ def Signature_Help_Trigger_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'Temperature temp, '
                               'int sugargs) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'Temperature temp' ),
-                                ParameterMatcher( 'int sugargs' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
                               ] ),
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] ),
           )
         } ),
@@ -222,16 +222,16 @@ def Signature_Help_Trigger_After_Trigger_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'Temperature temp, '
                               'int sugargs) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'Temperature temp' ),
-                                ParameterMatcher( 'int sugargs' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
                               ] ),
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] ),
           )
         } ),
@@ -285,16 +285,16 @@ def Signature_Help_Trigger_After_Trigger_PlusText_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'Temperature temp, '
                               'int sugargs) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'Temperature temp' ),
-                                ParameterMatcher( 'int sugargs' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
                               ] ),
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] ),
           )
         } ),
@@ -326,16 +326,16 @@ def Signature_Help_Trigger_After_Trigger_PlusCompletion_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'Temperature temp, '
                               'int sugargs) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'Temperature temp' ),
-                                ParameterMatcher( 'int sugargs' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
                               ] ),
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] ),
           )
         } ),
@@ -367,16 +367,16 @@ def Signature_Help_Trigger_After_OtherTrigger_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'Temperature temp, '
                               'int sugargs) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'Temperature temp' ),
-                                ParameterMatcher( 'int sugargs' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
                               ] ),
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] ),
           )
         } ),
@@ -408,9 +408,9 @@ def Signature_Help_Trigger_After_Arguments_Narrow_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] )
           )
         } ),
@@ -442,9 +442,9 @@ def Signature_Help_Trigger_After_Arguments_Narrow2_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'Temperature temp, '
                               'int sugargs) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'Temperature temp' ),
-                                ParameterMatcher( 'int sugargs' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
                               ] )
           )
         } ),
@@ -476,16 +476,16 @@ def Signature_Help_Trigger_After_OtherTrigger_ReTrigger_test( app ):
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'Temperature temp, '
                               'int sugargs) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'Temperature temp' ),
-                                ParameterMatcher( 'int sugargs' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
                               ] ),
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] ),
           )
         } ),
