@@ -374,3 +374,7 @@ def BuildDebugInfoResponse( name, servers = [], items = [] ):
     'servers': [ BuildServerData( server ) for server in servers ],
     'items': [ BuildItemData( item ) for item in items ]
   }
+
+
+def BuildSignatureHelpAvailableResponse( value ):
+  return { 'available': value }

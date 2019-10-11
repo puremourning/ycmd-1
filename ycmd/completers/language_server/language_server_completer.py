@@ -773,6 +773,8 @@ class LanguageServerCompleter( Completer ):
         self._UpdateServerWithFileContents( request_data )
     )
 
+    self._signature_help_disabled = user_options[ 'disable_signature_help' ]
+
 
   def ServerReset( self ):
     """Clean up internal state related to the running server instance.
@@ -1063,6 +1065,15 @@ class LanguageServerCompleter( Completer ):
     request_data[ 'start_codepoint' ] = min_start_codepoint
     return completions
 
+
+  def SignatureHelpAvailable( self ):
+    if not self.ServerIsReady():
+      return 'PENDING'
+    if not self._signature_help_disabled and bool(
+           self._server_capabilities.get( 'signatureHelpProvider' ) ):
+      return 'YES'
+    else:
+      return 'NO'
 
   def ComputeSignaturesInner( self, request_data ):
     if not self.ServerIsReady():

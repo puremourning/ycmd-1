@@ -439,6 +439,10 @@ class Completer( with_metaclass( abc.ABCMeta, object ) ):
     return self.ServerIsHealthy()
 
 
+  def SignatureHelpAvailable( self ):
+    return 'NO'
+
+
   def ServerIsHealthy( self ):
     """Called by the /healthy handler to check if the underlying completion
     server is started and ready to receive requests. Returns bool."""

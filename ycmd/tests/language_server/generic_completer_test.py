@@ -28,6 +28,7 @@ import json
 import requests
 from hamcrest import ( assert_that,
                        contains,
+                       empty,
                        equal_to,
                        has_entries,
                        has_entry,
@@ -46,6 +47,7 @@ from ycmd.tests.test_utils import ( BuildRequest,
                                     ErrorMatcher,
                                     LocationMatcher,
                                     RangeMatcher,
+                                    SignatureAvailableMatcher,
                                     WaitUntilCompleterServerReady )
 from ycmd.utils import ReadFile
 
@@ -243,3 +245,25 @@ def GenericLSPCompleter_DebugInfo_CustomRoot_test( app, *args ):
       } ) ),
     } ) )
   )
+
+
+@IsolatedYcmd( { 'language_server':
+  [ { 'name': 'foo',
+      'filetypes': [ 'foo' ],
+      'project_root_files': [ 'proj_root' ],
+      'cmdline': [ 'node', PATH_TO_GENERIC_COMPLETER, '--stdio' ] } ] } )
+def GenericLSPCompleter_SignatureHelp_NotSupported_test( app ):
+  test_file = PathToTestFile(
+      'generic_server', 'foo', 'bar', 'baz', 'test_file' )
+  app.post_json( '/event_notification',
+                 BuildRequest( **{
+                   'filepath': test_file,
+                   'event_name': 'FileReadyToParse',
+                   'filetype': 'foo'
+                 } ),
+                 expect_errors = True )
+  WaitUntilCompleterServerReady( app, 'foo' )
+
+  response = app.get( '/signature_help_available',
+                      { 'subserver': 'foo' } ).json
+  assert_that( response, SignatureAvailableMatcher( 'NO' ) )
