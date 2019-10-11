@@ -1080,7 +1080,16 @@ class LanguageServerCompleter( Completer ):
                                                  msg,
                                                  REQUEST_TIMEOUT_COMPLETION )
 
-    return response[ 'result' ]
+    result = response[ 'result' ]
+    for sig in result[ 'signatures' ]:
+      end = 0
+      for arg in sig[ 'parameters' ]:
+        arg_label = arg[ 'label' ]
+        if not isinstance( arg_label, list ):
+          begin = sig[ 'label' ].find( arg_label, end )
+          end = begin + len( arg_label )
+          arg[ 'label' ] = [ begin, end ]
+    return result
 
 
   def GetCustomSubcommands( self ):

@@ -2164,9 +2164,6 @@
             <p>If any errors are reported by the semantic engine, they are reported in
             the <code>errors</code> key in the response.</p>
             <p>The first signature and the first argument are both 0.</p>
-            <p>Identifying the position of an argument in the <code>label</code> for a signature
-            required matching the position of the text supplied in the <code>label</code> for
-            the active parameter of the active signature.</p>
             
                     </section>
             
@@ -2435,7 +2432,7 @@
                                                                                                                                                                 <dt data-property-name="parameters">
                                                                                                                                                                     <span class="json-property-name">parameters:</span>
                                                                                                                                                                     
-                                                                                                                                                                    <span class="json-property-type">string[]</span>
+                                                                                                                                                                    <span class="json-property-type">object[]</span>
                                                                                                                                                                     <span class="json-property-range" title="Value limits"></span>
                                                                                                                                                                     
                                                                                                                                                                         <span class="json-property-required"></span>
@@ -2447,11 +2444,39 @@
                                                                                                                                                                         
                                                                                                                                                                                         <section class="json-schema-array-items">
                                                                                                                                                                                             
-                                                                                                                                                                                            <span class="json-property-type">string</span>
+                                                                                                                                                                                            <span class="json-property-type">object</span>
                                                                                                                                                                                             <span class="json-property-range" title="Value limits"></span>
                                                                                                                                                                                             
                                                                                                                                                                                             <div class="json-inner-schema">
                                                                                                                                                                                                 
+                                                                                                                                                                                                        <section class="json-schema-properties">
+                                                                                                                                                                                                            <dl>
+                                                                                                                                                                                                                    <dt data-property-name="label">
+                                                                                                                                                                                                                        <span class="json-property-name">label:</span>
+                                                                                                                                                                                                                        
+                                                                                                                                                                                                                        <span class="json-property-type">integer[]</span>
+                                                                                                                                                                                                                        <span class="json-property-range" title="Value limits"></span>
+                                                                                                                                                                                                                        
+                                                                                                                                                                                                                    </dt>
+                                                                                                                                                                                                                    <dd>
+                                                                                                                                                                                                                        <p>The array of offsets representing an inclusive
+                                                                                                                                                                                                        start and exclusive end within the parameter&#39;s
+                                                                                                                                                                                                        containing signature label.</p>
+                                                                                                                                                                                                        
+                                                                                                                                                                                                                        <div class="json-inner-schema">
+                                                                                                                                                                                                                            
+                                                                                                                                                                                                                                            <section class="json-schema-array-items">
+                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                <span class="json-property-type">integer</span>
+                                                                                                                                                                                                                                                <span class="json-property-range" title="Value limits"></span>
+                                                                                                                                                                                                                                                
+                                                                                                                                                                                                                                                <div class="json-inner-schema">
+                                                                                                                                                                                                                                                    
+                                                                                                                                                                                                                                                </div>
+                                                                                                                                                                                                                                            </section>                </div>
+                                                                                                                                                                                                                    </dd>
+                                                                                                                                                                                                            </dl>
+                                                                                                                                                                                                        </section>
                                                                                                                                                                                             </div>
                                                                                                                                                                                         </section>                </div>
                                                                                                                                                                 </dd>
