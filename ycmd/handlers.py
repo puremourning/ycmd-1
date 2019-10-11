@@ -73,6 +73,16 @@ def EventNotification():
   return _JsonResponse( {} )
 
 
+@app.get( '/signature_help_available' )
+def GetSignatureHelpAvailable():
+  LOGGER.info( 'Received signature help available request' )
+  if request.query.subserver:
+    filetype = request.query.subserver
+    completer = _server_state.GetFiletypeCompleter( [ filetype ] )
+    return _JsonResponse( completer.SignatureHelpAvailable() )
+  return _JsonResponse( False )
+
+
 @app.post( '/run_completer_command' )
 def RunCompleterCommand():
   LOGGER.info( 'Received command request' )

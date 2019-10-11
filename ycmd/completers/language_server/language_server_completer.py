@@ -1064,6 +1064,11 @@ class LanguageServerCompleter( Completer ):
     return completions
 
 
+  def SignatureHelpAvailable( self ):
+    if not self.ServerIsReady():
+      return None
+    return bool( self._server_capabilities.get( 'signatureHelpProvider' ) )
+
   def ComputeSignaturesInner( self, request_data ):
     if not self.ServerIsReady():
       return {}

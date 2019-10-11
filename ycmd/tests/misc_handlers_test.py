@@ -44,6 +44,19 @@ def MiscHandlers_Healthy_Subserver_test( app ):
 
 
 @SharedYcmd
+def MiscHandlers_SignatureHelpAvailable_test( app ):
+  assert_that( app.get( '/signature_help_available' ).json, equal_to( False ) )
+
+
+@SharedYcmd
+def MiscHandlers_SignatureHelpAvailable_Subserver_test( app ):
+  with PatchCompleter( DummyCompleter, filetype = 'dummy_filetype' ):
+    assert_that( app.get( '/signature_help_available',
+                          { 'subserver': 'dummy_filetype' } ).json,
+                 equal_to( False ) )
+
+
+@SharedYcmd
 def MiscHandlers_Ready_test( app ):
   assert_that( app.get( '/ready' ).json, equal_to( True ) )
 
