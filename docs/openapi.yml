@@ -937,10 +937,6 @@ paths:
         the `errors` key in the response.
 
         The first signature and the first argument are both 0.
-
-        Identifying the position of an argument in the `label` for a signature
-        required matching the position of the text supplied in the `label` for
-        the active parameter of the active signature.
       produces:
         - application/json
       parameters:
@@ -1021,7 +1017,18 @@ paths:
                           description: List of parameters
                           type: array
                           items:
-                            type: string
+                            type: object
+                            properties:
+                             label:
+                               description: |
+                                 The array of offsets representing an inclusive
+                                 start and exclusive end within the parameter's
+                                 containing signature label.
+                               type: array
+                               maxItems: 2
+                               minItems: 2
+                               items:
+                                 type: integer
                       required:
                         - label
                         - parameters

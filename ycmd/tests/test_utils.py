@@ -198,9 +198,9 @@ def SignatureMatcher( label, parameters ):
   } )
 
 
-def ParameterMatcher( label ):
+def ParameterMatcher( begin, end ):
   return has_entries( {
-    'label': equal_to( label )
+    'label': contains( begin, end )
   } )
 
 
