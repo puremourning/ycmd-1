@@ -906,6 +906,56 @@ paths:
           schema:
             $ref: "#/definitions/ExceptionResponse"
 
+  /signature_help_available:
+    get:
+      summary: Is /signature_help supported for some filetype
+      description: |-
+        Since /signature_help can be expensive, clients can query ycmd with
+        /signature_help_available and then stop sending /signature_help if there
+        is no support for that filetype.
+
+        If the response is PENDING, the client should make another
+        /signature_help_available request later.
+      produces:
+        - application/json
+      parameters:
+        - name: subserver
+          in: body
+          description: |-
+            The context data, including the current cursor position, and details
+            of dirty buffers.
+          required: true
+          schema:
+            type: object
+            required:
+              - subserver
+            properties:
+              subserver:
+                type: string
+                description: |-
+                  Filetype for which the subserver should be queried.
+                  If a subserver supports more that one filetype, any of the
+                  filetypes can be sent.
+            example:
+              subserver: cpp
+      responses:
+        200:
+          description: Signature help support info.
+          schema:
+            type: object
+            required:
+              - available
+            properties:
+              available:
+                type: string
+                enum:
+                  - YES
+                  - NO
+                  - PENDING
+        500:
+          description: An error occurred.
+          schema:
+            $ref: "#/definitions/ExceptionResponse"
   /signature_help:
     post:
       summary: Get signature help (argument hints) for current file context.

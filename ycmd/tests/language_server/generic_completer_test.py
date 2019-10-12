@@ -28,7 +28,6 @@ import json
 import requests
 from hamcrest import ( assert_that,
                        contains,
-                       empty,
                        equal_to,
                        has_entries,
                        has_entry,
