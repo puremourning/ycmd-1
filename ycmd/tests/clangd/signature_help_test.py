@@ -27,11 +27,9 @@ from builtins import *  # noqa
 
 import json
 import requests
+from mock import patch
 from nose.tools import eq_
-from hamcrest import ( assert_that,
-                       contains,
-                       empty,
-                       has_entries )
+from hamcrest import assert_that, contains, empty, has_entries
 
 from ycmd.tests.clangd import PathToTestFile, SharedYcmd, IsolatedYcmd
 from ycmd.tests.test_utils import ( EMPTY_SIGNATURE_HELP,
@@ -495,7 +493,7 @@ def Signature_Help_Trigger_After_OtherTrigger_ReTrigger_test( app ):
 
 
 @SharedYcmd
-def Signature_Help_Trigger_JustBeforeClose( app ):
+def Signature_Help_Trigger_JustBeforeClose_test( app ):
   RunTest( app, {
     'description': 'Last argument, before )',
     'request': {
@@ -512,14 +510,21 @@ def Signature_Help_Trigger_JustBeforeClose( app ):
         'errors': empty(),
         'signature_help': has_entries( {
           'activeSignature': 0,
-          'activeParameter': 2,
+          'activeParameter': 0,
           'signatures': contains(
+            SignatureMatcher( 'make_drink(TypeOfDrink type, '
+                              'Temperature temp, '
+                              'int sugargs) -> Drink &', [
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 58 ),
+                              ] ),
             SignatureMatcher( 'make_drink(TypeOfDrink type, '
                               'double fizziness, '
                               'Flavour Flavour) -> Drink &', [
-                                ParameterMatcher( 'TypeOfDrink type' ),
-                                ParameterMatcher( 'double fizziness' ),
-                                ParameterMatcher( 'Flavour Flavour' ),
+                                ParameterMatcher( 11, 27 ),
+                                ParameterMatcher( 29, 45 ),
+                                ParameterMatcher( 47, 62 ),
                               ] ),
           )
         } ),
@@ -529,7 +534,7 @@ def Signature_Help_Trigger_JustBeforeClose( app ):
 
 
 @SharedYcmd
-def Signature_Help_Clears_After_EndFunction( app ):
+def Signature_Help_Clears_After_EndFunction_test( app ):
   RunTest( app, {
     'description': 'Empty response on )',
     'request': {
@@ -551,7 +556,7 @@ def Signature_Help_Clears_After_EndFunction( app ):
 
 
 @SharedYcmd
-def Signature_Help_Clears_After_Function_Call( app ):
+def Signature_Help_Clears_After_Function_Call_test( app ):
   RunTest( app, {
     'description': 'Empty response after )',
     'request': {
@@ -570,3 +575,27 @@ def Signature_Help_Clears_After_Function_Call( app ):
       } ),
     },
   } )
+
+
+@patch( 'ycmd.completers.completer.Completer.ShouldUseSignatureHelpNow',
+        return_value = True )
+@patch( 'ycmd.completers.language_server.language_server_completer.'
+        'LanguageServerCompleter._ServerIsInitialized', return_value = False )
+@IsolatedYcmd()
+def Signature_Help_Server_Not_Initialized_test( app, *args ):
+  filepath = PathToTestFile( 'general_fallback', 'make_drink.cc' )
+  request = {
+    'filetype'  : 'cpp',
+    'filepath'  : filepath,
+    'line_num'  : 7,
+    'column_num': 71,
+    'signature_help_state': 'INACTIVE',
+    'contents': ReadFile( filepath )
+  }
+  response = app.post_json( '/signature_help',
+                            BuildRequest( **request ),
+                            expect_errors = True )
+  assert_that( response.json, has_entries( {
+        'errors': empty(),
+        'signature_help': EMPTY_SIGNATURE_HELP,
+      } ) )
