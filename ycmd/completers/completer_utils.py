@@ -46,6 +46,13 @@ class PreparedTriggers( object ):
     self._CombineTriggers()
 
 
+  def __bool__( self ):
+    return bool( self._filetype_to_prepared_triggers )
+
+
+  __nonzero__ = __bool__
+
+
   def _CombineTriggers( self ):
     user_prepared_triggers = ( _FiletypeTriggerDictFromSpec(
       dict( self._user_trigger_map ) ) if self._user_trigger_map else
