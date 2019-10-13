@@ -47,6 +47,48 @@
           "YCM_TEST_NO_RETRY": "1"
         }
       }
+    },
+    "python - attach": {
+      "adapter": "vscode-python",
+      "variables": [
+        {
+          "python": {
+            "shell": "/bin/bash -c 'if [ -z \"${dollar}VIRTUAL_ENV\" ]; then echo $$(which python); else echo \"${dollar}VIRTUAL_ENV/bin/python\"; fi'"
+          }
+        }
+      ],
+      "configuration": {
+        "name": "Python attach",
+        "type": "vscode-python",
+        "request": "attach",
+
+        "pythonPath": "${python}",
+        "host": "localhost",
+        "port": "${port}"
+      }
+    },
+    "python - attach ptvsd": {
+      "adapter": {
+        "name": "ptvsd",
+        "port": 1234
+      },
+      "variables": [
+        {
+          "python": {
+            "shell": "/bin/bash -c 'if [ -z \"${dollar}VIRTUAL_ENV\" ]; then echo $$(which python); else echo \"${dollar}VIRTUAL_ENV/bin/python\"; fi'"
+          }
+        }
+      ],
+      "configuration": {
+        "name": "Python attach",
+        "type": "vscode-python",
+        "request": "attach",
+        "debugOptions":  [
+          "RedirectOutput",
+          "UnixClient",
+          "ShowReturnValue"
+        ]
+      }
     }
   }
 }
