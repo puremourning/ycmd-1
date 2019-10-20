@@ -36,6 +36,7 @@ from ycmd.responses import ( BuildExceptionResponse,
                              BuildCompletionResponse,
                              BuildSignatureHelpResponse,
                              BuildSignatureHelpAvailableResponse,
+                             SignatureHelpAvailalability,
                              UnknownExtraConf )
 from ycmd.request_wrap import RequestWrap
 from ycmd.bottle_utils import SetResponseHeader
@@ -79,7 +80,11 @@ def GetSignatureHelpAvailable():
   LOGGER.info( 'Received signature help available request' )
   if request.query.subserver:
     filetype = request.query.subserver
-    completer = _server_state.GetFiletypeCompleter( [ filetype ] )
+    try:
+      completer = _server_state.GetFiletypeCompleter( [ filetype ] )
+    except ValueError:
+      return _JsonResponse( BuildSignatureHelpAvailableResponse(
+        SignatureHelpAvailalability.NOT_AVAILABLE ) )
     value = completer.SignatureHelpAvailable()
     return _JsonResponse( BuildSignatureHelpAvailableResponse( value ) )
   else:
