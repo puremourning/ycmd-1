@@ -16,6 +16,8 @@ test ${python_version} == ${YCM_PYTHON_VERSION}
 
 # Add the Cargo executable to PATH
 PATH="${HOME}/.cargo/bin:${PATH}"
+# Add sourcekit to PATH
+PATH="${PATH}:${HOME}/swift/usr/bin"
 
 python run_tests.py
 

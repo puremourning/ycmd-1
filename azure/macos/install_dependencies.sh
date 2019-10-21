@@ -33,4 +33,12 @@ if [ "${YCM_PYTHON_VERSION}" == "2.7.2" ]; then
   curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain none
 fi
 
+#
+# Swift setup
+#
+
+wget https://swift.org/builds/development/xcode/swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a/swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a-osx.pkg
+sudo installer -pkg swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a-osx.pkg -target /
+sudo mv /Library/Developer/Toolchains/swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a.xctoolchain ${HOME}/swift
+
 set +e
