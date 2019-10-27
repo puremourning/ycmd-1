@@ -85,6 +85,14 @@ class MockCompleter( lsc.LanguageServerCompleter, DummyCompleter ):
     return self._started
 
 
+  def GetCommandLine( self ):
+    return [ 'server' ]
+
+
+  def GetServerName( self ):
+    return 'mock_completer'
+
+
 @IsolatedYcmd( { 'global_ycm_extra_conf':
                  PathToTestFile( 'extra_confs', 'settings_extra_conf.py' ) } )
 def LanguageServerCompleter_ExtraConf_ServerReset_test( app ):

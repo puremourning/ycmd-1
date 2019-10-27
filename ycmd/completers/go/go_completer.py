@@ -28,7 +28,7 @@ import os
 
 from ycmd import responses
 from ycmd import utils
-from ycmd.completers.language_server import simple_language_server_completer
+from ycmd.completers.language_server import language_server_completer
 
 
 PATH_TO_GOPLS = os.path.abspath( os.path.join( os.path.dirname( __file__ ),
@@ -54,7 +54,7 @@ def ShouldEnableGoCompleter( user_options ):
   return False
 
 
-class GoCompleter( simple_language_server_completer.SimpleLSPCompleter ):
+class GoCompleter( language_server_completer.LanguageServerCompleter ):
   def __init__( self, user_options ):
     super( GoCompleter, self ).__init__( user_options )
 
@@ -112,9 +112,6 @@ class GoCompleter( simple_language_server_completer.SimpleLSPCompleter ):
 
   def GetCustomSubcommands( self ):
     return {
-      'RestartServer': (
-        lambda self, request_data, args: self._RestartServer( request_data )
-      ),
       'GetDoc': (
         lambda self, request_data, args: self.GetDoc( request_data )
       ),
