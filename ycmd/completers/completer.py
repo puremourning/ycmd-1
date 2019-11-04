@@ -21,6 +21,7 @@ from ycmd import extra_conf_store
 from ycmd.completers import completer_utils
 from ycmd.responses import NoDiagnosticSupport, SignatureHelpAvailalability
 from ycmd.utils import LOGGER
+from ycmd.extra_conf_support import IgnoreExtraConf
 
 NO_USER_COMMANDS = 'This completer does not define any commands.'
 
@@ -553,10 +554,14 @@ class Completer( metaclass = abc.ABCMeta ):
 
   def GetSettings( self, module, request_data ):
     if hasattr( module, 'Settings' ):
-      settings = module.Settings(
-        filename = request_data[ 'filepath' ],
-        language = self.Language(),
-        client_data = request_data[ 'extra_conf_data' ] )
+      try:
+        settings = module.Settings(
+          language = self.Language(),
+          filename = request_data[ 'filepath' ],
+          client_data = request_data[ 'extra_conf_data' ] )
+      except IgnoreExtraConf:
+        settings = None
+
       if settings is not None:
         return settings
 
