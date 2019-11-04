@@ -37,6 +37,7 @@ from ycmd import extra_conf_store, responses, utils
 from ycmd.completers.completer import Completer, CompletionsCache
 from ycmd.completers.completer_utils import GetFileContents, GetFileLines
 from ycmd.utils import LOGGER
+from ycmd.extra_conf_support import IgnoreExtraConf
 
 from ycmd.completers.language_server import language_server_protocol as lsp
 
@@ -1264,10 +1265,14 @@ class LanguageServerCompleter( Completer ):
 
   def GetSettings( self, module, request_data ):
     if hasattr( module, 'Settings' ):
-      settings = module.Settings(
-        language = self.Language(),
-        filename = request_data[ 'filepath' ],
-        client_data = request_data[ 'extra_conf_data' ] )
+      try:
+        settings = module.Settings(
+          language = self.Language(),
+          filename = request_data[ 'filepath' ],
+          client_data = request_data[ 'extra_conf_data' ] )
+      except IgnoreExtraConf:
+        settings = None
+
       if settings is not None:
         return settings
 

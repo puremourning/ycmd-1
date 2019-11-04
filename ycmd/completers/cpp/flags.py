@@ -36,6 +36,7 @@ from ycmd.utils import ( OnMac,
                          ToUnicode,
                          CLANG_RESOURCE_DIR )
 from ycmd.responses import NoExtraConfDetected
+from ycmd.extra_conf_support import IgnoreExtraConf
 
 # -include-pch and --sysroot= must be listed before -include and --sysroot
 # respectively because the latter is a prefix of the former (and the algorithm
@@ -173,7 +174,10 @@ class Flags( object ):
     # Load the flags from the extra conf file if one is found and is not global.
     module = extra_conf_store.ModuleForSourceFile( filename )
     if module and not extra_conf_store.IsGlobalExtraConfModule( module ):
-      return _CallExtraConfFlagsForFile( module, filename, client_data )
+      try:
+        return _CallExtraConfFlagsForFile( module, filename, client_data )
+      except IgnoreExtraConf:
+        pass
 
     # Load the flags from the compilation database if any.
     database = self.LoadCompilationDatabase( filename )
@@ -182,7 +186,10 @@ class Flags( object ):
 
     # Load the flags from the global extra conf if set.
     if module:
-      return _CallExtraConfFlagsForFile( module, filename, client_data )
+      try:
+        return _CallExtraConfFlagsForFile( module, filename, client_data )
+      except IgnoreExtraConf:
+        pass
 
     # No compilation database and no extra conf found. Warn the user if not
     # already warned.
