@@ -16,6 +16,7 @@
 # along with ycmd.  If not, see <http://www.gnu.org/licenses/>.
 
 from ycmd import extra_conf_store, responses
+from ycmd.extra_conf_support import IgnoreExtraConf
 from ycmd.completers.completer import Completer, SignatureHelpAvailalability
 from ycmd.utils import ( CodepointOffsetToByteOffset,
                          ExpandVariablesInPath,
@@ -73,14 +74,18 @@ class PythonCompleter( Completer ):
 
   def _GetSettings( self, module, filepath, client_data ):
     # We don't warn the user if no extra conf file is found.
-    if module:
-      if hasattr( module, 'Settings' ):
-        settings = module.Settings( language = 'python',
-                                    filename = filepath,
-                                    client_data = client_data )
-        if settings is not None:
-          return settings
-      LOGGER.debug( 'No Settings function defined in %s', module.__file__ )
+    try:
+      if module:
+        if hasattr( module, 'Settings' ):
+          settings = module.Settings( language = 'python',
+                                      filename = filepath,
+                                      client_data = client_data )
+          if settings is not None:
+            return settings
+        LOGGER.debug( 'No Settings function defined in %s', module.__file__ )
+    except IgnoreExtraConf:
+      pass
+
     return {
       # NOTE: this option is only kept for backward compatibility. Setting the
       # Python interpreter path through the extra conf file is preferred.
