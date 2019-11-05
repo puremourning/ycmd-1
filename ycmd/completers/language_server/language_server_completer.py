@@ -2339,6 +2339,11 @@ def _InsertionTextForItem( request_data, item ):
       insertion_text = item[ 'label' ]
       start_codepoint = request_data[ 'start_codepoint' ]
 
+      # FIXME:
+      # So forced-completion breaks here, as the textEdit is formulated to
+      # remove the existing "prefix". E.g. typing getT<ctrl-space>, the edit
+      # attempts to replace getT with the new code.
+
       # Add a fixit which removes the inserted label
       #
       # TODO: Perhaps we should actually supply a completion with an empty
@@ -2370,7 +2375,7 @@ def _InsertionTextForItem( request_data, item ):
       contents = GetFileLines( request_data, filepath )
       completion_fixit_chunks = [
         responses.FixItChunk(
-          text_edit[ 'newText' ],
+          text_edit[ 'newText' ], # FIXME: This could also be a Snippet
           _BuildRange( contents, filepath, text_edit[ 'range' ] )
         )
       ]
