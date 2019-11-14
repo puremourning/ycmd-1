@@ -1283,12 +1283,18 @@ class LanguageServerCompleter( Completer ):
 
 
   def _GetSettingsFromExtraConf( self, request_data ):
-    self._settings = self.DefaultSettings( request_data )
+    ls = self.DefaultSettings( request_data )
+    # In case no module is found
+    self._settings = {
+      'ls': ls
+    }
 
     module = extra_conf_store.ModuleForSourceFile( request_data[ 'filepath' ] )
     if module:
-      settings = self.GetSettings( module, request_data )
-      self._settings.update( settings.get( 'ls', {} ) )
+      self._settings = self.GetSettings( module, request_data )
+      ls.update( self._settings.get( 'ls', {} ) )
+      self._settings[ 'ls' ] = ls
+
       # Only return the dir if it was found in the paths; we don't want to use
       # the path of the global extra conf as a project root dir.
       if not extra_conf_store.IsGlobalExtraConfModule( module ):
@@ -1706,7 +1712,8 @@ class LanguageServerCompleter( Completer ):
       # clear how/where that is specified.
       msg = lsp.Initialize( request_id,
                             self._project_directory,
-                            self._settings )
+                            self._settings.get( 'ls', {} ),
+                            self._settings.get( 'capabilities', {} ) )
 
       def response_handler( response, message ):
         if message is None:
@@ -1821,7 +1828,7 @@ class LanguageServerCompleter( Completer ):
       # configuration should be send in response to a workspace/configuration
       # request?
       self.GetConnection().SendNotification(
-          lsp.DidChangeConfiguration( self._settings ) )
+          lsp.DidChangeConfiguration( self._settings.get( 'ls', {} ) ) )
 
       # Notify the other threads that we have completed the initialize exchange.
       self._initialize_response = None
