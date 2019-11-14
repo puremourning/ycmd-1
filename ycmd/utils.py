@@ -24,7 +24,12 @@ from __future__ import absolute_import
 # Not installing aliases from python-future; it's unreliable and slow.
 from builtins import *  # noqa
 
-from future.utils import PY2, native
+try:
+  import collections.abc as collections_abc
+except ImportError:
+  import collections as collections_abc
+
+from future.utils import PY2, native, iteritems
 import copy
 import json
 import logging
@@ -673,3 +678,46 @@ def GetClangResourceDir():
 
 
 CLANG_RESOURCE_DIR = GetClangResourceDir()
+
+
+def UpdateDict( target, override ):
+  """Apply the updates in |override| to the dict |target|. This is like
+  dict.update, but recursive. i.e. if the existing element is a dict, then
+  override elements of the sub-dict rather than wholesale replacing.
+
+  e.g. 
+
+  UpdateDict(
+    {
+      'outer': { 'inner': { 'key': 'oldValue', 'existingKey': True } }
+    },
+    {
+      'outer': { 'inner': { 'key': 'newValue' } },
+      'newKey': { 'newDict': True },
+    }
+  )
+
+  yields:
+
+    {
+      outer: {
+        inner: {
+           key: 'newValue',
+           exitingKey: True
+        }
+      },
+      newKey: { newDict: True }
+    }
+
+  """
+  
+  for key, value in iteritems( override ):
+    current_value = target.get( key )
+    if not isinstance( current_value, collections_abc.Mapping ):
+      target[ key ] = value
+    elif isinstance( value, collections_abc.Mapping ):
+      target[ key ] = UpdateDict( current_value, value )
+    else:
+      target[ key ] = value
+
+  return target
