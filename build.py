@@ -829,7 +829,7 @@ def EnableGoCompleter( args ):
   os.chdir( p.join(
     go_dir, 'src', 'golang.org', 'x', 'tools', 'cmd', 'gopls' ) )
   CheckCall( [ go, 'build' ],
-             quiet = args.quiet,
+             quiet = True, # go build is silent, so our quiet mode is better
              status_message = 'Building gopls for go completion' )
 
 

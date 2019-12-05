@@ -45,8 +45,8 @@ from ycmd.tests.go import ( PathToTestFile,
 from ycmd.tests.test_utils import ( BuildRequest,
                                     ChunkMatcher,
                                     ErrorMatcher,
-                                    ExpectedFailure,
-                                    LocationMatcher )
+                                    LocationMatcher,
+                                    WithRetry )
 from ycmd.utils import ReadFile
 
 
@@ -74,25 +74,29 @@ def RunTest( app, test, contents = None ):
                                  } ),
                  expect_errors = True )
 
-  # We also ignore errors here, but then we check the response code
-  # ourself. This is to allow testing of requests returning errors.
-  response = app.post_json(
-    '/run_completer_command',
-    CombineRequest( test[ 'request' ], {
-      'completer_target': 'filetype_default',
-      'contents': contents,
-      'filetype': 'go',
-      'command_arguments': ( [ test[ 'request' ][ 'command' ] ]
-                             + test[ 'request' ].get( 'arguments', [] ) )
-    } ),
-    expect_errors = True
-  )
 
-  print( 'completer response: {}'.format( pformat( response.json ) ) )
+  # Sigh. It seems to take gopls longer to parse now, so we have to wait.
+  @WithRetry
+  def Check():
+    # We also ignore errors here, but then we check the response code
+    # ourself. This is to allow testing of requests returning errors.
+    response = app.post_json(
+      '/run_completer_command',
+      CombineRequest( test[ 'request' ], {
+        'completer_target': 'filetype_default',
+        'contents': contents,
+        'filetype': 'go',
+        'command_arguments': ( [ test[ 'request' ][ 'command' ] ]
+                               + test[ 'request' ].get( 'arguments', [] ) )
+      } ),
+      expect_errors = True
+    )
 
-  assert_that( response.status_code,
-               equal_to( test[ 'expect' ][ 'response' ] ) )
-  assert_that( response.json, test[ 'expect' ][ 'data' ] )
+    print( 'completer response: {}'.format( pformat( response.json ) ) )
+
+    assert_that( response.status_code,
+                 equal_to( test[ 'expect' ][ 'response' ] ) )
+    assert_that( response.json, test[ 'expect' ][ 'data' ] )
 
 
 @SharedYcmd
@@ -117,13 +121,15 @@ def Subcommands_DefinedSubcommands_test( app ):
   subcommands_data = BuildRequest( completer_target = 'go' )
 
   assert_that( app.post_json( '/defined_subcommands', subcommands_data ).json,
-               contains_inanyorder( 'Format',
+               contains_inanyorder( 'ExecuteCommand',
+                                    'Format',
                                     'GetDoc',
                                     'GetType',
                                     'RefactorRename',
                                     'GoTo',
                                     'GoToDeclaration',
                                     'GoToDefinition',
+                                    'GoToImplementation',
                                     'GoToReferences',
                                     'GoToType',
                                     'FixIt',
@@ -209,8 +215,6 @@ def Subcommands_Format_WholeFile_test( app ):
   } )
 
 
-@ExpectedFailure( 'rangeFormat is not yet implemented',
-                  matches_regexp( '\nExpected: <200>\n     but: was <500>\n' ) )
 @SharedYcmd
 def Subcommands_Format_Range_test( app ):
   project_dir = PathToTestFile()
