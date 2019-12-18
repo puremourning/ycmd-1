@@ -396,10 +396,18 @@ class JavaCompleter( simple_language_server_completer.SimpleLSPCompleter ):
 
 
   def _OpenProject( self, request_data, args ):
-    if len( args ) != 1:
-      raise ValueError( "Usage: OpenProject <project directory>" )
+    if len( args ) < 1:
+      raise ValueError( "Usage: OpenProject <project directory> "
+                        "[--wipe [--with-config]]" )
 
     project_directory = args[ 0 ]
+
+    kwargs = {}
+    if len( args ) > 1 and args[ 1 ] == '--wipe':
+      kwargs[ 'wipe_workspace' ] = True
+      if len( args ) > 2 and args[ 2 ] == '--with-config':
+        kwargs[ 'wipe_config' ] = True
+
 
     # If the dir is not absolute, calculate it relative to the working dir of
     # the client (if supplied).
@@ -448,6 +456,10 @@ class JavaCompleter( simple_language_server_completer.SimpleLSPCompleter ):
 
       if project_directory:
         self._java_project_dir = project_directory
+      elif 'project_directory' in self._settings:
+        self._java_project_dir = utils.AbsoluatePath(
+          self._settings[ 'project_directory' ],
+          self._extra_conf_dir )
       else:
         self._java_project_dir = _FindProjectDir(
           os.path.dirname( request_data[ 'filepath' ] ) )

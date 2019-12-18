@@ -815,6 +815,7 @@ class LanguageServerCompleter( Completer ):
       self._resolve_completion_items = False
       self._project_directory = None
       self._settings = {}
+      self._extra_conf_dir = None
       self._server_started = False
 
 
@@ -1304,14 +1305,14 @@ class LanguageServerCompleter( Completer ):
     StartServer. In general, completers don't need to call this as it is called
     automatically in OnFileReadyToParse, but this may be used in completer
     subcommands that require restarting the underlying server."""
-    extra_conf_dir = self._GetSettingsFromExtraConf( request_data )
+    self._extra_conf_dir = self._GetSettingsFromExtraConf( request_data )
 
     # Only attempt to start the server once. Set this after above call as it may
     # throw an exception
     self._server_started = True
 
     if self.StartServer( request_data, *args, **kwargs ):
-      self._SendInitialize( request_data, extra_conf_dir )
+      self._SendInitialize( request_data )
 
 
   def OnFileReadyToParse( self, request_data ):
@@ -1652,7 +1653,7 @@ class LanguageServerCompleter( Completer ):
     GetProjectDirectory."""
     return []
 
-  def GetProjectDirectory( self, request_data, extra_conf_dir ):
+  def GetProjectDirectory( self, request_data ):
     """Return the directory in which the server should operate. Language server
     protocol and most servers have a concept of a 'project directory'. Where a
     concrete completer can detect this better, it should override this method,
@@ -1665,6 +1666,10 @@ class LanguageServerCompleter( Completer ):
     Note: None of these are ideal. Ycmd doesn't really have a notion of project
     directory and therefore neither do any of our clients."""
 
+    if 'project_directory' in self._settings:
+      return utils.AbsoluatePath( self._settings[ 'project_directory' ],
+                                  self._extra_conf_dir )
+
     project_root_files = self.GetProjectRootFiles()
     if project_root_files:
       for folder in utils.PathsToAllParentFolders( request_data[ 'filepath' ] ):
@@ -1672,8 +1677,8 @@ class LanguageServerCompleter( Completer ):
           if os.path.isfile( os.path.join( folder, root_file ) ):
             return folder
 
-    if extra_conf_dir:
-      return extra_conf_dir
+    if self._extra_conf_dir:
+      return self._extra_conf_dir
 
     if 'working_dir' in request_data:
       return request_data[ 'working_dir' ]
@@ -1681,21 +1686,21 @@ class LanguageServerCompleter( Completer ):
     return os.path.dirname( request_data[ 'filepath' ] )
 
 
-  def _SendInitialize( self, request_data, extra_conf_dir ):
+  def _SendInitialize( self, request_data ):
     """Sends the initialize request asynchronously.
     This must be called immediately after establishing the connection with the
     language server. Implementations must not issue further requests to the
     server until the initialize exchange has completed. This can be detected by
     calling this class's implementation of _ServerIsInitialized.
-    The extra_conf_dir parameter is the value returned from
-    _GetSettingsFromExtraConf, which must be called before calling this method.
+    _GetSettingsFromExtraConf must be called before calling this method, as this
+    method release on self._extra_conf_dir.
     It is called before starting the server in OnFileReadyToParse."""
 
     with self._server_info_mutex:
       assert not self._initialize_response
 
       self._project_directory = self.GetProjectDirectory( request_data,
-                                                          extra_conf_dir )
+                                                          self._extra_conf_dir )
       request_id = self.GetConnection().NextRequestId()
 
       # FIXME: According to the discussion on
