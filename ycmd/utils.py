@@ -685,7 +685,7 @@ def UpdateDict( target, override ):
   dict.update, but recursive. i.e. if the existing element is a dict, then
   override elements of the sub-dict rather than wholesale replacing.
 
-  e.g. 
+  e.g.
 
   UpdateDict(
     {
@@ -710,7 +710,6 @@ def UpdateDict( target, override ):
     }
 
   """
-  
   for key, value in iteritems( override ):
     current_value = target.get( key )
     if not isinstance( current_value, collections_abc.Mapping ):
@@ -721,3 +720,12 @@ def UpdateDict( target, override ):
       target[ key ] = value
 
   return target
+
+
+def AbsoluatePath( path, relative_to ):
+  """Returns a normalised, absoluate path to |path|. If |path| is relative, it
+  is resolved relative to |relative_to|."""
+  if not os.path.isabs( path ):
+    path = os.path.join( relative_to, path )
+
+  return os.path.normpath( path )
