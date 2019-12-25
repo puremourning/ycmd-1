@@ -74,4 +74,11 @@ if [ "${YCM_PYTHON_VERSION}" == "2.7.1" ]; then
   curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain none
 fi
 
+#
+# Swift setup
+#
+wget https://swift.org/builds/development/ubuntu1604/swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a/swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a-ubuntu16.04.tar.gz
+tar xf swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a-ubuntu16.04.tar.gz
+mv swift-DEVELOPMENT-SNAPSHOT-2019-11-11-a-ubuntu16.04 ${HOME}/swift
+
 set +e

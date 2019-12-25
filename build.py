@@ -386,6 +386,9 @@ def ParseArguments():
   parser.add_argument( '--clang-completer', action = 'store_true',
                        help = 'Enable C-family semantic completion engine '
                               'through libclang.' )
+  parser.add_argument( '--swift-completer', action = 'store_true',
+                       help = 'Enable Swift semantic completion engine '
+                              'through sourcekit-lsp server.' )
   parser.add_argument( '--clangd-completer', action = 'store_true',
                        help = 'Enable C-family semantic completion engine '
                               'through clangd lsp server.(EXPERIMENTAL)' )
@@ -1099,6 +1102,11 @@ def EnableClangdCompleter( Args ):
            'deprecated FlagsForFile().' )
 
 
+def EnableSwiftCompleter( args ):
+  if not args.quiet:
+    print( 'swiftc and sourcekit-lsp neet to be in $PATH.' )
+
+
 def WritePythonUsedDuringBuild():
   path = p.join( DIR_OF_THIS_SCRIPT, 'PYTHON_USED_DURING_BUILDING' )
   with open( path, 'w' ) as f:
@@ -1137,6 +1145,8 @@ def Main():
     EnableTypeScriptCompleter( args )
   if args.clangd_completer or args.all_completers:
     EnableClangdCompleter( args )
+  if args.swift_completer or args.all_completers:
+    EnableSwiftCompleter( args )
 
 
 if __name__ == '__main__':
