@@ -1699,8 +1699,7 @@ class LanguageServerCompleter( Completer ):
     with self._server_info_mutex:
       assert not self._initialize_response
 
-      self._project_directory = self.GetProjectDirectory( request_data,
-                                                          self._extra_conf_dir )
+      self._project_directory = self.GetProjectDirectory( request_data )
       request_id = self.GetConnection().NextRequestId()
 
       # FIXME: According to the discussion on
