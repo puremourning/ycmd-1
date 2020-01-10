@@ -34,7 +34,8 @@ from ycmd.utils import ( ByteOffsetToCodepointOffset,
                          unquote,
                          url2pathname,
                          urlparse,
-                         urljoin )
+                         urljoin,
+                         UpdateDict )
 
 
 Error = collections.namedtuple( 'RequestError', [ 'code', 'reason' ] )
@@ -233,7 +234,10 @@ def BuildResponse( request, parameters ):
   return _BuildMessageData( message )
 
 
-def Initialize( request_id, project_directory, settings ):
+def Initialize( request_id,
+                project_directory,
+                settings,
+                capabilities ):
   """Build the Language Server initialize request"""
 
   return BuildRequest( request_id, 'initialize', {
@@ -241,8 +245,11 @@ def Initialize( request_id, project_directory, settings ):
     'rootPath': project_directory,
     'rootUri': FilePathToUri( project_directory ),
     'initializationOptions': settings,
-    'capabilities': {
-      'workspace': { 'applyEdit': True, 'documentChanges': True },
+    'capabilities': UpdateDict( {
+      'workspace': {
+          'applyEdit': True,
+          'documentChanges': True,
+      },
       'textDocument': {
         'codeAction': {
           'codeActionLiteralSupport': {
@@ -288,7 +295,7 @@ def Initialize( request_id, project_directory, settings ):
           },
         },
       },
-    },
+    }, capabilities ),
   } )
 
 
