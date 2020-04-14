@@ -1154,8 +1154,9 @@ class LanguageServerCompleter( Completer ):
         resolve_id,
         resolve,
         REQUEST_TIMEOUT_COMPLETION )
-      item.clear()
-      item.update( response[ 'result' ] )
+      if item.get( 'result' ):
+        item.clear()
+        item.update( response[ 'result' ] )
     except ResponseFailedException:
       LOGGER.exception( 'A completion item could not be resolved. Using '
                         'basic data' )
