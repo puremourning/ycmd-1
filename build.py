@@ -838,15 +838,12 @@ def GetCsCompleterDataForPlatform():
 
 
 def EnableGoCompleter( args ):
-  go = FindExecutableOrDie( 'go', 'go is required to build gopls.' )
+  go = FindExecutableOrDie( 'go', 'go is required to build gocode.' )
 
-  new_env = os.environ.copy()
-  new_env[ 'GO111MODULE' ] = 'on'
-  new_env[ 'GOPATH' ] = p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'go' )
-  new_env.pop( 'GOROOT', None )
-  new_env[ 'GOBIN' ] = p.join( new_env[ 'GOPATH' ], 'bin' )
-  CheckCall( [ go, 'get', 'golang.org/x/tools/gopls@v0.4.4' ],
-             env = new_env,
+  go_dir = p.join( DIR_OF_THIS_SCRIPT, 'third_party', 'go' )
+  os.chdir( p.join(
+    go_dir, 'src', 'golang.org', 'x', 'tools', 'gopls' ) )
+  CheckCall( [ go, 'build' ],
              quiet = args.quiet,
              status_message = 'Building gopls for go completion' )
 

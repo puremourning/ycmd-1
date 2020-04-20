@@ -39,6 +39,8 @@
   "gopls_binary_path": "",
   "gopls_args": [],
   "rust_toolchain_root": "",
+  "rls_binary_path": "",
+  "rustc_binary_path": "",
   "tsserver_binary_path": "",
   "roslyn_binary_path": "",
   "mono_binary_path": "",
