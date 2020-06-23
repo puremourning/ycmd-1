@@ -62,7 +62,7 @@ def Subcommands_FixIt_Multi_test( app ):
 
     request = BuildRequest( completer_target = 'filetype_default',
                             command_arguments = [ 'FixIt' ],
-                            line_num = 4,
+                            line_num = 5,
                             column_num = 27,
                             contents = contents,
                             filetype = 'cs',
@@ -88,7 +88,7 @@ def Subcommands_FixIt_Multi_test( app ):
     response = app.post_json( '/resolve_fixit', request ).json
     assert_that( response, has_entries( {
       'fixits': contains_exactly( has_entries( {
-        'location': LocationMatcher( fixit_test, 4, 27 ),
+        'location': LocationMatcher( fixit_test, 5, 27 ),
         'chunks': contains_exactly(
           has_entries( { 'replacement_text': '0b101', } ) )
       } ) ) } ) )
@@ -102,14 +102,14 @@ def Subcommands_FixIt_Range_test( app ):
 
     request = BuildRequest( completer_target = 'filetype_default',
                             command_arguments = [ 'FixIt' ],
-                            line_num = 4,
+                            line_num = 5,
                             column_num = 23,
                             contents = contents,
                             filetype = 'cs',
                             filepath = fixit_test )
     request.update( { 'range': {
-      'start': { 'line_num': 4, 'column_num': 23 },
-      'end': { 'line_num': 4, 'column_num': 27 }
+      'start': { 'line_num': 5, 'column_num': 23 },
+      'end': { 'line_num': 5, 'column_num': 27 }
     } } )
     response = app.post_json( '/run_completer_command', request ).json
     assert_that( response, has_entries( {
@@ -135,21 +135,18 @@ def Subcommands_FixIt_Single_test( app ):
     request = BuildRequest( completer_target = 'filetype_default',
                             command_arguments = [ 'FixIt' ],
                             line_num = 4,
-                            column_num = 23,
+                            column_num = 17,
                             contents = contents,
                             filetype = 'cs',
                             filepath = fixit_test )
     response = app.post_json( '/run_completer_command', request ).json
-    LOGGER.debug( 'r = %s', response )
     assert_that( response, has_entries( {
       'fixits': contains_exactly( has_entries( {
-        'location': LocationMatcher( fixit_test, 4, 23 ),
+        'location': LocationMatcher( fixit_test, 4, 17 ),
         'chunks': contains_exactly(
           has_entries( {
-            'replacement_text':
-              '\n        {\n            NewMethod();\n        }\n\n'
-              '        private static void NewMethod()\n        {\r\n',
-            'range': RangeMatcher( fixit_test, ( 3, 31 ), ( 4, 1 ) ) } )
+            'replacement_text': 'var',
+            'range': RangeMatcher( fixit_test, ( 4, 13 ), ( 4, 16 ) ) } )
         ) } ) ) } ) )
 
 
