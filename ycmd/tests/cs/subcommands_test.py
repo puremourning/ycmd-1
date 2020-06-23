@@ -34,7 +34,7 @@ from ycmd.tests.test_utils import ( BuildRequest,
                                     RangeMatcher,
                                     WaitUntilCompleterServerReady,
                                     WithRetry )
-from ycmd.utils import ReadFile, LOGGER
+from ycmd.utils import ReadFile
 
 
 @SharedYcmd
