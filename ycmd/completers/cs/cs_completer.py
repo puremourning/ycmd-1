@@ -66,7 +66,7 @@ def ShouldEnableCsCompleter( user_options ):
     roslyn = PATH_TO_OMNISHARP_ROSLYN_BINARY
   mono = FindExecutableWithFallback( user_options[ 'mono_binary_path' ],
                                      FindExecutable( 'mono' ) )
-  if roslyn and (mono or utils.OnWindows()):
+  if roslyn and ( mono or utils.OnWindows() ):
     return True
   LOGGER.info( 'No mono executable at %s', mono )
   return False
