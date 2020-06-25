@@ -27,7 +27,8 @@ from ycmd.tests.test_utils import ( BuildRequest,
                                     IsolatedApp,
                                     WaitUntilCompleterServerReady,
                                     StopCompleterServer,
-                                    SetUpApp )
+                                    SetUpApp,
+                                    ShutdownSubservers )
 
 shared_app = None
 # map of 'app' to filepaths
@@ -45,6 +46,8 @@ def set_up_shared_app():
     for filepath in shared_filepaths.get( shared_app, [] ):
       StopCompleterServer( shared_app, 'cs', filepath )
 
+    ShutdownSubservers( shared_app )
+
 
 @pytest.fixture
 def app( request ):
@@ -59,6 +62,8 @@ def app( request ):
         # Shutdown the isolated app
         for filepath in shared_filepaths.get( app, [] ):
           StopCompleterServer( app, 'cs', filepath )
+
+        ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()

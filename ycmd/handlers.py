@@ -293,6 +293,16 @@ def Shutdown():
   return _JsonResponse( True )
 
 
+
+@app.post( '/shutdown_servers' )
+def ShutdownSubservers():
+  LOGGER.info( 'Received ***test only*** shutdown servers request' )
+  ServerCleanup()
+
+  return _JsonResponse( True )
+
+
+
 @app.post( '/receive_messages' )
 def ReceiveMessages():
   # Receive messages is a "long-poll" handler.

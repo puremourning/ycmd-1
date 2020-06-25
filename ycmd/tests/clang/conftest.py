@@ -16,7 +16,10 @@
 # along with ycmd.  If not, see <http://www.gnu.org/licenses/>.
 
 import pytest
-from ycmd.tests.test_utils import ClearCompletionsCache, IsolatedApp, SetUpApp
+from ycmd.tests.test_utils import ( ClearCompletionsCache,
+                                    IsolatedApp,
+                                    SetUpApp,
+                                    ShutdownSubservers )
 
 shared_app = None
 
@@ -25,6 +28,10 @@ shared_app = None
 def set_up_shared_app():
   global shared_app
   shared_app = SetUpApp( { 'use_clangd': 0 } )
+  try:
+    yield
+  finally:
+    ShutdownSubservers( shared_app )
 
 
 @pytest.fixture
@@ -35,7 +42,10 @@ def app( request ):
     custom_options = request.param[ 1 ]
     custom_options.update( { 'use_clangd': 0 } )
     with IsolatedApp( custom_options ) as app:
-      yield app
+      try:
+        yield app
+      finally:
+        ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()

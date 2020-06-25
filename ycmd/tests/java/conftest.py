@@ -24,7 +24,8 @@ from ycmd.tests.test_utils import ( BuildRequest,
                                     IsolatedApp,
                                     SetUpApp,
                                     StopCompleterServer,
-                                    WaitUntilCompleterServerReady )
+                                    WaitUntilCompleterServerReady,
+                                    ShutdownSubservers )
 shared_app = None
 SERVER_STARTUP_TIMEOUT = 120 # seconds
 
@@ -47,6 +48,7 @@ def set_up_shared_app():
     yield
   finally:
     StopCompleterServer( shared_app, 'java' )
+    ShutdownSubservers( shared_app )
 
 
 def StartJavaCompleterServerInDirectory( app, directory ):
@@ -82,6 +84,7 @@ def isolated_app():
         yield app
       finally:
         StopCompleterServer( app, 'java' )
+        ShutdownSubservers( app )
 
   return manager
 

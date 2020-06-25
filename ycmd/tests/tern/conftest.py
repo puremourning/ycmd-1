@@ -19,7 +19,8 @@ import os
 import pytest
 from ycmd.tests.test_utils import ( BuildRequest, ClearCompletionsCache,
                                     IsolatedApp, SetUpApp, StopCompleterServer,
-                                    WaitUntilCompleterServerReady )
+                                    WaitUntilCompleterServerReady,
+                                    ShutdownSubservers )
 shared_app = None
 
 
@@ -36,6 +37,7 @@ def set_up_shared_app():
     yield
   finally:
     StopCompleterServer( shared_app, 'java' )
+    ShutdownSubservers( shared_app )
 
 
 def StartJavaScriptCompleterServerInDirectory( app, directory ):
@@ -57,6 +59,7 @@ def app( request ):
         yield app
       finally:
         StopCompleterServer( app, 'javascript' )
+        ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()
