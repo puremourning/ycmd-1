@@ -38,12 +38,12 @@ def set_up_shared_app():
   by all tests using the SharedYcmd decorator in this package. Additional
   configuration that is common to these tests, like starting a semantic
   subserver, should be done here."""
+  global shared_app
+  shared_app = SetUpApp()
+  with IgnoreExtraConfOutsideTestsFolder():
+    StartJavaCompleterServerInDirectory(
+        shared_app, PathToTestFile( DEFAULT_PROJECT_DIR ) )
   try:
-    global shared_app
-    shared_app = SetUpApp()
-    with IgnoreExtraConfOutsideTestsFolder():
-      StartJavaCompleterServerInDirectory(
-          shared_app, PathToTestFile( DEFAULT_PROJECT_DIR ) )
     yield
   finally:
     StopCompleterServer( shared_app, 'java' )

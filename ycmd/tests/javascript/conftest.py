@@ -30,12 +30,12 @@ shared_app = None
 
 @pytest.fixture( scope='package', autouse=True )
 def set_up_shared_app():
+  global shared_app
+  with patch( 'ycmd.completers.javascript.hook.'
+              'ShouldEnableTernCompleter', return_value = False ):
+    shared_app = SetUpApp()
+    WaitUntilCompleterServerReady( shared_app, 'javascript' )
   try:
-    global shared_app
-    with patch( 'ycmd.completers.javascript.hook.'
-                'ShouldEnableTernCompleter', return_value = False ):
-      shared_app = SetUpApp()
-      WaitUntilCompleterServerReady( shared_app, 'javascript' )
     yield
   finally:
     StopCompleterServer( shared_app, 'typescript' )

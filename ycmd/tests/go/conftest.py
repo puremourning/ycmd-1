@@ -29,11 +29,11 @@ shared_app = None
 
 @pytest.fixture( scope='package', autouse=True )
 def set_up_shared_app():
+  global shared_app
+  shared_app = SetUpApp()
+  with IgnoreExtraConfOutsideTestsFolder():
+    StartGoCompleterServerInDirectory( shared_app, PathToTestFile() )
   try:
-    global shared_app
-    shared_app = SetUpApp()
-    with IgnoreExtraConfOutsideTestsFolder():
-      StartGoCompleterServerInDirectory( shared_app, PathToTestFile() )
     yield
   finally:
     StopCompleterServer( shared_app, 'go' )
