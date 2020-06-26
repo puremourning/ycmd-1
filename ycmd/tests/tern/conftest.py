@@ -33,11 +33,9 @@ def set_up_shared_app():
   global shared_app
   shared_app = SetUpApp()
   StartJavaScriptCompleterServerInDirectory( shared_app, PathToTestFile() )
-  try:
-    yield
-  finally:
-    StopCompleterServer( shared_app, 'java' )
-    ShutdownSubservers( shared_app )
+  yield
+  StopCompleterServer( shared_app, 'java' )
+  ShutdownSubservers( shared_app )
 
 
 def StartJavaScriptCompleterServerInDirectory( app, directory ):
@@ -55,11 +53,9 @@ def app( request ):
   assert which == 'isolated' or which == 'shared'
   if which == 'isolated':
     with IsolatedApp( {} ) as app:
-      try:
-        yield app
-      finally:
-        StopCompleterServer( app, 'javascript' )
-        ShutdownSubservers( app )
+      yield app
+      StopCompleterServer( app, 'javascript' )
+      ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()

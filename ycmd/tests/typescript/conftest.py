@@ -33,11 +33,9 @@ def set_up_shared_app():
   global shared_app
   shared_app = SetUpApp()
   WaitUntilCompleterServerReady( shared_app, 'typescript' )
-  try:
-    yield
-  finally:
-    StopCompleterServer( shared_app, 'typescript' )
-    ShutdownSubservers( shared_app )
+  yield
+  StopCompleterServer( shared_app, 'typescript' )
+  ShutdownSubservers( shared_app )
 
 
 def StartGoCompleterServerInDirectory( app, directory ):
@@ -55,11 +53,9 @@ def app( request ):
   assert which == 'isolated' or which == 'shared'
   if which == 'isolated':
     with IsolatedApp( request.param[ 1 ] ) as app:
-      try:
-        yield app
-      finally:
-        StopCompleterServer( app, 'go' )
-        ShutdownSubservers( app )
+      yield app
+      StopCompleterServer( app, 'go' )
+      ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()

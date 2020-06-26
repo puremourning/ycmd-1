@@ -40,13 +40,11 @@ shared_log_indexes = {}
 def set_up_shared_app():
   global shared_app, shared_filepaths
   shared_app = SetUpApp()
-  try:
-    yield
-  finally:
-    for filepath in shared_filepaths.get( shared_app, [] ):
-      StopCompleterServer( shared_app, 'cs', filepath )
+  yield
+  for filepath in shared_filepaths.get( shared_app, [] ):
+    StopCompleterServer( shared_app, 'cs', filepath )
 
-    ShutdownSubservers( shared_app )
+  ShutdownSubservers( shared_app )
 
 
 @pytest.fixture
@@ -56,14 +54,12 @@ def app( request ):
   if which == 'isolated':
     custom_options = request.param[ 1 ]
     with IsolatedApp( custom_options ) as app:
-      try:
-        yield app
-      finally:
-        # Shutdown the isolated app
-        for filepath in shared_filepaths.get( app, [] ):
-          StopCompleterServer( app, 'cs', filepath )
+      yield app
+      # Shutdown the isolated app
+      for filepath in shared_filepaths.get( app, [] ):
+        StopCompleterServer( app, 'cs', filepath )
 
-        ShutdownSubservers( app )
+      ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()

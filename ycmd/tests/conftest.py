@@ -28,10 +28,8 @@ shared_app = None
 def set_up_shared_app():
   global shared_app
   shared_app = SetUpApp()
-  try:
-    yield
-  finally:
-    ShutdownSubservers( shared_app )
+  yield
+  ShutdownSubservers( shared_app )
 
 
 @pytest.fixture
@@ -40,10 +38,8 @@ def app( request ):
   assert which == 'isolated' or which == 'shared'
   if which == 'isolated':
     with IsolatedApp( request.param[ 1 ] ) as app:
-      try:
-        yield app
-      finally:
-        ShutdownSubservers( app )
+      yield app
+      ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()

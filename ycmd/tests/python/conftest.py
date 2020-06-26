@@ -30,10 +30,8 @@ shared_app = None
 def set_up_shared_app():
   global shared_app
   shared_app = SetUpApp()
-  try:
-    yield
-  finally:
-    ShutdownSubservers( shared_app )
+  yield
+  ShutdownSubservers( shared_app )
 
 
 @pytest.fixture

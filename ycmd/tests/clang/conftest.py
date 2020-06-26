@@ -28,10 +28,8 @@ shared_app = None
 def set_up_shared_app():
   global shared_app
   shared_app = SetUpApp( { 'use_clangd': 0 } )
-  try:
-    yield
-  finally:
-    ShutdownSubservers( shared_app )
+  yield
+  ShutdownSubservers( shared_app )
 
 
 @pytest.fixture
@@ -42,10 +40,8 @@ def app( request ):
     custom_options = request.param[ 1 ]
     custom_options.update( { 'use_clangd': 0 } )
     with IsolatedApp( custom_options ) as app:
-      try:
-        yield app
-      finally:
-        ShutdownSubservers( app )
+      yield app
+      ShutdownSubservers( app )
   else:
     global shared_app
     ClearCompletionsCache()
