@@ -225,6 +225,10 @@ class CsharpCompleter( Completer ):
       'GetDoc'                           : ( lambda self, request_data, args:
          self._SolutionSubcommand( request_data,
                                    method = '_GetDoc' ) ),
+      'GoToSymbol'                       : ( lambda self, request_data, args:
+         self._SolutionSubcommand( request_data,
+                                   method = '_GoToSymbol',
+                                   args = args ) ),
       'RefactorRename'                   : ( lambda self, request_data, args:
          self._SolutionSubcommand( request_data,
                                    method = '_RefactorRename',
@@ -594,6 +598,36 @@ class CsharpSolutionCompleter( object ):
     fixit = _ModifiedFilesToFixIt( response[ 'Changes' ], request_data )
     return responses.BuildFixItResponse( [ fixit ] )
 
+
+  def _GoToSymbol( self, request_data, args):
+    request = self._DefaultParameters( request_data )
+    request.update( {
+      'Language': 'C#',
+      'Filter': args[ 0 ]
+    } )
+    response = self._GetResponse( '/findsymbols', request )
+
+    if response[ 'QuickFixes' ]:
+      if len( response[ 'QuickFixes' ] ) == 1:
+        ref = response[ 'QuickFixes' ][ 0 ]
+        return responses.BuildGoToResponseFromLocation(
+          _BuildLocation(
+            request_data,
+            ref[ 'FileName' ],
+            ref[ 'Line' ],
+            ref[ 'Column' ] ),
+          GetFileLines( request_data, ref[ 'FileName' ] )[ ref[ 'Line' ] - 1 ] )
+      else:
+        return [ responses.BuildGoToResponseFromLocation(
+                   _BuildLocation( request_data,
+                                   ref[ 'FileName' ],
+                                   ref[ 'Line' ],
+                                   ref[ 'Column' ] ),
+                   GetFileLines( request_data,
+                                 ref[ 'FileName' ] )[ ref[ 'Line' ] - 1 ] )
+                 for ref in response[ 'QuickFixes' ] ]
+    else:
+      raise RuntimeError( 'No symbols found' )
 
   def _GoToReferences( self, request_data ):
     """ Jump to references of identifier under cursor """
