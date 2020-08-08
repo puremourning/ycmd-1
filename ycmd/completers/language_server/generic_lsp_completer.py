@@ -22,15 +22,25 @@ from ycmd.completers.language_server import language_server_completer
 class GenericLSPCompleter( language_server_completer.LanguageServerCompleter ):
   def __init__( self, user_options, server_settings ):
     self._name = server_settings[ 'name' ]
-    self._supported_filetypes = server_settings[ 'filetypes' ]
-    self._project_root_files = server_settings.get( 'project_root_files', [] )
+    self._server_settings = server_settings
+
     super().__init__( user_options )
+
     self._command_line = server_settings[ 'cmdline' ]
     self._command_line[ 0 ] = utils.FindExecutable( self._command_line[ 0 ] )
 
 
+  def GetSettings( self, module, request_data ):
+    settings = {}
+    settings = super().GetSettings( module, request_data )
+    utils.UpdateDict( settings.setdefault( 'capabilities', {} ),
+                      self._server_settings.get( 'capabilities', {} ) )
+    return settings
+
+
+
   def GetProjectRootFiles( self ):
-    return self._project_root_files
+    return self._server_settings.get( 'project_root_files', [] )
 
 
   def Language( self ):
@@ -76,4 +86,4 @@ class GenericLSPCompleter( language_server_completer.LanguageServerCompleter ):
 
 
   def SupportedFiletypes( self ):
-    return self._supported_filetypes
+    return self._server_settings[ 'filetypes' ]

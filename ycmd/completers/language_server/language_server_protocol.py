@@ -24,7 +24,8 @@ from urllib.request import pathname2url, url2pathname
 
 from ycmd.utils import ( ByteOffsetToCodepointOffset,
                          ToBytes,
-                         ToUnicode )
+                         ToUnicode,
+                         UpdateDict )
 
 
 Error = collections.namedtuple( 'RequestError', [ 'code', 'reason' ] )
@@ -259,7 +260,10 @@ def BuildResponse( request, parameters ):
   return _BuildMessageData( message )
 
 
-def Initialize( request_id, project_directory, settings ):
+def Initialize( request_id,
+                project_directory,
+                settings,
+                capabilities ):
   """Build the Language Server initialize request"""
 
   return BuildRequest( request_id, 'initialize', {
@@ -267,7 +271,7 @@ def Initialize( request_id, project_directory, settings ):
     'rootPath': project_directory,
     'rootUri': FilePathToUri( project_directory ),
     'initializationOptions': settings,
-    'capabilities': {
+    'capabilities': UpdateDict( {
       'experimental': { 'statusNotification': True },
       'workspace': {
         'applyEdit': True,
@@ -330,7 +334,7 @@ def Initialize( request_id, project_directory, settings ):
           'didSave': True
         },
       },
-    },
+    }, capabilities ),
   } )
 
 
