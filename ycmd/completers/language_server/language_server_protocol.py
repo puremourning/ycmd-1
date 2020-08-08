@@ -645,7 +645,7 @@ def ExecuteCommand( request_id, command, arguments ):
   } )
 
 
-def SemanticTokens( request_id, request_data ):
+def SemanticTokens( request_id, request_data, previous_result_id = None ):
   if 'range' in request_data:
     return BuildRequest( request_id, 'textDocument/semanticTokens/range', {
       'textDocument': TextDocumentIdentifier( request_data ),
@@ -655,20 +655,6 @@ def SemanticTokens( request_id, request_data ):
     return BuildRequest( request_id, 'textDocument/semanticTokens/full', {
       'textDocument': TextDocumentIdentifier( request_data ),
     } )
-
-
-def SemanticTokensDelta( request_id, previous_result_id, request_data ):
-  if 'range' in request_data:
-    raise ValueError( "LSP does not support range deltas" )
-
-  return BuildRequest(
-    request_id,
-    'textDocument/semanticTokens/range/delta',
-    {
-      'textDocument': TextDocumentIdentifier( request_data ),
-      'previousResultId': previous_result_id
-    }
-  )
 
 
 def FilePathToUri( file_name ):
