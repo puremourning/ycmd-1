@@ -30,6 +30,7 @@ from hamcrest import ( assert_that,
 
 from pprint import pformat
 import requests
+import os
 
 from ycmd import handlers
 from ycmd.tests.java import ( DEFAULT_PROJECT_DIR,
@@ -550,6 +551,7 @@ def GetCompletions_ServerNotInitialized_test( app ):
     } )
 
 
+@WithRetry
 @SharedYcmd
 def GetCompletions_MoreThan10_NoResolve_ThenResolve_test( app ):
   request, response = RunTest( app, {
@@ -599,6 +601,7 @@ def GetCompletions_MoreThan10_NoResolve_ThenResolve_test( app ):
 
     print( f"Resolve response: { pformat( response ) }" )
 
+    nl = os.linesep
     assert_that( response, has_entries( {
       'completion': CompletionEntryMatcher(
           'useAString',
@@ -608,11 +611,11 @@ def GetCompletions_MoreThan10_NoResolve_ThenResolve_test( app ):
             # This is the resolved info (no documentation)
             'detailed_info': 'useAString(String s) : void\n'
                              '\n'
-                             'Multiple lines of description here.\n'
-                             '\n'
-                             ' *  **Parameters:**\n'
-                             '    \n'
-                             '     *  **s** a string'
+                             f'Multiple lines of description here.{ nl }'
+                             f'{ nl }'
+                             f' *  **Parameters:**{ nl }'
+                             f'    { nl }'
+                             f'     *  **s** a string'
           }
         ),
       'errors': empty(),
@@ -624,8 +627,10 @@ def GetCompletions_MoreThan10_NoResolve_ThenResolve_test( app ):
 
 
 
+@WithRetry
 @SharedYcmd
 def GetCompletions_FewerThan10_Resolved_test( app ):
+  nl = os.linesep
   request, response = RunTest( app, {
     'description': "More than 10 candiates after filtering, don't resolve",
     'request': {
@@ -646,11 +651,11 @@ def GetCompletions_FewerThan10_Resolved_test( app ):
               # This is the resolved info (no documentation)
               'detailed_info': 'useAString(String s) : void\n'
                                '\n'
-                               'Multiple lines of description here.\n'
-                               '\n'
-                               ' *  **Parameters:**\n'
-                               '    \n'
-                               '     *  **s** a string'
+                               f'Multiple lines of description here.{ nl }'
+                               f'{ nl }'
+                               f' *  **Parameters:**{ nl }'
+                               f'    { nl }'
+                               f'     *  **s** a string'
             }
           ),
         ),
@@ -667,6 +672,7 @@ def GetCompletions_FewerThan10_Resolved_test( app ):
 
 
 
+@WithRetry
 @SharedYcmd
 def GetCompletions_MoreThan10_NoResolve_ThenResolveCacheBad_test( app ):
   request, response = RunTest( app, {
@@ -723,6 +729,7 @@ def GetCompletions_MoreThan10_NoResolve_ThenResolveCacheBad_test( app ):
 
 
 
+@WithRetry
 @SharedYcmd
 def GetCompletions_MoreThan10ForceSemantic_test( app ):
   RunTest( app, {
