@@ -1301,7 +1301,7 @@ class LanguageServerCompleter( Completer ):
       request_data )
 
 
-  def DetailCandidate( self, request_data, completions, to_resolve ):
+  def DetailSingleCandidate( self, request_data, completions, to_resolve ):
     completion = completions[ to_resolve ]
     if not self._resolve_completion_items:
       return completion

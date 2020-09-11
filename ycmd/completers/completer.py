@@ -129,7 +129,7 @@ class Completer( metaclass = abc.ABCMeta ):
   that you must add a 'resolve' key to the candidate's 'extra_data' which will
   be round-tripped to the client. The client passes the 'resolve' key back to us
   in the /resolve_completion request and your completer must override the
-  DetailCandidate() method, which is passed the full list of candidates from the
+  DetailSingleCandidate() method, which is passed the full list of candidates from the
   cache and the resolve key supplied. This method must return the candidate,
   fully detailed. See the LanguageServerCompleter for an example.
 
@@ -308,9 +308,9 @@ class Completer( metaclass = abc.ABCMeta ):
     if not candidates:
       raise CompletionsChanged( 'Resolve request must not change request data' )
 
-    return self.DetailCandidate( request_data,
-                                 candidates,
-                                 request_data[ 'resolve' ] )
+    return self.DetailSingleCandidate( request_data,
+                                       candidates,
+                                       request_data[ 'resolve' ] )
 
 
 
@@ -326,7 +326,7 @@ class Completer( metaclass = abc.ABCMeta ):
     return raw_completions
 
 
-  def DetailCandidate( self, request_data, candidates, to_resolve ):
+  def DetailSingleCandidate( self, request_data, candidates, to_resolve ):
     raise RuntimeError( # pragma: no cover
       "Delayed detail candidate not implemented" ) # pragma: no cover
 
