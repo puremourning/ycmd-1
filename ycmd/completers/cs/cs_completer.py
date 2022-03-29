@@ -434,7 +434,8 @@ class CsharpSolutionCompleter( object ):
 
     if ( not utils.OnWindows()
          and self._roslyn_path.endswith( '.exe' ) ):
-      self._omnisharp_command.insert( 0, self._mono_path )
+      self._omnisharp_command[ : 0 ] = [ self._mono_path,
+                                         '--assembly-loader=strict' ]
 
     return self._omnisharp_command
 
