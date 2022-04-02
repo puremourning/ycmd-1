@@ -26,11 +26,14 @@ from webtest import AppError
 
 from ycmd.tests.cs import setUpModule, tearDownModule # noqa
 from ycmd.tests.cs import PathToTestFile, SharedYcmd, WrapOmniSharpServer
-from ycmd.tests.test_utils import BuildRequest, CompletionEntryMatcher
+from ycmd.tests.test_utils import ( BuildRequest,
+                                    CompletionEntryMatcher,
+                                    WithRetry )
 from ycmd.utils import ReadFile
 
 
 class GetCompletionsTest( TestCase ):
+  @WithRetry()
   @SharedYcmd
   def test_GetCompletions_DefaultToIdentifier( self, app ):
     filepath = PathToTestFile( 'testy', 'Program.cs' )
@@ -55,6 +58,7 @@ class GetCompletionsTest( TestCase ):
         } ) )
 
 
+  @WithRetry()
   @SharedYcmd
   def test_GetCompletions_Basic( self, app ):
     filepath = PathToTestFile( 'testy', 'Program.cs' )
@@ -84,6 +88,7 @@ class GetCompletionsTest( TestCase ):
         } ) )
 
 
+  @WithRetry()
   @SharedYcmd
   def test_GetCompletions_Unicode( self, app ):
     filepath = PathToTestFile( 'testy', 'Unicode.cs' )
@@ -109,6 +114,7 @@ class GetCompletionsTest( TestCase ):
                     } ) )
 
 
+  @WithRetry()
   @SharedYcmd
   def test_GetCompletions_MultipleSolution( self, app ):
     filepaths = [ PathToTestFile( 'testy', 'Program.cs' ),
@@ -145,6 +151,7 @@ class GetCompletionsTest( TestCase ):
           } ) )
 
 
+  @WithRetry()
   @SharedYcmd
   def test_GetCompletions_PathWithSpace( self, app ):
     filepath = PathToTestFile( 'неприличное слово', 'Program.cs' )
@@ -174,6 +181,7 @@ class GetCompletionsTest( TestCase ):
         } ) )
 
 
+  @WithRetry()
   @SharedYcmd
   def test_GetCompletions_DoesntStartWithAmbiguousMultipleSolutions(
       self, app ):
