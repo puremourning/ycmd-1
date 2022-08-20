@@ -3211,80 +3211,14 @@ def _InsertionTextForItem( request_data, item ):
 
     insertion_text = text_edit[ 'newText' ]
 
-    if '\n' in insertion_text and not insertion_text_is_snippet:
-      # FIXME: If this logic actually worked, then we should do it for
-      # everything and not just hte multi-line completions ? Would that allow us
-      # to avoid the _GetCompletionItemStartCodepointOrReject logic ? Possibly,
-      # but it would look strange in the UI cycling through items. In any case,
-      # doing both should be complete.
-
-      # servers can return completions which generate code, such as
-      # getters/setters and entire anonymous classes. These contain newlines in
-      # the generated textEdit. This is irksome because ycmd's clients don't
-      # necessarily support that. Certainly, Vim doesn't.
-      #
-      # However, we do have 'fixits' in completion responses which we can lean
-      # on.
-      #
-      # In order to support this we:
-      #  - use the item's label as the intial insertion text with the start
-      #    codepoint set to the query codepoint
-      #  - insert a textEdit in additionalTextEdits which deletes this
-      #    insertion
-      #  - insert another textEdit in additionalTextEdits which applies this
-      #    textedit
-      #
-      # On the other hand, if the insertion text is a snippet, then the snippet
-      # system will handle the expansion.
-      insertion_text = item[ 'label' ]
-      start_codepoint = request_data[ 'start_codepoint' ]
-
-      # FIXME:
-      # So forced-completion breaks here, as the textEdit is formulated to
-      # remove the existing "prefix". E.g. typing getT<ctrl-space>, the edit
-      # attempts to replace getT with the new code.
-
-      # Add a fixit which removes the inserted label
-      #
-      # TODO: Perhaps we should actually supply a completion with an empty
-      # insertion_text, than have the _client_ deal with this. One key advantage
-      # to that is that the client can then decide where to put the cursor.
-      # Currently, the Vim client puts the cursor in the wrong place (i.e.
-      # before the text, rather than after it).
-      completion_fixit_chunks = [
-        responses.FixItChunk(
-          '',
-          responses.Range(
-            responses.Location( request_data[ 'line_num' ],
-                                start_codepoint,
-                                filepath ),
-            responses.Location( request_data[ 'line_num' ],
-                                start_codepoint + len( insertion_text ),
-                                filepath ),
-          )
-        )
-      ]
-      # FIXME: The problem with this is that it _might_ break the offsets in any
-      # additionalTextEdits
-      fixits.append(
-        responses.FixIt( completion_fixit_chunks[ 0 ].range.start_,
-                         completion_fixit_chunks,
-                         item[ 'label' ] )
-      )
-      # Add a fixit which applies this textEdit
-      contents = GetFileLines( request_data, filepath )
-      completion_fixit_chunks = [
-        responses.FixItChunk(
-          text_edit[ 'newText' ], # FIXME: This could also be a Snippet
-          _BuildRange( contents, filepath, text_edit[ 'range' ] )
-        )
-      ]
-      fixits.append(
-        responses.FixIt( completion_fixit_chunks[ 0 ].range.start_,
-                         completion_fixit_chunks,
-                         item[ 'label' ],
-                         is_completion = True )
-      )
+    if '\n' in insertion_text:
+      # If there's a newline in the completion, we have to use a snippet engine
+      # because Vim (the main client) doesn't support completions with multiple
+      # lines in them, but given that snippet completions work, we can just
+      # assume this is a snippet without tabstops...
+      # The main issue is that if the competion does contain things that look
+      # like tabstops...
+      insertion_text_is_snippet = True
   else:
     # Calculate the start codepoint based on the overlapping text in the
     # insertion text and the existing text. This is the behavior of Visual
