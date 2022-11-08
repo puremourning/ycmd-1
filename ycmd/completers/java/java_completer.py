@@ -304,8 +304,9 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
     else:
       self._extension_path.append( DEFAULT_EXTENSION_PATH )
 
-    self._bundles = ( _CollectExtensionBundles( self._extension_path )
-                      if self._extension_path else [] )
+    self._bundles = user_options.get( "java_jdtls_extensions", [] ) + (
+        _CollectExtensionBundles( self._extension_path )
+                                  if self._extension_path else [] )
 
     self._connection = None
     self._server_handle = None
