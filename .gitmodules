@@ -15,4 +15,4 @@
 	url = https://github.com/gorakhargosh/watchdog
 [submodule "third_party/mrab-regex"]
 	path = third_party/mrab-regex
-	url = https://bitbucket.org/mrabarnett/mrab-regex.git
+	url = https://github.com/mrabarnett/mrab-regex
