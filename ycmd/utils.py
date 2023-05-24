@@ -300,6 +300,8 @@ def OnMac():
 
 
 def ProcessIsRunning( handle ):
+  if hasattr( handle, 'ycmd_always_assume_running' ):
+    return getattr( handle, 'ycmd_always_assume_running' )
   return handle is not None and handle.poll() is None
 
 

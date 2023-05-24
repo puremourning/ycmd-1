@@ -721,8 +721,10 @@ class StandardIOLanguageServerConnection( LanguageServerConnection ):
 
 
   def IsConnected( self ):
-    # TODO ? self._server_stdin.closed / self._server_stdout.closed?
-    return True
+    return ( self._server_stdin and
+             self._server_stdout and
+             not self._server_stdin.closed and
+             not self._server_stdout.closed )
 
 
   def Shutdown( self ):
@@ -1109,6 +1111,7 @@ class LanguageServerCompleter( Completer ):
           stdout = subprocess.PIPE,
           stderr = stderr,
           env = self.GetServerEnvironment() )
+        self._server_handle.ycmd_always_assume_running = True
 
       self._connection = (
         StandardIOLanguageServerConnection(
@@ -1146,6 +1149,7 @@ class LanguageServerCompleter( Completer ):
         return
 
       if self._server_handle:
+        del self._server_handle.ycmd_always_assume_running
         LOGGER.info( 'Stopping %s with PID %s',
                      self.GetServerName(),
                      self._server_handle.pid )
@@ -1257,10 +1261,7 @@ class LanguageServerCompleter( Completer ):
 
 
   def ServerIsHealthy( self ):
-    if not self.GetCommandLine():
-      return self._connection and self._connection.IsConnected()
-    else:
-      return utils.ProcessIsRunning( self._server_handle )
+    return self._connection and self._connection.IsConnected()
 
 
   def ServerIsReady( self ):
