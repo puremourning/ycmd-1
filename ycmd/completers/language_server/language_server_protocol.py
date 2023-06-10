@@ -710,11 +710,11 @@ def ExecuteCommand( request_id, command, arguments ):
   } )
 
 
-def SemanticTokens( request_id, range_supported, request_data ):
-  if 'range' in request_data and range_supported:
+def SemanticTokens( request_id, request_range, request_data ):
+  if request_range is not None:
     return BuildRequest( request_id, 'textDocument/semanticTokens/range', {
       'textDocument': TextDocumentIdentifier( request_data ),
-      'range': Range( request_data )
+      'range': request_range,
     } )
   else:
     return BuildRequest( request_id, 'textDocument/semanticTokens/full', {

@@ -1559,13 +1559,25 @@ class LanguageServerCompleter( Completer ):
     if not self._semantic_token_atlas:
       return {}
 
-    range_supported = self._server_capabilities[ 'semanticTokensProvider' ].get(
-      'range', False )
+    # output_range is the range we return to the client, i.e. what was requested
+    # from ycmd
+    output_range = None # i.e. full/whole document
+    # request range is the range we ask from the server. The reason these may
+    # differ is basically that some servers might not support a range request,
+    # but we want to minimise what we send to the ycmd client anyway
+    request_range = None # i.e. full/whole document
+
+    if 'range' in request_data:
+      output_range = lsp.Range( request_data )
+
+    if self._server_capabilities[ 'semanticTokensProvider' ].get( 'range',
+                                                                  False ):
+      request_range = output_range
 
     self._UpdateServerWithCurrentFileContents( request_data )
 
     request_id = self.GetConnection().NextRequestId()
-    body = lsp.SemanticTokens( request_id, range_supported, request_data )
+    body = lsp.SemanticTokens( request_id, request_range, request_data )
 
     for _ in RetryOnFailure( [ lsp.Errors.ContentModified ] ):
       response = self._connection.GetResponse(
@@ -1579,10 +1591,12 @@ class LanguageServerCompleter( Completer ):
     filename = request_data[ 'filepath' ]
     contents = GetFileLines( request_data, filename )
     result = response.get( 'result' ) or {}
+
     tokens = _DecodeSemanticTokens( self._semantic_token_atlas,
                                     result.get( 'data' ) or [],
                                     filename,
-                                    contents )
+                                    contents,
+                                    output_range )
 
     return {
       'tokens': tokens
@@ -3539,7 +3553,11 @@ class TokenAtlas:
     self.tokenModifiers = legend[ 'tokenModifiers' ]
 
 
-def _DecodeSemanticTokens( atlas, token_data, filename, contents ):
+def _DecodeSemanticTokens( atlas,
+                           token_data,
+                           filename,
+                           contents,
+                           output_range ):
   # We decode the tokens on the server because that's not blocking the user,
   # whereas decoding in the client would be.
   assert len( token_data ) % 5 == 0
@@ -3585,24 +3603,28 @@ def _DecodeSemanticTokens( atlas, token_data, filename, contents ):
     token.token_type = token_data[ token_index + 3 ]
     token.token_modifiers = token_data[ token_index + 4 ]
 
-    tokens.append( {
-      'range': responses.BuildRangeData( _BuildRange(
-        contents,
-        filename,
-        {
-          'start': {
-            'line': token.line,
-            'character': token.start_character,
-          },
-          'end': {
-            'line': token.line,
-            'character': token.start_character + token.num_characters,
-          }
-        }
-      ) ),
-      'type': atlas.tokenTypes[ token.token_type ],
-      'modifiers': token.DecodeModifiers( atlas.tokenModifiers )
-    } )
+    # Note: LSP range not ycmd range; we actually convert this to ycmd range
+    # only if it overlaps the (LSP range) output_range
+    token_range = {
+      'start': {
+        'line': token.line,
+        'character': token.start_character,
+      },
+      'end': {
+        'line': token.line,
+        'character': token.start_character + token.num_characters,
+      }
+    }
+
+    if output_range is None or lsp.RangesOverlap( output_range,
+                                                  token_range ):
+      tokens.append( {
+        'range': responses.BuildRangeData( _BuildRange( contents,
+                                                        filename,
+                                                        token_range ) ),
+        'type': atlas.tokenTypes[ token.token_type ],
+        'modifiers': token.DecodeModifiers( atlas.tokenModifiers )
+      } )
 
     last_token = token
 
