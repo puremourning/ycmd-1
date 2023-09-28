@@ -325,12 +325,12 @@ class LanguageServerConnection( threading.Thread ):
   def __init__( self,
                 project_directory,
                 watchdog_factory,
-                workspace_conf_handler,
+                server_to_client_request_handlers,
                 notification_handler = None ):
     super().__init__()
 
     self._watchdog_factory = watchdog_factory
-    self._workspace_conf_handler = workspace_conf_handler
+    self._request_handlers = server_to_client_request_handlers
     self._project_directory = project_directory
     self._last_id = 0
     self._responses = {}
@@ -604,12 +604,6 @@ class LanguageServerConnection( threading.Thread ):
     try:
       if method == 'workspace/applyEdit':
         self._collector.CollectApplyEdit( request, self )
-      elif method == 'workspace/configuration':
-        response = self._workspace_conf_handler( request )
-        if response is not None:
-          self.SendResponse( lsp.Accept( request, response ) )
-        else:
-          self.SendResponse( lsp.Reject( request, lsp.Errors.MethodNotFound ) )
       elif method == 'client/registerCapability':
         self._HandleDynamicRegistrations( request )
       elif method == 'client/unregisterCapability':
@@ -617,10 +611,14 @@ class LanguageServerConnection( threading.Thread ):
           if reg[ 'method' ] == 'workspace/didChangeWatchedFiles':
             self._CancelWatchdogThreads()
         self.SendResponse( lsp.Void( request ) )
-      elif method == 'workspace/workspaceFolders':
-        self.SendResponse(
-          lsp.Accept( request,
-                      lsp.WorkspaceFolders( self._project_directory ) ) )
+      elif method in self._request_handlers:
+        # Completer declares that it can handle this request, so pass it on
+        response = self._request_handlers[ method ]( request )
+        # TODO: Catch exceptions, and return error based on that?
+        if response is not None:
+          self.SendResponse( lsp.Accept( request, response ) )
+        else:
+          self.SendResponse( lsp.Reject( request, lsp.Error.MethodNotFound ) )
       else: # method unknown - reject
         self.SendResponse( lsp.Reject( request, lsp.Errors.MethodNotFound ) )
       return
@@ -695,11 +693,11 @@ class StandardIOLanguageServerConnection( LanguageServerConnection ):
                 watchdog_factory,
                 server_stdin,
                 server_stdout,
-                workspace_conf_handler,
+                server_to_client_request_handlers,
                 notification_handler = None ):
     super().__init__( project_directory,
                       watchdog_factory,
-                      workspace_conf_handler,
+                      server_to_client_request_handlers,
                       notification_handler )
 
     self._server_stdin = server_stdin
@@ -772,11 +770,11 @@ class TCPSingleStreamConnection( LanguageServerConnection ):
                 project_directory,
                 watchdog_factory,
                 port,
-                workspace_conf_handler,
+                server_to_client_request_handlers,
                 notification_handler = None ):
     super().__init__( project_directory,
                       watchdog_factory,
-                      workspace_conf_handler,
+                      server_to_client_request_handlers,
                       notification_handler )
 
     self.port = port
@@ -1119,7 +1117,12 @@ class LanguageServerCompleter( Completer ):
           lambda globs: WatchdogHandler( self, globs ),
           self._server_handle.stdin,
           self._server_handle.stdout,
-          lambda request: self.WorkspaceConfigurationResponse( request ),
+          {
+            'workspace/configuration':
+              lambda request: self.WorkspaceConfigurationResponse( request ),
+            'workspace/workspaceFolders':
+              lambda request: self.WorkspaceFoldersResponse( request ),
+          },
           self.GetDefaultNotificationHandler() )
       )
 
@@ -1713,6 +1716,10 @@ class LanguageServerCompleter( Completer ):
     """If the concrete completer wants to respond to workspace/configuration
        requests, it should override this method."""
     return None
+
+
+  def WorskpaceFoldersResponse( self, request ):
+    return lsp.WorkspaceFolders( self._project_directory )
 
 
   def ExtraCapabilities( self ):

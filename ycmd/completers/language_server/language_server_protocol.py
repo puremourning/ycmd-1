@@ -387,13 +387,20 @@ def Initialize( request_id, project_directory, extra_capabilities, settings ):
       }
     },
   }
+  if isinstance( project_directory, list ):
+      root = project_directory[ 0 ]
+      additional_folders = project_directory[ 1: ]
+  else:
+      root = project_directory
+      additional_folders = []
+
   return BuildRequest( request_id, 'initialize', {
     'processId': os.getpid(),
-    'rootPath': project_directory,
-    'rootUri': FilePathToUri( project_directory ),
+    'rootPath': root,
+    'rootUri': FilePathToUri( root ),
     'initializationOptions': settings,
     'capabilities': UpdateDict( capabilities, extra_capabilities ),
-    'workspaceFolders': WorkspaceFolders( project_directory ),
+    'workspaceFolders': WorkspaceFolders( root, *additional_folders ),
   } )
 
 
