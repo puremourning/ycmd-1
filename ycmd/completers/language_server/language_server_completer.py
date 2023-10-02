@@ -585,6 +585,9 @@ class LanguageServerConnection( threading.Thread ):
         for watcher in reg[ 'registerOptions' ][ 'watchers' ]:
           # TODO: Take care of watcher kinds. Not everything needs
           # to be watched for create, modify *and* delete actions.
+
+          # TODO: Handle the "relative" path version of this, which might supply
+          # a complete URI
           pattern = os.path.join( self._project_directory,
                                   watcher[ 'globPattern' ] )
           if os.path.isdir( pattern ):
@@ -895,6 +898,8 @@ class LanguageServerCompleter( Completer ):
       - GetDefaultNotificationHandler
       - HandleNotificationInPollThread
       - Language
+      - CalculateWorkspaceFolders
+      - HaveWorkspaceFoldersChanged
 
   Startup
 
@@ -1045,6 +1050,7 @@ class LanguageServerCompleter( Completer ):
     self._is_completion_provider = False
     self._resolve_completion_items = False
     self._project_directory = None
+    self._workspace_folders = []
     self._settings = {}
     self._extra_conf_dir = None
     self._semantic_token_atlas = None
@@ -1075,6 +1081,7 @@ class LanguageServerCompleter( Completer ):
                  self.GetCommandLine() )
 
     self._project_directory = self.GetProjectDirectory( request_data )
+    self._workspace_folders = self.CalculateWorkspaceFolders( request_data )
 
     if self._connection_type == 'tcp':
       if self.GetCommandLine():
@@ -1714,12 +1721,17 @@ class LanguageServerCompleter( Completer ):
 
   def WorkspaceConfigurationResponse( self, request ):
     """If the concrete completer wants to respond to workspace/configuration
-       requests, it should override this method."""
+       requests, it should override this method.
+       NOTE: This handler is called in the message pump thread, so must be fast
+    """
     return None
 
 
   def WorskpaceFoldersResponse( self, request ):
-    return lsp.WorkspaceFolders( self._project_directory )
+    """
+       NOTE: This handler is called in the message pump thread, so must be fast
+    """
+    return lsp.WorkspaceFolders( *self._workspace_folders )
 
 
   def ExtraCapabilities( self ):
@@ -1909,6 +1921,9 @@ class LanguageServerCompleter( Completer ):
       # We have to get the settings before starting the server, as this call
       # might throw UnknownExtraConf.
       self._StartAndInitializeServer( request_data )
+
+    if self.HaveWorkspaceFoldersChanged( request_data ):
+      self._workspace_folders = self.CalculateWorkspaceFolders( request_data )
 
     if not self.ServerIsHealthy():
       return
@@ -2313,6 +2328,16 @@ class LanguageServerCompleter( Completer ):
       return request_data[ 'working_dir' ]
 
     return os.path.dirname( request_data[ 'filepath' ] )
+
+
+  def HaveWorkspaceFoldersChanged( self, request_data ):
+    return not self._workspace_folders
+
+
+  def CalculateWorkspaceFolders( self, request_data ):
+    return ( [ self._project_directory ] +
+             [ utils.AbsolutePath( folder ) for folder in
+               self._settings.get( 'extraWorkspaceFolders', [] ) ] )
 
 
   def _SendInitialize( self, request_data ):
@@ -2927,6 +2952,8 @@ class LanguageServerCompleter( Completer ):
                                       ServerStateDescription() ),
              responses.DebugInfoItem( 'Project Directory',
                                       self._project_directory ),
+             responses.DebugInfoItem( 'Workspace Folders',
+                                      ['\n'.join( self._workspace_folders ) ] ),
              responses.DebugInfoItem(
                'Settings',
                json.dumps( self._settings.get( 'ls', {} ),
