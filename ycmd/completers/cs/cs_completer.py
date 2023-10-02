@@ -54,6 +54,7 @@ if ( not os.path.isfile( PATH_TO_OMNISHARP_ROSLYN_BINARY )
   PATH_TO_OMNISHARP_ROSLYN_BINARY = (
     os.path.join( PATH_TO_ROSLYN_OMNISHARP, 'omnisharp', 'OmniSharp.exe' ) )
 LOGFILE_FORMAT = 'omnisharp_{port}_{sln}_{std}_'
+PATH_TO_BUNDLED_MONO = os.path.join( PATH_TO_ROSLYN_OMNISHARP, 'bin', 'mono' )
 
 
 def ShouldEnableCsCompleter( user_options ):
@@ -67,11 +68,19 @@ def ShouldEnableCsCompleter( user_options ):
     roslyn = user_roslyn_path
   else:
     roslyn = PATH_TO_OMNISHARP_ROSLYN_BINARY
+
   mono = FindExecutableWithFallback( user_options[ 'mono_binary_path' ],
                                      FindExecutable( 'mono' ) )
   if roslyn and ( mono or utils.OnWindows() ):
     return True
-  LOGGER.info( 'No mono executable at %s', mono )
+  elif os.path.isfile( PATH_TO_BUNDLED_MONO ):
+    LOGGER.info( 'No mono executable at %s, using the bundled mono %s',
+                 mono,
+                 PATH_TO_BUNDLED_MONO )
+    return True
+
+  LOGGER.info( 'No mono executable at %s, and none bundled; omnisharp disabled',
+               mono )
   return False
 
 
@@ -93,7 +102,8 @@ class CsharpCompleter( Completer ):
       self._roslyn_path = PATH_TO_OMNISHARP_ROSLYN_BINARY
     self._mono_path = FindExecutableWithFallback(
         user_options[ 'mono_binary_path' ],
-        FindExecutable( 'mono' ) )
+        FindExecutable( 'mono' ),
+        PATH_TO_BUNDLED_MONO )
 
 
   def Shutdown( self ):
@@ -439,7 +449,13 @@ class CsharpSolutionCompleter( object ):
 
     if ( not utils.OnWindows()
          and self._roslyn_path.endswith( '.exe' ) ):
-      command[ : 0 ] = [ self._mono_path, '--assembly-loader=strict' ]
+      mono_options = [ self._mono_path, '--assembly-loader=strict' ]
+      if self._mono_path == PATH_TO_BUNDLED_MONO:
+        mono_options += [
+          '--config',
+          os.path.join( PATH_TO_ROSLYN_OMNISHARP, 'etc', 'config' )
+        ]
+      command[ : 0 ] = mono_options
 
     LOGGER.info( 'Starting OmniSharp server with: %s', command )
 

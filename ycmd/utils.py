@@ -25,7 +25,7 @@ import sys
 import tempfile
 import time
 import threading
-import collections.abc as collections_abc
+import contextlib
 
 LOGGER = logging.getLogger( 'ycmd' )
 ROOT_DIR = os.path.normpath( os.path.join( os.path.dirname( __file__ ), '..' ) )
@@ -269,7 +269,7 @@ def FindExecutable( executable ):
   return None
 
 
-def FindExecutableWithFallback( executable_path, fallback ):
+def FindExecutableWithFallback( executable_path, *fallbacks ):
   if executable_path:
     executable_path = FindExecutable( ExpandVariablesInPath( executable_path ) )
     if not executable_path:
@@ -278,7 +278,11 @@ def FindExecutableWithFallback( executable_path, fallback ):
       return None
     return executable_path
   else:
-    return fallback
+    with contextlib.suppress( StopIteration ):
+      return next( fallback for fallback in fallbacks
+                   if fallback and os.path.isfile( fallback ) )
+
+  return None
 
 
 def ExecutableName( executable ):
