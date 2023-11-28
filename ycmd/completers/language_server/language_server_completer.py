@@ -2336,7 +2336,7 @@ class LanguageServerCompleter( Completer ):
 
   def CalculateWorkspaceFolders( self, request_data ):
     return ( [ self._project_directory ] +
-             [ utils.AbsolutePath( folder ) for folder in
+             [ utils.AbsolutePath( folder, self._project_directory ) for folder in
                self._settings.get( 'extraWorkspaceFolders', [] ) ] )
 
 
@@ -2362,7 +2362,7 @@ class LanguageServerCompleter( Completer ):
       extra_capabilities = self._settings.get( 'capabilities' , {} )
       extra_capabilities.update( self.ExtraCapabilities() )
       msg = lsp.Initialize( request_id,
-                            self._project_directory,
+                            self._workspace_folders,
                             extra_capabilities,
                             self._settings.get( 'ls', {} ) )
 
@@ -2953,7 +2953,7 @@ class LanguageServerCompleter( Completer ):
              responses.DebugInfoItem( 'Project Directory',
                                       self._project_directory ),
              responses.DebugInfoItem( 'Workspace Folders',
-                                      ['\n'.join( self._workspace_folders ) ] ),
+                                      self._workspace_folders ),
              responses.DebugInfoItem(
                'Settings',
                json.dumps( self._settings.get( 'ls', {} ),
