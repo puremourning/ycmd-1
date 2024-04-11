@@ -2396,7 +2396,9 @@ class LanguageServerCompleter( Completer ):
       self._server_workspace_dirs.update( self._settings.get(
                                           'additional_workspace_dirs',
                                           [] ) )
-      extra_capabilities = self._settings.get( 'capabilities' , {} )
+
+      extra_capabilities = {}
+      extra_capabilities.update( self._settings.get( 'capabilities' , {} ) )
       extra_capabilities.update( self.ExtraCapabilities() )
 
       msg = lsp.Initialize( request_id,
