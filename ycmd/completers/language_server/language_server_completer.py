@@ -1306,7 +1306,8 @@ class LanguageServerCompleter( Completer ):
       items = result
       is_incomplete = False
     else:
-      items = result[ 'items' ]
+      # Some buggy servers return null for 'items' illegally
+      items = result.get( 'items' ) or []
       is_incomplete = result[ 'isIncomplete' ]
 
     # Note: _CandidatesFromCompletionItems does a lot of work on the actual
