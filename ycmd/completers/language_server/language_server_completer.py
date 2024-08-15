@@ -621,6 +621,11 @@ class LanguageServerConnection( threading.Thread ):
         self.SendResponse(
           lsp.Accept( request,
                       lsp.WorkspaceFolders( *self._server_workspace_dirs ) ) )
+      elif method == 'window/showDocument':
+        # We handle this like a notification to YCM and then ack it
+        # unconditionally
+        self._AddNotificationToQueue( request )
+        self.SendResponse( lsp.Accept( request, { 'success': True } ) )
       else: # method unknown - reject
         self.SendResponse( lsp.Reject( request, lsp.Errors.MethodNotFound ) )
       return
@@ -2140,6 +2145,9 @@ class LanguageServerCompleter( Completer ):
       LOGGER.log( log_level[ int( params[ 'type' ] ) ],
                   'Server reported: %s',
                   params[ 'message' ] )
+
+    if notification[ 'method' ] == 'window/showDocument':
+      return notification[ 'params' ] | { 'action': 'showDocument' }
 
     return None
 
