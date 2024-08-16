@@ -448,6 +448,10 @@ def ParseArguments():
   parser.add_argument( '--clang-completer', action = 'store_true',
                        help = 'Enable C-family semantic completion engine '
                               'through libclang.' )
+  parser.add_argument( '--no-clang-completer',
+                       action = 'store_true',
+                       help = 'Disable C-family semantic completion engine '
+                              'through libclang.' )
   parser.add_argument( '--clangd-completer', action = 'store_true',
                        help = 'Enable C-family semantic completion engine '
                               'through clangd lsp server.(EXPERIMENTAL)' )
@@ -579,6 +583,10 @@ def ParseArguments():
     raise InstallationFailed(
       'ERROR: you can\'t pass --system-libclang without also passing '
       '--clang-completer or --all as well.' )
+
+  if args.no_clang_completer and args.clang_completer:
+    raise InstallationFailed(
+      'ERROR: you can\'t pass both --clang-completer and --no-clang-completer' )
   return args
 
 
@@ -611,8 +619,9 @@ def GetCmakeCommonArgs( args ):
 
 def GetCmakeArgs( parsed_args ):
   cmake_args = []
-  if parsed_args.clang_completer or parsed_args.all_completers:
-    cmake_args.append( '-DUSE_CLANG_COMPLETER=ON' )
+  if not parsed_args.no_clang_completer:
+    if parsed_args.clang_completer or parsed_args.all_completers:
+      cmake_args.append( '-DUSE_CLANG_COMPLETER=ON' )
 
   if parsed_args.clang_tidy:
     cmake_args.append( '-DUSE_CLANG_TIDY=ON' )
