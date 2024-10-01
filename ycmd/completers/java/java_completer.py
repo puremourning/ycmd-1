@@ -660,3 +660,11 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
           *language_server_completer._LspLocationToLocationAndDescription(
             request_data, item[ 'from' ] ) )
     return result
+
+  def GetDidChangeConfigurationMessage( self ):
+    # HAAAAACK: It seems that jdt.ls does not properly handle
+    # didChangeConfiguration or at least our interpretation of it (where we just
+    # send initializationOptions again). In fact, it only wants the 'settings'
+    # part (not 'bundles' or whatever else they have at the stop level)
+    return lsp.DidChangeConfiguration(
+      self._settings.get( 'ls', {} ).get( 'settings', {} ) )

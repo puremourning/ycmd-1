@@ -2552,7 +2552,7 @@ class LanguageServerCompleter( Completer ):
       # configuration should be send in response to a workspace/configuration
       # request?
       self.GetConnection().SendNotification(
-          lsp.DidChangeConfiguration( self._settings.get( 'ls', {} ) ) )
+        self.GetDidChangeConfigurationMessage() )
 
       # Notify the other threads that we have completed the initialize exchange.
       self._initialize_response = None
@@ -2566,6 +2566,9 @@ class LanguageServerCompleter( Completer ):
 
     self._on_initialize_complete_handlers = []
 
+
+  def GetDidChangeConfigurationMessage( self ):
+    return lsp.DidChangeConfiguration( self._settings.get( 'ls', {} ) )
 
   def _OnInitializeComplete( self, handler ):
     """Register a function to be called when the initialize exchange completes.
