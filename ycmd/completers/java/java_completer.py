@@ -22,9 +22,9 @@ import os
 import shutil
 import tempfile
 import threading
+from collections import OrderedDict
 
 from ycmd import responses, utils
-from ycmd.completers.language_server import language_server_protocol as lsp
 from ycmd.completers.language_server import language_server_completer
 from ycmd.utils import LOGGER
 
@@ -42,13 +42,13 @@ LANGUAGE_SERVER_HOME = os.path.abspath( os.path.join(
 
 PATH_TO_JAVA = None
 
-PROJECT_FILE_TAILS = {
+PROJECT_FILE_TAILS = OrderedDict( {
   'pom.xml': 'maven',
   'build.gradle': 'gradle',
   'build.gradle.kts': 'gradle',
   'settings.gradle': 'gradle',
   '.project': 'eclipse',
-}
+} )
 
 DEFAULT_WORKSPACE_ROOT_PATH = os.path.abspath( os.path.join(
   os.path.dirname( __file__ ),
@@ -263,7 +263,7 @@ def _FindProjectDir( starting_dir ):
     for folder in utils.PathsToAllParentFolders( os.path.join( project_path,
                                                                '..' ) ):
       if any( os.path.isfile( os.path.join( folder, tail ) )
-              for tail in file_types_to_search_for):
+              for tail in file_types_to_search_for ):
         LOGGER.debug( '  %s is a parent project dir', folder )
         project_path = folder
       else:
@@ -630,24 +630,13 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
 
 
   def OrganizeImports( self, request_data ):
-    fixit = {
-      'resolve': True,
-      'command': {
-        'title': 'Organize Imports',
-        'command': 'java.edit.organizeImports',
-        'arguments': [ lsp.FilePathToUri( request_data[ 'filepath' ] ) ]
-      }
-    }
-    return self._ResolveFixit( request_data, fixit )
-
-
-  def CodeActionCommandToFixIt( self, request_data, command ):
-    # JDT wants us to special case `java.apply.workspaceEdit`
-    # https://github.com/eclipse/eclipse.jdt.ls/issues/376
-    if command[ 'command' ][ 'command' ] == 'java.apply.workspaceEdit':
-      command[ 'edit' ] = command.pop( 'command' )[ 'arguments' ][ 0 ]
-      return super().CodeActionLiteralToFixIt( request_data, command )
-    return super().CodeActionCommandToFixIt( request_data, command )
+    fixits = super().GetCodeActions( request_data )[ 'fixits' ]
+    for fixit in fixits:
+      if fixit[ 'command' ][ 'kind' ] == 'source.organizeImports':
+        return self._ResolveFixit( request_data, fixit )
+    # We should never get here. With codeAction/resolve support,
+    # JDT always sends the organizeImports code action.
+    raise RuntimeError( 'OrganizeImports not available.' )
 
 
   def GetServerName( self ):
