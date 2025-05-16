@@ -1681,6 +1681,7 @@ class LanguageServerCompleter( Completer ):
         GetFileLines( request_data, current_file )[ current_line_lsp ],
         request_data[ 'column_codepoint' ] ) - 1
     minimum_distance = None
+    diag = None
 
     message = 'No diagnostics for current line.'
     for diagnostic in diagnostics:
@@ -1691,18 +1692,25 @@ class LanguageServerCompleter( Completer ):
       point = { 'line': current_line_lsp, 'character': current_column }
       distance = _DistanceOfPointToRange( point, diagnostic[ 'range' ] )
       if minimum_distance is None or distance < minimum_distance:
-        message = diagnostic[ 'message' ]
-        try:
-          code = diagnostic[ 'code' ]
-          message += f' [{ code }]' # noqa
-        except KeyError:
-          pass
-
+        diag = diagnostic
         if distance == 0:
           break
         minimum_distance = distance
 
+    if diag is not None:
+      message = self.BuildDetailedDiagnostic( diag )
     return responses.BuildDisplayMessageResponse( message )
+
+
+  def BuildDetailedDiagnostic( self, diagnostic ):
+    message = diagnostic[ 'message' ]
+    try:
+      code = diagnostic[ 'code' ]
+      message += f' [{ code }]' # noqa
+    except KeyError:
+      pass
+    return message
+
 
 
   @abc.abstractmethod
@@ -3568,12 +3576,15 @@ def _BuildDiagnostic( contents, uri, diag ):
     # code field doesn't exist.
     pass
 
+  severity = diag.get( 'severity' ) or 1
   return responses.Diagnostic(
     ranges = [ r ],
     location = r.start_,
     location_extent = r,
     text = diag_text,
-    kind = lsp.SEVERITY[ diag.get( 'severity' ) or 1 ].upper() )
+    kind = lsp.SEVERITY[ severity ].upper(),
+    severity = severity
+  )
 
 
 def TextEditToChunks( request_data, uri, text_edit ):

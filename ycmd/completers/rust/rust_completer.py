@@ -21,6 +21,7 @@ from subprocess import PIPE
 
 from ycmd import responses, utils
 from ycmd.completers.language_server import language_server_completer
+from ycmd.completers.language_server import language_server_protocol as lsp
 from ycmd.utils import LOGGER, re
 
 
@@ -218,6 +219,74 @@ class RustCompleter( language_server_completer.LanguageServerCompleter ):
                         'serverStatusNotification': True },
       'workspace': { 'configuration': True }
     }
+
+
+  def GetCustomSubcommands( self ):
+    return {
+      'RebuildProcMacros': (
+        lambda self, request_data, args: self._RebuildProcMacros( request_data )
+      ),
+      'ExpandMacro': (
+        lambda self, request_data, args: self._ExpandMacro( request_data )
+      ),
+    }
+
+
+  def _RebuildProcMacros( self, request_data ):
+    if not self.ServerIsReady():
+      raise RuntimeError( 'Server is initializing. Please wait.' )
+
+    self._UpdateServerWithFileContents( request_data )
+
+    request_id = self.GetConnection().NextRequestId()
+    message = lsp.BuildRequest( request_id, 'rust-analyzer/rebuildProcMacros' )
+    self.GetConnection().GetResponse(
+      request_id,
+      message,
+      language_server_completer.REQUEST_TIMEOUT_COMMAND )
+    return ""
+
+
+  def _ExpandMacro( self, request_data ):
+    if not self.ServerIsReady():
+      raise RuntimeError( 'Server is initializing. Please wait.' )
+
+    self._UpdateServerWithFileContents( request_data )
+
+    request_id = self.GetConnection().NextRequestId()
+    message = lsp.BuildRequest( request_id, 'rust-analyzer/expandMacro', {
+      'textDocument': lsp.TextDocumentIdentifier( request_data ),
+      'position': lsp.Position( request_data[ 'line_num' ],
+                                request_data[ 'line_value' ],
+                                request_data[ 'column_codepoint' ] ),
+    } )
+
+    response = self.GetConnection().GetResponse(
+      request_id,
+      message,
+      language_server_completer.REQUEST_TIMEOUT_COMMAND )[ 'result' ]
+
+    if not response:
+      raise RuntimeError( 'No macro expansion available.' )
+
+    return responses.BuildDetailedInfoResponse(
+       f'''
+Name: { response[ "name" ] }
+
+Expansion:
+{ response[ "expansion" ] }
+      '''
+    )
+
+
+  def BuildDetailedDiagnostic( self, diagnostic ):
+    if 'data' in diagnostic and 'rendered' in diagnostic[ 'data' ]:
+      rendered = diagnostic[ 'data' ][ 'rendered' ]
+      if rendered:
+        # The rendered message is already formatted.
+        return rendered
+    return super().BuildDetailedDiagnostic( diagnostic )
+
 
 
   def WorkspaceConfigurationResponse( self, request ):
