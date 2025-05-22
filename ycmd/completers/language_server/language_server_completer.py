@@ -2563,7 +2563,7 @@ class LanguageServerCompleter( Completer ):
       # configuration should be send in response to a workspace/configuration
       # request?
       self.GetConnection().SendNotification(
-        self.GetDidChangeConfigurationMessage() )
+        self.GetDidChangeConfigurationMessage())
 
       # Notify the other threads that we have completed the initialize exchange.
       self._initialize_response = None
