@@ -26,6 +26,7 @@ from collections import OrderedDict
 
 from ycmd import responses, utils
 from ycmd.completers.language_server import language_server_completer
+from ycmd.completers.language_server import language_server_protocol as lsp
 from ycmd.utils import LOGGER
 
 NO_DOCUMENTATION_MESSAGE = 'No documentation available for current context'
@@ -43,10 +44,10 @@ LANGUAGE_SERVER_HOME = os.path.abspath( os.path.join(
 PATH_TO_JAVA = None
 
 PROJECT_FILE_TAILS = OrderedDict( {
-  'pom.xml': 'maven',
   'build.gradle': 'gradle',
   'build.gradle.kts': 'gradle',
   'settings.gradle': 'gradle',
+  'pom.xml': 'maven',
   '.project': 'eclipse',
 } )
 
@@ -485,6 +486,10 @@ class JavaCompleter( language_server_completer.LanguageServerCompleter ):
           '-Dosgi.bundles.defaultStartLevel=4',
           '-Declipse.product=org.eclipse.jdt.ls.core.product',
           '-Dlog.level=ALL',
+          '-Xmx1G',
+          '--add-modules=ALL-SYSTEM',
+          '--add-opens', 'java.base/java.util=ALL-UNNAMED',
+          '--add-opens', 'java.base/java.lang=ALL-UNNAMED',
           '-jar', self._launcher_path,
           '-configuration', self._launcher_config,
           '-data', self._workspace_path,

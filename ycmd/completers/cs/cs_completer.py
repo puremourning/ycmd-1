@@ -47,13 +47,9 @@ PATH_TO_ROSLYN_OMNISHARP = os.path.join(
   '..', '..', '..', 'third_party', 'omnisharp-roslyn'
 )
 PATH_TO_OMNISHARP_ROSLYN_BINARY = os.path.join(
-  PATH_TO_ROSLYN_OMNISHARP, 'Omnisharp.exe' )
-if ( not os.path.isfile( PATH_TO_OMNISHARP_ROSLYN_BINARY )
-     and os.path.isfile( os.path.join(
-       PATH_TO_ROSLYN_OMNISHARP, 'omnisharp', 'OmniSharp.exe' ) ) ):
-  PATH_TO_OMNISHARP_ROSLYN_BINARY = (
-    os.path.join( PATH_TO_ROSLYN_OMNISHARP, 'omnisharp', 'OmniSharp.exe' ) )
+  PATH_TO_ROSLYN_OMNISHARP, 'omnisharp', 'Omnisharp.exe' )
 LOGFILE_FORMAT = 'omnisharp_{port}_{sln}_{std}_'
+BUNDLED_RUNNER = os.path.join( PATH_TO_ROSLYN_OMNISHARP, 'run' )
 
 
 def ShouldEnableCsCompleter( user_options ):
@@ -67,11 +63,9 @@ def ShouldEnableCsCompleter( user_options ):
     roslyn = user_roslyn_path
   else:
     roslyn = PATH_TO_OMNISHARP_ROSLYN_BINARY
-  mono = FindExecutableWithFallback( user_options[ 'mono_binary_path' ],
-                                     FindExecutable( 'mono' ) )
-  if roslyn and ( mono or utils.OnWindows() ):
+
+  if roslyn:
     return True
-  LOGGER.info( 'No mono executable at %s', mono )
   return False
 
 
@@ -91,9 +85,6 @@ class CsharpCompleter( Completer ):
       self._roslyn_path = user_options[ 'roslyn_binary_path' ]
     else:
       self._roslyn_path = PATH_TO_OMNISHARP_ROSLYN_BINARY
-    self._mono_path = FindExecutableWithFallback(
-        user_options[ 'mono_binary_path' ],
-        FindExecutable( 'mono' ) )
 
 
   def Shutdown( self ):
@@ -120,8 +111,7 @@ class CsharpCompleter( Completer ):
         completer = CsharpSolutionCompleter( solution,
                                              keep_logfiles,
                                              desired_omnisharp_port,
-                                             self._roslyn_path,
-                                             self._mono_path )
+                                             self._roslyn_path )
         self._completer_per_solution[ solution ] = completer
 
     return self._completer_per_solution[ solution ]
@@ -398,8 +388,7 @@ class CsharpSolutionCompleter( object ):
                 solution_path,
                 keep_logfiles,
                 desired_omnisharp_port,
-                roslyn_path,
-                mono_path ):
+                roslyn_path ):
     self._solution_path = solution_path
     self._keep_logfiles = keep_logfiles
     self._filename_stderr = None
@@ -410,7 +399,6 @@ class CsharpSolutionCompleter( object ):
     self._desired_omnisharp_port = desired_omnisharp_port
     self._server_state_lock = threading.Lock()
     self._roslyn_path = roslyn_path
-    self._mono_path = mono_path
 
 
   def CodeCheck( self, request_data ):
@@ -432,16 +420,15 @@ class CsharpSolutionCompleter( object ):
       return self._omnisharp_command
 
     self._ChooseOmnisharpPort()
-    self._omnisharp_command = [ self._roslyn_path,
-                                '-p',
-                                str( self._omnisharp_port ),
-                                '-s',
-                                str( self._solution_path ) ]
+    if utils.OnWindows():
+      self._omnisharp_command = [ self._roslyn_path ]
+    if not utils.OnWindows():
+      self._omnisharp_command = [ BUNDLED_RUNNER ]
 
-    if ( not utils.OnWindows()
-         and self._roslyn_path.endswith( '.exe' ) ):
-      self._omnisharp_command[ : 0 ] = [ self._mono_path,
-                                         '--assembly-loader=strict' ]
+    self._omnisharp_command += [ '-p',
+                                 str( self._omnisharp_port ),
+                                 '-s',
+                                 str( self._solution_path ) ]
 
     return self._omnisharp_command
 

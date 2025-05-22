@@ -89,10 +89,10 @@ DYNAMIC_PYTHON_LIBRARY_REGEX = """
   )$
 """
 
-JDTLS_MILESTONE = '1.40.0'
-JDTLS_BUILD_STAMP = '202409261450'
+JDTLS_MILESTONE = '1.45.0'
+JDTLS_BUILD_STAMP = '202502271238'
 JDTLS_SHA256 = (
-  '7416fc62befa450e32f06ec2b503f2eec5f22f0b1cc12f7b8ee5112bf671cf11'
+  'c09e79e958beb5ce41fb3b5097aec0455298bc88a14c8e41462b57edb2812797'
 )
 
 DEFAULT_RUST_TOOLCHAIN = 'nightly-2024-12-12'
@@ -1119,7 +1119,7 @@ def EnableJavaCompleter( switches ):
     sys.stdout.write( 'Installing jdt.ls for Java support...' )
     sys.stdout.flush()
 
-  CheckJavaVersion( 17 )
+  CheckJavaVersion( 21 )
 
   TARGET = p.join( DIR_OF_THIRD_PARTY, 'eclipse.jdt.ls', 'target', )
   REPOSITORY = p.join( TARGET, 'repository' )
