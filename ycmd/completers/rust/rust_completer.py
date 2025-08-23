@@ -85,7 +85,7 @@ class RustCompleter( language_server_completer.LanguageServerCompleter ):
 
 
   def _Reset( self ):
-    self._server_progress = 'Not started'
+    self._server_progress = 'starting'
     super()._Reset()
 
 
@@ -117,7 +117,7 @@ class RustCompleter( language_server_completer.LanguageServerCompleter ):
 
   def ServerIsReady( self ):
     return ( super().ServerIsReady() and
-             self._server_progress in [ 'invalid', 'ready' ] )
+             self._server_progress != "starting" )
 
 
   def SupportedFiletypes( self ):
@@ -142,15 +142,16 @@ class RustCompleter( language_server_completer.LanguageServerCompleter ):
     if notification[ 'method' ] == 'experimental/serverStatus':
       params = notification[ 'params' ]
       # NOTE: status == 'warning' not handled.
-      if params[ 'quiescent' ]:
-        if params[ 'health' ] == 'error':
-          self._server_progress = 'invalid'
-        else:
-          self._server_progress = 'ready'
+      self._server_progress = params[ 'health' ]
+      if not params[ 'quiescent' ]:
+        self._server_progress += ' - initialising'
+      msg = params.get( 'message' ) or None
+      if msg:
+        self._server_progress += ' - ' + msg
     if notification[ 'method' ] == 'window/showMessage':
       if ( notification[ 'params' ][ 'message' ] ==
            'rust-analyzer failed to discover workspace' ):
-        self._server_progress = 'invalid'
+        self._server_progress = 'error'
 
     super().HandleNotificationInPollThread( notification )
 
@@ -204,13 +205,9 @@ class RustCompleter( language_server_completer.LanguageServerCompleter ):
       hover_response = self.GetHoverResponse( request_data )
     except language_server_completer.NoHoverInfoException:
       raise RuntimeError( 'No documentation available.' )
-
-    # Strips all empty lines and lines starting with "```" to make the hover
-    # response look like plain text. For the format, see the comment in GetType.
-    lines = hover_response[ 'value' ].split( '\n' )
-    documentation = '\n'.join(
-      line for line in lines if line and not line.startswith( '```' ) ).strip()
-    return responses.BuildDetailedInfoResponse( documentation )
+    return responses.BuildDetailedInfoResponse( hover_response[ 'value' ] ) | {
+      'filetype': 'markdown',
+    }
 
 
   def ExtraCapabilities( self ):
