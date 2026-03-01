@@ -153,6 +153,8 @@ class LanguageServerProtocolTest( TestCase ):
                  equal_to( '/usr/local/test/test.test' ) )
     assert_that( lsp.UriToFilePath( 'file:///usr/local/test/test.test' ),
                  equal_to( '/usr/local/test/test.test' ) )
+    assert_that( lsp.UriToFilePath( 'file:///usr/local/test%23foo/test.test' ),
+                 equal_to( '/usr/local/test#foo/test.test' ) )
 
 
   @WindowsOnly
