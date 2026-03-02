@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with ycmd.  If not, see <http://www.gnu.org/licenses/>.
 
+import sys
 import collections
 import os
 import json
@@ -761,14 +762,18 @@ def UriToFilePath( uri ):
   if parsed_uri.scheme != 'file':
     raise InvalidUriException( uri )
 
-  # url2pathname doesn't work as expected when uri.path is percent-encoded and
-  # is a windows path for ex:
-  # url2pathname('/C%3a/') == 'C:\\C:'
-  # whereas
-  # url2pathname('/C:/') == 'C:\\'
-  # Therefore first unquote pathname.
-  pathname = unquote( parsed_uri.path )
-  return os.path.abspath( url2pathname( pathname ) )
+  if sys.version_info < ( 3, 14 ):
+    # Before Python 3.14:
+    # url2pathname doesn't work as expected when uri.path is percent-encoded and
+    # is a windows path for ex:
+    # url2pathname('/C%3a/') == 'C:\\C:'
+    # whereas
+    # url2pathname('/C:/') == 'C:\\'
+    # Therefore first unquote pathname.
+    return os.path.abspath( url2pathname( unquote( parsed_uri.path ) ) )
+  else:
+    # After Python 3.14, url2pathname seems to work properly
+    return os.path.abspath( url2pathname( uri, require_scheme=True ) )
 
 
 def _BuildMessageData( message ):
