@@ -3319,7 +3319,9 @@ def _InsertionTextForItem( request_data, item ):
   # Per the protocol, textEdit takes precedence over insertText, and the initial
   # range of the edit must be on the same line (and containing) the originally
   # requested position.
-  if 'textEdit' in item and item[ 'textEdit' ]:
+  if ( 'textEdit' in item
+       and item[ 'textEdit' ]
+       and 'range' in item[ 'textEdit' ] ):
     text_edit = item[ 'textEdit' ]
     start_codepoint = _GetCompletionItemStartCodepointOrReject( text_edit,
                                                                 request_data )
@@ -3333,6 +3335,10 @@ def _InsertionTextForItem( request_data, item ):
       # assume this is a snippet without tabstops...
       # The main issue is that if the competion does contain things that look
       # like tabstops...
+      # NOTE however that the protocol requires that textEdits explicitly are
+      # only on a single line and must oerlap the requested completion locaiton,
+      # alas server vendors have never really bothered to follow the protocol
+      # ... ever.
       insertion_text_is_snippet = True
   else:
     # Calculate the start codepoint based on the overlapping text in the
