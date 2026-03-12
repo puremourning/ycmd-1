@@ -1056,6 +1056,8 @@ class LanguageServerCompleter( Completer ):
     self._initialize_event = threading.Event()
     self._on_initialize_complete_handlers = []
     self._server_capabilities = None
+    self._pull_diagnostics_supported = False
+    self._pull_diagnostics_result_ids = {}
     self._workspace_notification_supported = False
     self._is_completion_provider = False
     self._resolve_completion_items = False
@@ -1984,6 +1986,14 @@ class LanguageServerCompleter( Completer ):
 
     self._UpdateServerWithFileContents( request_data )
 
+    filepath = request_data[ 'filepath' ]
+    uri = lsp.FilePathToUri( filepath )
+
+    # For servers that use the pull diagnostics model, request diagnostics
+    # asynchronously. The response will be delivered via PollForMessages.
+    if self._pull_diagnostics_supported:
+      self._PullDiagnosticsAsync( uri )
+
     # Return the latest diagnostics that we have received.
     #
     # NOTE: We also return diagnostics asynchronously via the long-polling
@@ -1993,8 +2003,6 @@ class LanguageServerCompleter( Completer ):
     # However, we _also_ return them here to refresh diagnostics after, say
     # changing the active file in the editor, or for clients not supporting the
     # polling mechanism.
-    filepath = request_data[ 'filepath' ]
-    uri = lsp.FilePathToUri( filepath )
     contents = GetFileLines( request_data, filepath )
     with self._latest_diagnostics_mutex:
       if uri in self._latest_diagnostics:
@@ -2111,6 +2119,60 @@ class LanguageServerCompleter( Completer ):
         return
       with self._latest_diagnostics_mutex:
         self._latest_diagnostics[ uri ] = params[ 'diagnostics' ]
+
+
+  def _PullDiagnosticsAsync( self, uri ):
+    """Send an async textDocument/diagnostic request for the given URI.
+    The response is handled in the message pump thread via
+    _HandlePullDiagnosticsResponse."""
+    request_id = self.GetConnection().NextRequestId()
+    params = { 'textDocument': { 'uri': uri } }
+
+    with self._latest_diagnostics_mutex:
+      result_id = self._pull_diagnostics_result_ids.get( uri )
+    if result_id is not None:
+      params[ 'previousResultId' ] = result_id
+
+    msg = lsp.BuildRequest( request_id,
+                            'textDocument/diagnostic',
+                            params )
+
+    def handler( response, message ):
+      if message is None:
+        return
+      self._HandlePullDiagnosticsResponse( uri, message )
+
+    self.GetConnection().GetResponseAsync( request_id, msg, handler )
+
+
+  def _HandlePullDiagnosticsResponse( self, uri, message ):
+    """Handle the response to a textDocument/diagnostic request. Called in the
+    message pump thread context."""
+    if 'error' in message:
+      LOGGER.warning( 'Pull diagnostics request failed: %s',
+                      message[ 'error' ] )
+      return
+
+    result = message[ 'result' ]
+    new_result_id = result.get( 'resultId' )
+
+    with self._latest_diagnostics_mutex:
+      if new_result_id is not None:
+        self._pull_diagnostics_result_ids[ uri ] = new_result_id
+      if result[ 'kind' ] == 'full':
+        diagnostics = result[ 'items' ]
+        self._latest_diagnostics[ uri ] = diagnostics
+
+    if result[ 'kind' ] == 'full':
+      # Inject a synthetic publishDiagnostics notification so that
+      # PollForMessages delivers these diagnostics to YCM via the existing
+      # code path. Calling _AddNotificationToQueue directly (rather than
+      # going through _DispatchMessage) means HandleNotificationInPollThread
+      # won't fire, avoiding a double-store.
+      self.GetConnection()._AddNotificationToQueue( {
+        'method': 'textDocument/publishDiagnostics',
+        'params': { 'uri': uri, 'diagnostics': diagnostics }
+      } )
 
 
   def ConvertNotificationToMessage( self, request_data, notification ):
@@ -2349,6 +2411,10 @@ class LanguageServerCompleter( Completer ):
 
     del self._server_file_state[ file_state.filename ]
 
+    uri = lsp.FilePathToUri( file_path )
+    with self._latest_diagnostics_mutex:
+      self._pull_diagnostics_result_ids.pop( uri, None )
+
 
   def GetProjectRootFiles( self ):
     """Returns a list of globs matching files that indicate the root of the
@@ -2543,6 +2609,12 @@ class LanguageServerCompleter( Completer ):
           'completionProvider' in self._server_capabilities )
 
       self._SetUpSemanticTokenAtlas( self._server_capabilities )
+
+      self._pull_diagnostics_supported = _IsCapabilityProvided(
+          self._server_capabilities, 'diagnosticProvider' )
+      if self._pull_diagnostics_supported:
+        LOGGER.info( '%s: Server supports pull diagnostics',
+                     self.Language() )
 
       sync = self._server_capabilities.get( 'textDocumentSync' )
       if sync is not None:

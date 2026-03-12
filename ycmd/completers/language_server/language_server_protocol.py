@@ -400,6 +400,8 @@ def Initialize( request_id,
       'synchronization': {
         'didSave': True
       },
+      'diagnostic': {
+      },
       'inlay_hint': {
       }
     },
