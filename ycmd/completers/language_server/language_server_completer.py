@@ -342,7 +342,7 @@ class LanguageServerConnection( threading.Thread ):
     self._stop_event = threading.Event()
     self._notification_handler = notification_handler
 
-    self._collector = RejectCollector()
+    self._collector = UnsolicitedEditApplier()
     self._observers = []
 
 
@@ -1056,6 +1056,8 @@ class LanguageServerCompleter( Completer ):
     self._initialize_event = threading.Event()
     self._on_initialize_complete_handlers = []
     self._server_capabilities = None
+    self._pull_diagnostics_supported = False
+    self._pull_diagnostics_result_ids = {}
     self._workspace_notification_supported = False
     self._is_completion_provider = False
     self._resolve_completion_items = False
@@ -1984,6 +1986,14 @@ class LanguageServerCompleter( Completer ):
 
     self._UpdateServerWithFileContents( request_data )
 
+    filepath = request_data[ 'filepath' ]
+    uri = lsp.FilePathToUri( filepath )
+
+    # For servers that use the pull diagnostics model, request diagnostics
+    # asynchronously. The response will be delivered via PollForMessages.
+    if self._pull_diagnostics_supported:
+      self._PullDiagnosticsAsync( uri )
+
     # Return the latest diagnostics that we have received.
     #
     # NOTE: We also return diagnostics asynchronously via the long-polling
@@ -1993,8 +2003,6 @@ class LanguageServerCompleter( Completer ):
     # However, we _also_ return them here to refresh diagnostics after, say
     # changing the active file in the editor, or for clients not supporting the
     # polling mechanism.
-    filepath = request_data[ 'filepath' ]
-    uri = lsp.FilePathToUri( filepath )
     contents = GetFileLines( request_data, filepath )
     with self._latest_diagnostics_mutex:
       if uri in self._latest_diagnostics:
@@ -2113,6 +2121,60 @@ class LanguageServerCompleter( Completer ):
         self._latest_diagnostics[ uri ] = params[ 'diagnostics' ]
 
 
+  def _PullDiagnosticsAsync( self, uri ):
+    """Send an async textDocument/diagnostic request for the given URI.
+    The response is handled in the message pump thread via
+    _HandlePullDiagnosticsResponse."""
+    request_id = self.GetConnection().NextRequestId()
+    params = { 'textDocument': { 'uri': uri } }
+
+    with self._latest_diagnostics_mutex:
+      result_id = self._pull_diagnostics_result_ids.get( uri )
+    if result_id is not None:
+      params[ 'previousResultId' ] = result_id
+
+    msg = lsp.BuildRequest( request_id,
+                            'textDocument/diagnostic',
+                            params )
+
+    def handler( response, message ):
+      if message is None:
+        return
+      self._HandlePullDiagnosticsResponse( uri, message )
+
+    self.GetConnection().GetResponseAsync( request_id, msg, handler )
+
+
+  def _HandlePullDiagnosticsResponse( self, uri, message ):
+    """Handle the response to a textDocument/diagnostic request. Called in the
+    message pump thread context."""
+    if 'error' in message:
+      LOGGER.warning( 'Pull diagnostics request failed: %s',
+                      message[ 'error' ] )
+      return
+
+    result = message[ 'result' ]
+    new_result_id = result.get( 'resultId' )
+
+    with self._latest_diagnostics_mutex:
+      if new_result_id is not None:
+        self._pull_diagnostics_result_ids[ uri ] = new_result_id
+      if result[ 'kind' ] == 'full':
+        diagnostics = result[ 'items' ]
+        self._latest_diagnostics[ uri ] = diagnostics
+
+    if result[ 'kind' ] == 'full':
+      # Inject a synthetic publishDiagnostics notification so that
+      # PollForMessages delivers these diagnostics to YCM via the existing
+      # code path. Calling _AddNotificationToQueue directly (rather than
+      # going through _DispatchMessage) means HandleNotificationInPollThread
+      # won't fire, avoiding a double-store.
+      self.GetConnection()._AddNotificationToQueue( {
+        'method': 'textDocument/publishDiagnostics',
+        'params': { 'uri': uri, 'diagnostics': diagnostics }
+      } )
+
+
   def ConvertNotificationToMessage( self, request_data, notification ):
     """Convert the supplied server notification to a ycmd message. Returns None
     if the notification should be ignored.
@@ -2161,6 +2223,23 @@ class LanguageServerCompleter( Completer ):
       LOGGER.log( log_level[ int( params[ 'type' ] ) ],
                   'Server reported: %s',
                   params[ 'message' ] )
+
+
+    # HACK: Not really a notification; we pretend it is because we send it
+    # (unsolicited) to our clients and pretend to the server that it was applied
+    # anyway.
+    if notification[ 'method' ] == 'workspace/applyEdit':
+      LOGGER.info( "Server requested to apply edit: %s",
+                   notification )
+      fixit = WorkspaceEditToFixIt(
+        request_data,
+        notification[ 'params' ][ 'edit' ],
+        notification[ 'params' ].get( 'label' ) or None )
+
+      if fixit:
+        response = responses.BuildFixItResponse( [ fixit ] )
+        LOGGER.info( "Response resulting: %s", response )
+        return response
 
     return None
 
@@ -2332,6 +2411,10 @@ class LanguageServerCompleter( Completer ):
 
     del self._server_file_state[ file_state.filename ]
 
+    uri = lsp.FilePathToUri( file_path )
+    with self._latest_diagnostics_mutex:
+      self._pull_diagnostics_result_ids.pop( uri, None )
+
 
   def GetProjectRootFiles( self ):
     """Returns a list of globs matching files that indicate the root of the
@@ -2377,6 +2460,44 @@ class LanguageServerCompleter( Completer ):
     return os.path.dirname( filepath )
 
 
+  def FindProjectFromRootFiles( self,
+                                filepath,
+                                project_root_files,
+                                nearest=True ):
+
+    project_folder = None
+    project_root_type = None
+
+    # First, find the nearest dir that has one of the root file types
+    for folder in utils.PathsToAllParentFolders( filepath ):
+      f = Path( folder )
+      for root_file in project_root_files:
+        if next( f.glob( root_file ), [] ):
+          # Found one, store the root file and the current nearest folder
+          project_root_type = root_file
+          project_folder = folder
+          break
+      if project_folder:
+        break
+
+    if not project_folder:
+      return None
+
+    # If asking for the nearest, return the one found
+    if nearest:
+      return str( project_folder )
+
+    # Otherwise keep searching up from the nearest until we don't find any more
+    for folder in utils.PathsToAllParentFolders( os.path.join( project_folder,
+                                                               '..' ) ):
+      f = Path( folder )
+      if next( f.glob( project_root_type ), [] ):
+        project_folder = folder
+      else:
+        break
+    return project_folder
+
+
   def GetWorkspaceForFilepath( self, filepath, strict = False ):
     """Return the workspace of the provided filepath. This could be a subproject
     or a completely unrelated project to the root directory.
@@ -2387,12 +2508,12 @@ class LanguageServerCompleter( Completer ):
     reuse this implementation.
     """
     project_root_files = self.GetProjectRootFiles()
+    workspace = None
     if project_root_files:
-      for folder in utils.PathsToAllParentFolders( filepath ):
-        for root_file in project_root_files:
-          if next( Path( folder ).glob( root_file ), [] ):
-            return folder
-    return None if strict else os.path.dirname( filepath )
+      workspace = self.FindProjectFromRootFiles( filepath,
+                                                 project_root_files,
+                                                 nearest = True )
+    return workspace or ( None if strict else os.path.dirname( filepath ) )
 
 
   def _SendInitialize( self, request_data ):
@@ -2488,6 +2609,12 @@ class LanguageServerCompleter( Completer ):
           'completionProvider' in self._server_capabilities )
 
       self._SetUpSemanticTokenAtlas( self._server_capabilities )
+
+      self._pull_diagnostics_supported = _IsCapabilityProvided(
+          self._server_capabilities, 'diagnosticProvider' )
+      if self._pull_diagnostics_supported:
+        LOGGER.info( '%s: Server supports pull diagnostics',
+                     self.Language() )
 
       sync = self._server_capabilities.get( 'textDocumentSync' )
       if sync is not None:
@@ -3267,7 +3394,9 @@ def _InsertionTextForItem( request_data, item ):
   # Per the protocol, textEdit takes precedence over insertText, and the initial
   # range of the edit must be on the same line (and containing) the originally
   # requested position.
-  if 'textEdit' in item and item[ 'textEdit' ]:
+  if ( 'textEdit' in item
+       and item[ 'textEdit' ]
+       and 'range' in item[ 'textEdit' ] ):
     text_edit = item[ 'textEdit' ]
     start_codepoint = _GetCompletionItemStartCodepointOrReject( text_edit,
                                                                 request_data )
@@ -3281,6 +3410,10 @@ def _InsertionTextForItem( request_data, item ):
       # assume this is a snippet without tabstops...
       # The main issue is that if the competion does contain things that look
       # like tabstops...
+      # NOTE however that the protocol requires that textEdits explicitly are
+      # only on a single line and must oerlap the requested completion locaiton,
+      # alas server vendors have never really bothered to follow the protocol
+      # ... ever.
       insertion_text_is_snippet = True
   else:
     # Calculate the start codepoint based on the overlapping text in the
@@ -3640,10 +3773,39 @@ def WorkspaceEditToFixIt( request_data,
                                        workspace_edit[ 'changes' ][ uri ] ) )
   else:
     chunks = []
-    for text_document_edit in workspace_edit[ 'documentChanges' ]:
-      uri = text_document_edit[ 'textDocument' ][ 'uri' ]
-      edits = text_document_edit[ 'edits' ]
-      chunks.extend( TextEditToChunks( request_data, uri, edits ) )
+    for document_change in workspace_edit[ 'documentChanges' ]:
+      if 'kind' in document_change:
+        # File operation
+        try:
+          if document_change[ 'kind' ] == 'create':
+            chunks.append( responses.FixItResourceOp( {
+              'op': 'create',
+              'uri': lsp.UriToFilePath( document_change[ 'uri' ] ),
+              'options': document_change.get( 'options', {} ),
+            } ) )
+          elif document_change[ 'kind' ] == 'rename':
+            chunks.append( responses.FixItResourceOp( {
+              'op': 'rename',
+              'old_filepath': lsp.UriToFilePath( document_change[ 'oldUri' ] ),
+              'new_filepath': lsp.UriToFilePath( document_change[ 'newUri' ] ),
+              'options': document_change.get( 'options', {} ),
+            } ) )
+          elif document_change[ 'kind' ] == 'delete':
+            chunks.append( responses.FixItResourceOp( {
+              'op': 'delete',
+              'uri': lsp.UriToFilePath( document_change[ 'uri' ] ),
+              'options': document_change.get( 'options', {} ),
+            } ) )
+        except lsp.InvalidUriException:
+          LOGGER.debug( 'Invalid filepath received in TextEdit create' )
+          continue
+      else:
+        # Text document edit
+        chunks.extend(
+          TextEditToChunks( request_data,
+                            document_change[ 'textDocument' ][ 'uri' ],
+                            document_change[ 'edits' ] ) )
+
   return responses.FixIt(
     responses.Location( request_data[ 'line_num' ],
                         request_data[ 'column_num' ],
@@ -3697,6 +3859,14 @@ class LanguageServerCompletionsCache( CompletionsCache ):
 class RejectCollector:
   def CollectApplyEdit( self, request, connection ):
     connection.SendResponse( lsp.ApplyEditResponse( request, False ) )
+
+
+class UnsolicitedEditApplier:
+  def CollectApplyEdit( self, request, connection: LanguageServerConnection ):
+    # Pretend this event is a notification and let the LSP implenentation handle
+    # it. This is a hack to forward these requests to the client.
+    connection._AddNotificationToQueue( request )
+    connection.SendResponse( lsp.ApplyEditResponse( request, True ) )
 
 
 class EditCollector:

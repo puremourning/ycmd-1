@@ -308,7 +308,14 @@ def Initialize( request_id,
       'didChangeWatchedFiles': {
         'dynamicRegistration': True
       },
-      'workspaceEdit': { 'documentChanges': True, },
+      'workspaceEdit': {
+        'documentChanges': True,
+        'resourceOperations': [
+          'create',
+          'rename',
+          'delete'
+        ],
+      },
       'symbol': {
         'symbolKind': {
           'valueSet': list( range( 1, len( SYMBOL_KIND ) ) ),
@@ -392,6 +399,8 @@ def Initialize( request_id,
       },
       'synchronization': {
         'didSave': True
+      },
+      'diagnostic': {
       },
       'inlay_hint': {
       }
